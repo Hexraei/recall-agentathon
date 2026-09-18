@@ -125,13 +125,26 @@ def build_check_messages(finding: dict, evidence: dict, comparison: dict) -> lis
 
 # ------------------------------------------------------------------ handlers
 
-def build_flow(call=complete, notes: str = ""):
+def build_flow(call=complete, notes: str = "", trace=None):
     """Return the Flow.
 
     `call` is injected so the whole state machine can be exercised with canned
     responses - no key, no network, no tokens. That is phase 1: the two-encounter
     story and the backwards arrow, with no model involved.
+
+    `trace` is an optional callable taking (step, seconds, detail). A real model
+    call takes long enough that a silent terminal looks hung, and a run that
+    looks hung is a run the audience stops believing in. Nothing here depends on
+    it; pass None and the flow is unchanged.
     """
+    import time as _time
+
+    def timed(step: str, fn, detail=lambda r: ""):
+        started = _time.time()
+        result = fn()
+        if trace:
+            trace(step, _time.time() - started, detail(result))
+        return result
 
     def handle_new_attempt(ctx) -> RunState:
         """Ingest. Normalise, and refuse a duplicate.
@@ -171,11 +184,11 @@ def build_flow(call=complete, notes: str = ""):
     def handle_extracting(ctx) -> RunState:
         """Pull evidence passages, then verify every citation in plain code."""
         attempt = ctx.latest("attempt")
-        result = call(
+        result = timed("extract", lambda: call(
             settings=ctx.settings, budget=ctx.budget,
             messages=build_extract_messages(attempt, notes),
             schema=EvidenceSet, step="extract",
-        )
+        ), lambda r: f"{len(r.items)} passages")
 
         sources = {
             f"{attempt['assignment_id']}#response": attempt["submission"],
@@ -201,12 +214,12 @@ def build_flow(call=complete, notes: str = ""):
         attempt = ctx.latest("attempt")
         prior = history.prior_records(ctx.store, attempt["student_id"], ctx.run_id)
 
-        comparison = call(
+        comparison = timed("compare", lambda: call(
             settings=ctx.settings, budget=ctx.budget,
             messages=build_compare_messages(ctx.latest("evidence"), prior,
                                             attempt["learning_objectives"]),
             schema=Comparison, step="compare",
-        )
+        ), lambda r: r.label)
 
         # The model may not award `recurring` on a single assignment, whatever
         # it thinks it sees. Recurrence is a claim about more than one piece of
@@ -236,13 +249,13 @@ def build_flow(call=complete, notes: str = ""):
                 "detail": checks[-1].payload.get("detail", ""),
             }
 
-        finding = call(
+        finding = timed("finding", lambda: call(
             settings=ctx.settings, budget=ctx.budget,
             messages=build_finding_messages(ctx.latest("evidence"),
                                             ctx.latest("comparison"),
                                             ctx.latest("attempt"), rejected),
             schema=Finding, step="finding",
-        )
+        ), lambda r: f"revision {len(ctx.history('finding')) + 1}, {r.status}")
         # The revision number is ours to assign, not the model's to claim.
         revision = len(ctx.history("finding")) + 1
         ctx.append("finding", finding.model_copy(update={"revision": revision}).model_dump(),
@@ -278,11 +291,11 @@ def build_flow(call=complete, notes: str = ""):
                           detail="Cites sources with no supported evidence row: "
                                  + ", ".join(fabricated))
         else:
-            check = call(
+            check = timed("check", lambda: call(
                 settings=ctx.settings, budget=ctx.budget,
                 messages=build_check_messages(finding, evidence, comparison),
                 schema=Check, step="check",
-            )
+            ), lambda r: r.verdict + (f" ({r.failed_check})" if r.failed_check else ""))
 
         ctx.append("check", check.model_dump(), produced_by="checker")
 
