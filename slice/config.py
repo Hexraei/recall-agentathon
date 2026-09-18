@@ -29,6 +29,18 @@ def load_env(path: str | Path = ".env") -> bool:
 @dataclass(frozen=True)
 class Settings:
     api_key: str
+    groq_key: str
+    """Groq, if set, is the primary provider. Added by us, not the kit.
+
+    Two reasons, both measured rather than assumed. The event's OpenRouter keys
+    are free-tier and shared: 50 free-model requests a day across every team, so
+    a busy room returns 429 to everybody at once. And Groq's inference is an
+    order of magnitude faster on this workload - 0.9s against 15-20s on the same
+    prompt - which turns a 75-second encounter into about four.
+
+    OpenRouter stays as the fallback, which is what a fallback is for: a
+    different provider family, so one outage is not both.
+    """
     model: str
     fallback_model: str
     escalation_model: str
@@ -51,8 +63,9 @@ def settings(reload: bool = True) -> Settings:
     g = os.environ.get
     return Settings(
         api_key               = g("OPENROUTER_API_KEY", "").strip(),
-        model                 = g("SLICE_MODEL", "inclusionai/ling-3.0-flash").strip(),
-        fallback_model        = g("SLICE_FALLBACK_MODEL", "mistralai/mistral-small-3.2-24b-instruct").strip(),
+        groq_key              = g("GROQ_API_KEY", "").strip(),
+        model                 = g("SLICE_MODEL", "qwen/qwen3.8-27b").strip(),
+        fallback_model        = g("SLICE_FALLBACK_MODEL", "openai/gpt-oss-20b").strip(),
         escalation_model      = g("SLICE_ESCALATION_MODEL", "anthropic/claude-haiku-4.5").strip(),
         max_tokens            = int(g("SLICE_MAX_TOKENS", "1200")),
         max_tokens_per_run    = int(g("SLICE_MAX_TOKENS_PER_RUN", "250000")),

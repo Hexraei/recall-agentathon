@@ -34,6 +34,36 @@ from .budget import Budget
 from .config import Settings
 
 API = "https://openrouter.ai/api/v1"
+GROQ_API = "https://api.groq.com/openai/v1"
+
+# Models Groq serves. Anything not here is assumed to be an OpenRouter id, so
+# the two providers can be mixed in one attempt chain without a prefix scheme.
+# Measured on this repo's extraction prompt, 3 trials each, 18 Sep 2026:
+#   qwen/qwen3.8-27b      0.89s   3/3 parsed, every passage verbatim
+#   openai/gpt-oss-20b    1.67s   3/3
+#   openai/gpt-oss-120b   2.35s   3/3
+# against inclusionai/ling-3.0-flash on OpenRouter at 15-20s.
+GROQ_MODELS = {
+    "qwen/qwen3.8-27b",
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-safeguard-20b",
+    "groq/compound",
+    "groq/compound-mini",
+    "allam-2-7b",
+}
+
+
+def _route(model: str, settings: Settings) -> tuple[str, str, str]:
+    """Where does this model live? Returns (base_url, api_key, provider).
+
+    Groq only if we have a key for it; otherwise everything falls to
+    OpenRouter, which is also the path when GROQ_API_KEY is unset - so a
+    checkout with no Groq key behaves exactly as the kit shipped.
+    """
+    if model in GROQ_MODELS and settings.groq_key:
+        return GROQ_API, settings.groq_key, "groq"
+    return API, settings.api_key, "openrouter"
 
 
 class ModelError(RuntimeError):
@@ -153,12 +183,23 @@ def complete(
                 "messages": messages,
             }
             if schema is not None:
-                body["response_format"] = {"type": "json_object"}
+                # Groq honours a real JSON schema, which is why it parsed 3/3
+                # on every model tested. OpenRouter's json_object is looser and
+                # leans on the repair pass below.
+                if mid in GROQ_MODELS and settings.groq_key:
+                    body["response_format"] = {
+                        "type": "json_schema",
+                        "json_schema": {"name": schema.__name__,
+                                        "schema": schema.model_json_schema()},
+                    }
+                else:
+                    body["response_format"] = {"type": "json_object"}
 
+            base, key, provider = _route(mid, settings)
             t0 = time.time()
             try:
-                r = httpx.post(f"{API}/chat/completions", json=body, timeout=timeout,
-                               headers={"Authorization": f"Bearer {settings.api_key}"})
+                r = httpx.post(f"{base}/chat/completions", json=body, timeout=timeout,
+                               headers={"Authorization": f"Bearer {key}"})
             except httpx.RequestError as e:
                 if role == "fallback":
                     raise ModelError(
@@ -192,7 +233,8 @@ def complete(
                     "before finishing. This is not a prompt problem.\n"
                     "  -> Raise SLICE_MAX_TOKENS, or ask the agent for a shorter "
                     "answer (fewer items, shorter fields).")
-            span.record(output={"model": mid, "role": role, "tokens": used,
+            span.record(output={"model": mid, "role": role, "provider": provider,
+                                "tokens": used,
                                 "seconds": round(time.time() - t0, 2)})
 
             if schema is None:
@@ -260,9 +302,10 @@ def _repair(settings, budget, messages, bad_text, schema, mid, timeout):
             f"Required JSON schema:\n{json.dumps(schema.model_json_schema())}\n\n"
             "Reply with the corrected JSON object and nothing else."},
     ]
+    base, key, _ = _route(mid, settings)
     try:
-        r = httpx.post(f"{API}/chat/completions", timeout=timeout,
-                       headers={"Authorization": f"Bearer {settings.api_key}"},
+        r = httpx.post(f"{base}/chat/completions", timeout=timeout,
+                       headers={"Authorization": f"Bearer {key}"},
                        json={"model": mid, "max_tokens": settings.max_tokens,
                              "temperature": 0, "messages": fix,
                              "response_format": {"type": "json_object"}})
