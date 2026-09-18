@@ -308,6 +308,35 @@ def test_a_run_nobody_was_asked_about_is_not_reported_as_ignored(store, settings
     assert store.history(run_id, "review") == []
 
 
+# ---------------------------------------------------- the compare prompt's rules
+# These read the prompt file rather than calling a model. They are cheap, they
+# run with no key, and they exist because of a real regression: an earlier
+# version of compare.md told the model "when the evidence supports `similar` and
+# you want to write `recurring`, write `similar`". The model obeyed, and the true
+# positive the whole demo rests on was hedged away 9 times in 10.
+#
+# A prompt is not covered by any other test here. These are the cheapest guard
+# against someone reintroducing a preference where a rule belongs.
+
+COMPARE_PROMPT = (Path(__file__).resolve().parents[1]
+                  / "app" / "prompts" / "compare.md").read_text()
+
+
+def test_compare_prompt_does_not_bias_toward_hedging():
+    lowered = COMPARE_PROMPT.lower()
+    for banned in ("write `similar`", "more often than", "tempted to find a pattern"):
+        assert banned not in lowered, (
+            f"compare.md contains {banned!r}, which biased the model away from "
+            "`recurring`. Measured: 1/10 correct before removal, 8/8 after.")
+
+
+def test_compare_prompt_states_a_decision_rule():
+    """The fix was replacing a preference with a procedure. Keep it that way."""
+    assert "would one explanation fix both" in COMPARE_PROMPT.lower()
+    for label in ("not_enough_evidence", "improving", "recurring", "similar"):
+        assert label in COMPARE_PROMPT
+
+
 # ------------------------------------------------------------- append-only
 
 def test_the_history_cannot_be_rewritten(store, settings):

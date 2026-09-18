@@ -18,7 +18,16 @@ from __future__ import annotations
 
 import argparse
 import collections
+import time
 from pathlib import Path
+
+PACE_SECONDS = 70
+"""Wait between trials so the measurement measures the model, not the quota.
+
+Groq's free tier is 8,000 tokens per minute; one trial is two encounters at
+~4,500 each. Running them back to back, four of eight trials came back FAILED -
+all of them HTTP 429 - and a distribution built from that says nothing.
+"""
 
 from slice import retrieve
 from slice.config import settings as load_settings
@@ -97,6 +106,11 @@ def main() -> None:
 
     labels = []
     for n in range(args.trials):
+        # Each trial is two encounters, ~9,000 tokens, against a limit of 8,000
+        # per minute. Back to back, half the trials die on HTTP 429 and the
+        # measurement measures the rate limit rather than the model. Pace it.
+        if n:
+            time.sleep(PACE_SECONDS)
         label = one_trial(settings, case) or "FAILED"
         labels.append(label)
         mark = (f"{GREEN}✓{RESET}" if label == case["want"]
