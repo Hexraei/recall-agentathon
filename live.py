@@ -38,6 +38,23 @@ DIM, BOLD, RESET = "\033[2m", "\033[1m", "\033[0m"
 GREEN, RED, YELLOW, CYAN = "\033[32m", "\033[31m", "\033[33m", "\033[36m"
 
 
+def _ingest(store: Store) -> None:
+    """Chunk and embed the course notes into the run database.
+
+    Local embeddings, no API key, no network after the model is cached. If this
+    fails, extraction falls back to sending the whole notes - slower and less
+    citable, but not fatal.
+    """
+    try:
+        from slice import retrieve
+        result = retrieve.ingest(store, str(Path(__file__).parent / "corpus"))
+        print(f"{DIM}corpus   : {result['chunks']} chunks from "
+              f"{result['files']} file(s){RESET}")
+    except Exception as e:
+        print(f"{YELLOW}corpus   : retrieval unavailable ({type(e).__name__}), "
+              f"sending full notes{RESET}")
+
+
 def preflight(settings) -> bool:
     if not settings.api_key:
         print(f"{RED}No OPENROUTER_API_KEY.{RESET}")
@@ -60,13 +77,22 @@ def one_call(step: str) -> None:
     if DB.exists():
         DB.unlink()
     store = Store(DB)
+    _ingest(store)
     run_id = store.create_run("recall", meta={"student_id": "mira"})
     store.append(run_id, "attempt", fixtures.MIRA_1, produced_by="ingest")
     budget = Budget(store, run_id, settings)
 
     attempt = fixtures.MIRA_1
+    chunks = []
     if step == "extract":
-        messages, schema = build_extract_messages(attempt, NOTES), EvidenceSet
+        try:
+            from slice import retrieve
+            chunks = retrieve.search(
+                store, f"{attempt['assignment_prompt']} {attempt['submission']}", k=3)
+            print(f"{DIM}retrieved: {', '.join(c.cite() for c in chunks)}{RESET}")
+        except Exception:
+            pass
+        messages, schema = build_extract_messages(attempt, NOTES, chunks), EvidenceSet
     elif step == "compare":
         messages = build_compare_messages(
             {"items": [], "uncertainty_notes": []}, {"evidence": [], "finding": [],
@@ -100,8 +126,9 @@ def one_call(step: str) -> None:
 
     # The part that matters more than the prose.
     if isinstance(result, EvidenceSet):
-        sources = {f"{attempt['assignment_id']}#response": attempt["submission"],
-                   "course_notes": NOTES}
+        sources = {f"{attempt['assignment_id']}#response": attempt["submission"]}
+        sources.update({c.cite(): c.text for c in chunks} if chunks
+                       else {"course_notes": NOTES})
         checked = provenance.check_evidence(result.items, sources)
         bad = provenance.unsupported(checked)
         print(f"\n{BOLD}citation check{RESET} {DIM}(code, no model){RESET}")
@@ -130,6 +157,7 @@ def full_story() -> None:
     if DB.exists():
         DB.unlink()
     store = Store(DB)
+    _ingest(store)
 
     def trace(step: str, secs: float, detail: str) -> None:
         # A silent terminal during a 20-second call looks hung, and a run that

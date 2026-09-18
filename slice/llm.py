@@ -24,6 +24,7 @@ A student cannot tell those apart from a raw error, so we do it for them.
 from __future__ import annotations
 
 import json
+import re
 import time
 from typing import Any, Type
 
@@ -52,6 +53,48 @@ GROQ_MODELS = {
     "groq/compound-mini",
     "allam-2-7b",
 }
+
+
+MAX_RATE_LIMIT_WAIT = 20.0
+"""Longest we will sit on a 429 before giving up on that model.
+
+Groq's free tier is 8,000 tokens per minute, and an encounter costs ~4,500 - so
+two runs back to back hit the ceiling and the API replies "try again in 11.6s".
+That is a queue, not an outage, and waiting it out is right. Beyond twenty
+seconds it is no longer a queue and the fallback is the better answer.
+"""
+
+
+def _retry_after(r: httpx.Response) -> float | None:
+    """How long the provider says to wait, in seconds, or None if it did not say.
+
+    Honours the standard Retry-After header, then Groq's own reset headers,
+    then the wait quoted in the error message itself.
+    """
+    header = r.headers.get("retry-after")
+    if header:
+        try:
+            return float(header)
+        except ValueError:
+            pass
+    for name in ("x-ratelimit-reset-tokens", "x-ratelimit-reset-requests"):
+        raw = r.headers.get(name)
+        if raw:
+            parsed = _duration(raw)
+            if parsed is not None:
+                return parsed
+    match = re.search(r"try again in ([\d.]+)s", r.text)
+    return float(match.group(1)) if match else None
+
+
+def _duration(raw: str) -> float | None:
+    """Parse Groq's duration strings: '11.5s', '105ms', '1m26.4s'."""
+    match = re.fullmatch(r"(?:(\d+)m)?([\d.]+)(ms|s)?", raw.strip())
+    if not match:
+        return None
+    minutes, value, unit = match.groups()
+    seconds = float(value) / 1000 if unit == "ms" else float(value)
+    return seconds + (int(minutes) * 60 if minutes else 0)
 
 
 def _route(model: str, settings: Settings) -> tuple[str, str, str]:
@@ -174,8 +217,12 @@ def complete(
         attempts.append((settings.fallback_model, "fallback"))
 
     last_text = ""
+    waited = False
     with _Span(settings, f"llm:{step}", {"model": primary, "step": step}) as span:
-        for mid, role in attempts:
+        i = 0
+        while i < len(attempts):
+            mid, role = attempts[i]
+            i += 1
             body = {
                 "model": mid,
                 "max_tokens": settings.max_tokens,
@@ -210,6 +257,25 @@ def complete(
 
             if r.status_code == 402:
                 raise _classify_402(_safe_json(r))     # never worth a retry
+
+            # A 429 from a token-per-minute limit is not an outage - it is a
+            # queue, and it tells you how long the queue is. Falling straight
+            # through to the fallback wastes that, and on a single-provider
+            # setup the fallback is behind the SAME limit, so both fail and the
+            # run dies on something that would have cleared in ten seconds.
+            #
+            # Wait once, if the wait is short enough to be worth it. Anything
+            # longer is a real outage and should fall back instead.
+            if r.status_code == 429 and not waited:
+                delay = _retry_after(r)
+                if delay is not None and delay <= MAX_RATE_LIMIT_WAIT:
+                    span.record(output={"model": mid, "rate_limited": True,
+                                        "waited": delay})
+                    time.sleep(delay + 0.25)
+                    waited = True
+                    i -= 1                              # try this model again
+                    continue
+
             if r.status_code in (429, 500, 502, 503) and role == "primary":
                 continue                                # transient: fall back
             if r.status_code != 200:

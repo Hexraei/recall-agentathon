@@ -60,13 +60,31 @@ def _prompt(name: str) -> str:
 # compare, draft, and the claim-strength half of the check - and no ambiguity
 # about which they are.
 
-def build_extract_messages(attempt: dict, notes: str) -> list[dict]:
+def build_extract_messages(attempt: dict, notes: str,
+                           chunks: list | None = None) -> list[dict]:
+    """`chunks` is what retrieval found for this submission. When it is None the
+    whole `notes` string is sent, which is what happens with no corpus ingested.
+
+    Sending everything does not scale and is not the point. Two pages of notes
+    is 758 tokens to analyse a 29-token answer; a real course is fifty pages and
+    simply will not fit. Retrieval also makes the citation check mean something
+    here: a claim cites `ds-notes.md#3`, a passage a reader can open, rather than
+    one undifferentiated blob called `course_notes`.
+    """
+    if chunks:
+        material = "\n\n".join(f"[{c.cite()}]\n{c.text}" for c in chunks)
+        header = ("Relevant course notes. Cite the reference in brackets as the "
+                  "source_ref when a passage comes from one of these:")
+    else:
+        material = notes
+        header = "Course notes (source_ref: course_notes):"
+
     return [
         {"role": "system", "content": _prompt("extract")},
         {"role": "user", "content": (
             f"Assignment prompt:\n{attempt['assignment_prompt']}\n\n"
             f"Learning objectives:\n" + "\n".join(f"- {o}" for o in attempt["learning_objectives"])
-            + f"\n\nCourse notes (source_ref: course_notes):\n{notes}"
+            + f"\n\n{header}\n{material}"
             + f"\n\nThe student's submission (source_ref: {attempt['assignment_id']}#response):\n"
             + attempt["submission"]
         )},
@@ -184,16 +202,26 @@ def build_flow(call=complete, notes: str = "", trace=None):
     def handle_extracting(ctx) -> RunState:
         """Pull evidence passages, then verify every citation in plain code."""
         attempt = ctx.latest("attempt")
+
+        # Retrieve the notes that bear on THIS submission, rather than sending
+        # all of them. Falls back to the whole string if no corpus is ingested,
+        # so the flow still runs with retrieval switched off.
+        chunks = _retrieve_notes(ctx, attempt)
+
         result = timed("extract", lambda: call(
             settings=ctx.settings, budget=ctx.budget,
-            messages=build_extract_messages(attempt, notes),
+            messages=build_extract_messages(attempt, notes, chunks),
             schema=EvidenceSet, step="extract",
         ), lambda r: f"{len(r.items)} passages")
 
-        sources = {
-            f"{attempt['assignment_id']}#response": attempt["submission"],
-            "course_notes": notes,
-        }
+        # Only what this run actually loaded counts as a source. A retrieved
+        # chunk is citable by its own reference; a chunk the search did not
+        # return is not, which is what stops a fabricated citation.
+        sources = {f"{attempt['assignment_id']}#response": attempt["submission"]}
+        if chunks:
+            sources.update({c.cite(): c.text for c in chunks})
+        else:
+            sources["course_notes"] = notes
         items = provenance.check_evidence(result.items, sources)
         bad = provenance.unsupported(items)
 
@@ -413,6 +441,30 @@ def build_flow(call=complete, notes: str = "", trace=None):
             RunState.RECOMMENDATION_READY: handle_recommendation_ready,
         },
     )
+
+
+def _retrieve_notes(ctx, attempt: dict, k: int = 3) -> list:
+    """The course passages that bear on this submission.
+
+    The query is the assignment prompt plus the student's own words, because
+    what matters is the material relevant to *what they wrote*, not to the topic
+    in general.
+
+    Returns [] if no corpus has been ingested, if the extension will not load,
+    or if anything else goes wrong - retrieval is an optimisation here, and a
+    run that cannot retrieve should fall back to the full notes rather than
+    fail. The failure is recorded so it is visible in a replay.
+    """
+    try:
+        from slice import retrieve
+        query = f"{attempt['assignment_prompt']} {attempt['submission']}"
+        return retrieve.search(ctx.store, query, k=k)
+    except Exception as e:
+        ctx.append("failure", {"kind": "retrieval_unavailable",
+                               "detail": f"{type(e).__name__}: {e}",
+                               "note": "fell back to sending the whole notes"},
+                   produced_by="extract")
+        return []
 
 
 def _classify_answer(raw: str | None) -> str:
