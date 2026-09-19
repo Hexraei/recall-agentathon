@@ -58,8 +58,8 @@ cite evidence and hand the decision to a human." It did.
 
 ## The general lesson
 
-Same shape as [bug-03](bug-03-biased-compare-prompt.md) and
-[bug-05](bug-05-checker-hallucinated-contradictions.md): the first plausible
+Same shape as [bug-03](bug-03-biased-compare-prompt.md) and the
+hallucinated-contradictions finding: the first plausible
 explanation was wrong. Here the first plausible explanation was *"the model
 over-claimed"* — the most comfortable conclusion available, because it blames
 the model rather than the person who built the test. Reading the citation before

@@ -53,7 +53,7 @@ one can remember it.
 **Category A — there is a pattern, and it should be found.** Members hand-picked
 because their wrong answers really do land on one concept. Selected by reading
 `roster.by_concept` / `misconceptions` rows directly, *not* the generated
-reports: [bug-04](evidence/bug-04-empty-structured-fields.md) records that 59% of
+reports: the "empty structured fields" finding in [docs/evidence](evidence/) records that 59% of
 real reports drop a genuine strength or gap from their structured fields, so a
 report's `gaps` list cannot be trusted to pick these.
 
@@ -193,3 +193,12 @@ has finished since.
 
 **`webapp.db` is read-only throughout and is never written to.** After the run
 above it contained zero `recall` runs; all 15 live in `memory.db`.
+
+## On a phone
+
+The mobile app reads this demo over a read-only JSON API
+(`/api/memory`, [`app/memory_api.py`](../app/memory_api.py)) served from
+`memory.db`. The app states *what* each sitting concluded and shows the answers
+it cited; it deliberately carries no field explaining *why* a sitting came out
+the way it did, because a person explains that live while the screen is up.
+Build notes for it: [`FLUTTER_CONTEXT.md`](../FLUTTER_CONTEXT.md).

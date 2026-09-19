@@ -9,6 +9,7 @@ Shape of the thing
     /teacher         pick a department
     /teacher/{dept}  class report + per-student list, both agent-written
     /teacher/{dept}/{sid}  one student, seen by the teacher
+    /api/memory/*    JSON, read-only: the persistent-memory demo for the app
 
 Why there is no feedback per question
 -------------------------------------
@@ -37,7 +38,7 @@ from slice.config import settings as load_settings
 from slice.llm import complete
 from slice.store import Store
 
-from app import bank, report, roster
+from app import bank, memory_api, report, roster
 
 DB = Path(__file__).parent / os.environ.get("RECALL_DB", "webapp.db")
 """Which database this process writes to.
@@ -57,6 +58,13 @@ fiction, with no way to tell afterwards which rows were which.
 """
 
 app = FastAPI()
+
+# The mobile app's read-only view of the persistent-memory demo, served from
+# memory.db rather than this process's database. It opens its own read-only
+# connection per request, so it shares none of the locking machinery below and
+# cannot write to anything. None of the quiz routes change because of it.
+app.include_router(memory_api.router)
+
 _settings = load_settings()
 _store: Store | None = None
 _store_lock = threading.RLock()
