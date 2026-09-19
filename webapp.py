@@ -90,8 +90,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;
 .wrap{max-width:680px;margin:0 auto;padding:1.5rem 1.15rem 4rem}
 .wide{max-width:980px}
 h1{font-size:1.45rem;margin:.2rem 0 .5rem;line-height:1.3;font-weight:600}
-h2{font-size:.82rem;margin:1.7rem 0 .5rem;color:var(--muted);
- text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+h2{font-size:1rem;margin:1.6rem 0 .5rem;color:var(--ink);font-weight:600}
 p{margin:.6rem 0}
 .muted{color:var(--muted);font-size:.92rem}
 a{color:var(--accent)}
@@ -112,28 +111,26 @@ button.go:disabled{background:#9db3a8;cursor:wait}
 .bar i{display:block;height:100%;background:var(--accent)}
 .meta{display:flex;justify-content:space-between;align-items:center;
  font-size:.82rem;color:var(--muted);margin-bottom:.3rem}
-.chip{display:inline-block;background:var(--accent-soft);border:1px solid var(--line);
- padding:.2rem .6rem;border-radius:99px;font-size:.76rem;color:var(--muted)}
+.chip{display:inline-block;font-size:.8rem;color:var(--muted)}
 .q{font-size:1.22rem;font-weight:600;line-height:1.4;margin:1.2rem 0 1.3rem}
 
 /* Every option identical. */
 .opts{display:grid;gap:.6rem}
 .opt{width:100%;text-align:left;padding:.95rem 1.05rem;font-size:1rem;
- border:1px solid var(--line);border-radius:10px;background:var(--card);
+ border:1px solid var(--line);border-radius:6px;background:var(--card);
  color:var(--ink);cursor:pointer;font-weight:400;line-height:1.45;
- transition:border-color .12s,background .12s;font-family:inherit}
-.opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+ transition:border-color .12s;font-family:inherit}
+.opt:hover{border-color:var(--accent)}
 .opt:disabled{opacity:.45;cursor:wait}
 .k{font-weight:700;color:var(--muted);margin-right:.6rem}
 
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;
  padding:1rem 1.15rem;margin:.7rem 0}
 .card.key{border-left:3px solid var(--accent)}
 .big{font-size:2.6rem;font-weight:700;letter-spacing:-.02em;color:var(--accent)}
 table{width:100%;border-collapse:collapse;font-size:.93rem;margin-top:.4rem}
-th{text-align:left;color:var(--muted);font-weight:600;font-size:.74rem;
- text-transform:uppercase;letter-spacing:.05em;padding:.5rem .55rem;
- border-bottom:1px solid var(--line)}
+th{text-align:left;color:var(--muted);font-weight:600;font-size:.85rem;
+ padding:.5rem .55rem;border-bottom:1px solid var(--line)}
 td{padding:.6rem .55rem;border-bottom:1px solid var(--line)}
 .pct{display:inline-block;min-width:3rem;font-variant-numeric:tabular-nums}
 .sb{display:inline-block;width:76px;height:7px;background:var(--line);
@@ -156,8 +153,6 @@ td{padding:.6rem .55rem;border-bottom:1px solid var(--line)}
  border:3px solid var(--line);border-top-color:var(--accent);
  animation:sp .9s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.fade{animation:fi .25s ease-out}
-@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
 """
 
 

@@ -79,8 +79,16 @@ class ConceptCall(BaseModel):
     concept: str
     """Must match a concept the student actually answered on. Checked in code."""
     verdict: Literal["strong", "mixed", "weak"]
-    evidence: str = Field(max_length=300)
-    """What in the counts supports this - the model's reading, in one sentence."""
+    evidence: str = Field(max_length=160)
+    """What in the counts supports this - the model's reading, in one sentence.
+
+    Lowered from 300 after a genuinely all-strong report (5 concepts, all
+    `strong`, nothing to trim) intermittently overran settings.max_tokens and
+    was truncated mid-JSON - the same failure as bug 01, recurring because 5
+    entries at 300 characters each, plus a headline and next_step, sometimes
+    does not fit. A hard character cap holds regardless of how many concepts a
+    student happens to have; prompt wording asking for brevity does not.
+    """
 
 
 # The length bounds below are not stylistic. A request is capped at
