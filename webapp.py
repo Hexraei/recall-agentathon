@@ -565,6 +565,58 @@ def teacher_student(dept: str, sid: str):
     return RedirectResponse(f"/report/{sid}", status_code=303)
 
 
+# ------------------------------------------------------------------- 5. live
+
+@app.get("/live", response_class=HTMLResponse)
+def live(request: Request):
+    """A rolling headcount, for the person running this, nobody else.
+
+    Localhost only - the public ngrok tunnel forwards every path on this app,
+    so without this check anyone holding the student-facing link could also
+    reach /live just by guessing the path. `request.client.host` is the
+    server's own view of who connected; a tunnelled request arrives from
+    127.0.0.1 same as a real one, so this is checked by testing straight
+    through the tunnel, not assumed from the code alone.
+
+    Refreshes itself every 15s via a plain meta tag - no JS, nothing to break
+    if a phone's browser is being awkward, and it survives a page reload the
+    same way. Counts, not names: this is glanced at while people are mid-quiz,
+    not a place to read anyone's score.
+    """
+    if request.client is None or request.client.host not in ("127.0.0.1", "::1"):
+        return HTMLResponse("Not found", status_code=404)
+
+    s = store()
+    rows = []
+    total_done = total_seen = 0
+    for dept, label in bank.DEPARTMENTS.items():
+        people = roster.students_in(s, dept)
+        done = sum(1 for p in people if roster.score(s, p["id"])[1] >= 20)
+        seen = len(people)
+        total_done += done
+        total_seen += seen
+        rows.append(f"<tr><td>{esc(label)}</td><td>{done}</td>"
+                    f"<td class=\"muted\">{seen - done} still going</td>"
+                    f"<td class=\"muted\">{seen} total</td></tr>")
+
+    import datetime
+    stamp = datetime.datetime.now().strftime("%H:%M:%S")
+    return HTMLResponse(f"""<!doctype html><html lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="refresh" content="15">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recall — live</title><style>{CSS}</style></head>
+<body><div class="wrap">
+<a class="brand" href="/">Recall</a>
+<h1>Live count</h1>
+<div class="big">{total_done}<span class="muted" style="font-size:1.2rem">
+ /{total_seen} finished</span></div>
+<p class="muted">Refreshes every 15 seconds. Last updated {stamp}.</p>
+<table><tr><th>Department</th><th>Finished</th><th></th><th></th></tr>
+{"".join(rows)}</table>
+</div></body></html>""")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
