@@ -1,6 +1,6 @@
 # Recall — Agent-a-thon 2026 Full Context Transfer
 
-Team: Mavericks (Navin + Barathkumar M P)
+Team: Mavericks (Navin + Barathkumar M P + Jasper)
 Event: 48 Hours Agent-a-thon, CSE Dept, CEG, Anna University
 Theme: Building the Next Generation of Agentic EdTech
 Hackathon dates: Sept 19–20, 2026
@@ -214,9 +214,10 @@ Beyond the live quiz, Recall extends into three additional touchpoints, each rea
 Team Name: MAVERICKS · Chosen Track: Persistent Student State · Lead Name: Navin · Team Lead Contact: 9363129869 · Mail: vnavin7714@gmail.com
 
 **S2 — Team Details**
-Columns: **Name | Register No. | Year | Department** (confirmed final column set, supersedes an earlier draft that used Name/Role/Contact/Focus Area and another that used Name/Department & Year/College/Contact). Register numbers not yet filled in — user to complete. 2-person team confirmed (a separate draft doc's claim that a 3rd member was compulsory was confirmed outdated/incorrect).
+Columns: **Name | Register No. | Year | Department** (confirmed final column set, supersedes an earlier draft that used Name/Role/Contact/Focus Area and another that used Name/Department & Year/College/Contact). Register numbers not yet filled in — user to complete.
 - Navin — Robotics & Automation, MIT Anna University
 - Barathkumar M P — CSE, CEG Anna University
+- Jasper
 
 **S3 — Problem Statement** (final version)
 > Ask a student a question and today's AI answers instantly. Ask it what that same student got wrong last month, and it has nothing.

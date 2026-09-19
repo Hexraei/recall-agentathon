@@ -31,6 +31,7 @@ The model's job is to say what they MEAN, never to work out what they are.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -210,15 +211,6 @@ def build_class_messages(facts: dict, rejected: dict | None) -> list[dict]:
         )
     return [{"role": "system", "content": _prompt("class_report")},
             {"role": "user", "content": "\n\n---\n\n".join(user)}]
-
-
-def build_check_messages(report: dict, facts: dict, kind: str) -> list[dict]:
-    return [{"role": "system", "content": _prompt("report_check")},
-            {"role": "user", "content": (
-                f"Report kind: {kind}\n\nReport under review:\n"
-                + json.dumps(report, indent=2)
-                + "\n\nThe measured counts it must rest on:\n"
-                + json.dumps(facts, indent=2))}]
 
 
 # ----------------------------------------------------------------- the facts
@@ -465,6 +457,142 @@ def check_citations(report: dict, facts: dict) -> ReportCheck | None:
     return None
 
 
+# ---------------------------------------------------------- claim_strength, in code
+
+# A checker model was asked to find a sentence the counts contradict. Measured
+# across a real cohort (10 students, both departments), every rejection pulled
+# from demo.db was the checker inventing a contradiction that was not there:
+#
+#   "the counts show 3 correct out of 3 asked" used to reject a sentence
+#   saying all three were right - the TRUE case, rejected as false, twice.
+#
+#   "8 of 20" rejected against a headline that also says "8 of 20", verbatim,
+#   twice.
+#
+#   "one topic was clean" rejected by restating the fact that supports it.
+#
+# This is not a wording problem in report_check.md - three rounds of tightening
+# that prompt changed which false rejections happened, not whether they did.
+# It is the same capability gap `verdict_for()`, `enforce_pattern()` and
+# `check_citations()` were all created to route around: a model asked to do
+# arithmetic or exact structural comparison does it unreliably, even when the
+# numbers are handed to it directly. Every one of those moves held up under
+# measurement; every model-judged version of this exact task kept failing. So
+# `claim_strength` moves the same way - the checker call is gone, not just its
+# prompt.
+#
+# What is actually being verified is narrow: a report may not claim a clean
+# sweep ("all", "every", "each", "always") on a concept that has any wrong
+# answers, may not misquote the topic's or the student's own score, and may
+# not compare the student/class to anyone else or describe their character.
+# All three are exact, mechanical checks - the same kind of fact `verdict_for`
+# already turns into a number instead of an opinion.
+
+_UNIVERSAL_WORDS = (
+    "all of these", "all of them", "every one", "every answer", "each of these",
+    "each one", "always got", "consistently got", "got them all", "got it all",
+    "right every time", "every time", "clean sweep", "all correct", "all right",
+    "were right", "was right", "got all",
+)
+
+_COMPARISON_PHRASES = (
+    "compared to", "compared with", "below average", "above average",
+    "the class average", "most students", "other students", "than your peers",
+    "than the rest", "rank", "ranked", "percentile", "better than", "worse than",
+)
+
+_CHARACTER_WORDS = (
+    "lazy", "careless", "weak student", "strong student", "smart", "stupid",
+    "not trying", "gave up", "doesn't care", "don't care", "not paying attention",
+)
+
+
+def _mentions_universal_claim(text: str) -> bool:
+    low = text.lower()
+    return any(phrase in low for phrase in _UNIVERSAL_WORDS)
+
+
+def _prose_fields(report: dict) -> list[tuple[str, str]]:
+    """Every free-text field a report can make a claim in, labelled."""
+    out = [("headline", report.get("headline") or "")]
+    for field in ("strengths", "gaps", "teach_again", "solid"):
+        for row in report.get(field) or []:
+            out.append((f"{field}:{row.get('concept')}", row.get("evidence") or ""))
+    if report.get("cross_topic_pattern"):
+        out.append(("cross_topic_pattern", report["cross_topic_pattern"]))
+    for field in ("next_step", "uncertainty", "split"):
+        if report.get(field):
+            out.append((field, report[field]))
+    return out
+
+
+def _headline_score_claim(headline: str) -> tuple[int, int] | None:
+    """Pull an "X of Y" / "X out of Y" claim out of a headline, if it makes one.
+
+    Only a small, deliberate grammar - the point is to catch a wrong number,
+    not to parse arbitrary prose. A headline that does not use this shape makes
+    no numeric claim this check can verify, and is left alone.
+    """
+    m = re.search(r"(\d+)\s*(?:of|out of)\s*(\d+)", headline)
+    if not m:
+        return None
+    return int(m.group(1)), int(m.group(2))
+
+
+def check_claim_strength(report: dict, facts: dict) -> ReportCheck | None:
+    """Code-side replacement for the model 'find a false sentence' check.
+
+    Returns a rejection, or None to continue. See the note above this function
+    for why this is code and not a model call.
+    """
+    overall = facts.get("score")  # student reports only
+    concepts = {r["concept"]: r for r in facts.get("by_concept", [])}
+
+    headline = report.get("headline") or ""
+    claimed = _headline_score_claim(headline)
+    if claimed and overall:
+        got, asked = claimed
+        if (got, asked) != (overall["correct"], overall["asked"]):
+            return ReportCheck(
+                verdict="rejected", failed_check="claim_strength",
+                detail=(f"The headline says '{headline}' but the measured score "
+                        f"is {overall['correct']} of {overall['asked']}."))
+
+    for label, text in _prose_fields(report):
+        if not text:
+            continue
+        if _mentions_universal_claim(text):
+            # Which concept is this claim about, if any - a strengths/gaps/
+            # teach_again/solid entry names one in its label.
+            concept = label.split(":", 1)[1] if ":" in label else None
+            row = concepts.get(concept) if concept else None
+            if row is not None:
+                asked = row.get("asked", row.get("answered", 0))
+                if row["correct"] < asked:
+                    return ReportCheck(
+                        verdict="rejected", failed_check="claim_strength",
+                        detail=(f"The sentence '{text}' claims a clean sweep for "
+                                f"'{concept}', but the counts show "
+                                f"{row['correct']} correct out of {asked} - "
+                                "at least one wrong answer."))
+
+        low = text.lower()
+        hit = next((p for p in _COMPARISON_PHRASES if p in low), None)
+        if hit:
+            return ReportCheck(
+                verdict="rejected", failed_check="claim_strength",
+                detail=f"The sentence '{text}' compares against other students "
+                       f"('{hit}'), which this report is not given data for.")
+        hit = next((p for p in _CHARACTER_WORDS if p in low), None)
+        if hit:
+            return ReportCheck(
+                verdict="rejected", failed_check="claim_strength",
+                detail=f"The sentence '{text}' describes the person rather than "
+                       f"the work ('{hit}').")
+
+    return None
+
+
 # ------------------------------------------------------------------- the loop
 
 def _generate(store, kind: str, key: str, facts: dict, schema, build, call,
@@ -523,11 +651,14 @@ def _generate(store, kind: str, key: str, facts: dict, schema, build, call,
             if trace:
                 trace("correct", attempt, "; ".join(corrected))
 
-        check = check_citations(body, facts)
+        # Both checks are code, not a model call. citation and claim_strength
+        # were both, in turn, judgement calls handed to a model and both, in
+        # turn, measured to fail at it - see check_claim_strength()'s note for
+        # the numbers. Nothing here asks a model to compare a sentence to a
+        # count anymore.
+        check = check_citations(body, facts) or check_claim_strength(body, facts)
         if check is None:
-            check = call(settings=settings, budget=budget,
-                         messages=build_check_messages(body, facts, kind),
-                         schema=ReportCheck, step="report_check")
+            check = ReportCheck(verdict="accepted")
         trail.append({"step": "check", "revision": attempt,
                       "body": check.model_dump()})
         if trace:

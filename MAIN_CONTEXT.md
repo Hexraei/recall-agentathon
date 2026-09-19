@@ -1,6 +1,6 @@
 # Recall — Build Context
 
-**Team:** Navin V, Barathkumar M P
+**Team:** Navin V, Barathkumar M P, Jasper
 **Event:** CEG ASTRA Agent-a-thon, 19–20 September 2026, 9:00–18:00 on site each day
 **Status:** `Mavericks_04.pdf` is the submitted AgentSpec and remains the spec of record.
 This document is the **build reference**: the submitted spec plus decisions taken after

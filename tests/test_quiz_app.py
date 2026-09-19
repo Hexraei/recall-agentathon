@@ -411,26 +411,30 @@ def test_an_accepted_draft_stops_the_loop(store):
     sid = roster.create_student(store, "A", "1", "R", "computer_science")
     _answer_all(store, sid, "computer_science",
                 wrong_concepts={_widest("computer_science")})
-    call = _Scripted(_OK_REPORT, {"verdict": "accepted"})
+    call = _Scripted(_OK_REPORT)
 
     body = report.for_student(store, sid, settings=None, call=call, force=True)
     assert body["_revisions"] == 1
-    assert call.calls == ["student_report", "report_check"]
+    # The check is code now (see check_claim_strength) - a clean draft costs
+    # exactly one model call, not two.
+    assert call.calls == ["student_report"]
     assert "_unverified" not in body
 
 
 def test_a_rejection_sends_the_draft_back_with_the_reason(store):
     """The back-edge. The second request must carry the objection - a blind
-    retry of an identical prompt usually fails identically."""
+    retry of an identical prompt usually fails identically.
+
+    The rejection itself comes from check_claim_strength (code), triggered by
+    a real overclaim in the draft body, not a scripted checker reply - the
+    checker is no longer a model call.
+    """
     sid = roster.create_student(store, "A", "1", "R", "computer_science")
     _answer_all(store, sid, "computer_science",
                 wrong_concepts={_widest("computer_science")})
 
-    overclaim = dict(_OK_REPORT, cross_topic_pattern="Everything is connected.")
-    call = _Scripted(overclaim,
-                     {"verdict": "rejected", "failed_check": "claim_strength",
-                      "detail": "The pattern is not traceable to specific rows."},
-                     _OK_REPORT, {"verdict": "accepted"})
+    overclaim = dict(_OK_REPORT, headline="You got 20 of 20 questions right.")
+    call = _Scripted(overclaim, _OK_REPORT)
 
     body = report.for_student(store, sid, settings=None, call=call, force=True)
     assert body["_revisions"] == 2
@@ -458,17 +462,19 @@ def test_a_report_that_never_passes_ships_flagged_not_silently(store):
     is better served by a flagged report than by nothing - but it must not look
     like it passed.
 
-    Scripted from MAX_DRAFTS rather than a hard-coded 3, so tuning the budget
-    does not silently turn this into a test of nothing."""
+    Every scripted draft repeats the same real overclaim, so check_claim_strength
+    (code) rejects it every time - scripted from MAX_DRAFTS rather than a
+    hard-coded 3, so tuning the budget does not silently turn this into a test
+    of nothing."""
     sid = roster.create_student(store, "A", "1", "R", "computer_science")
-    _answer_all(store, sid, "computer_science")
-    reject = {"verdict": "rejected", "failed_check": "claim_strength",
-              "detail": "still overclaims"}
-    call = _Scripted(*([_OK_REPORT, reject] * report.MAX_DRAFTS))
+    _answer_all(store, sid, "computer_science",
+                wrong_concepts={_widest("computer_science")})
+    overclaim = dict(_OK_REPORT, headline="You got 20 of 20 questions right.")
+    call = _Scripted(*([overclaim] * report.MAX_DRAFTS))
 
     body = report.for_student(store, sid, settings=None, call=call, force=True)
     assert body["_revisions"] == report.MAX_DRAFTS
-    assert body["_unverified"] == "still overclaims"
+    assert "20 of 20" in body["_unverified"]
     assert not call.replies, "the loop stopped early"
 
 
@@ -478,11 +484,14 @@ def test_a_slow_report_stops_at_the_deadline_and_ships_what_it_has(store, monkey
     simply composed. MAX_DRAFTS cannot catch that because the time goes INSIDE
     one draft's call chain, so the deadline is a third, separate counter."""
     sid = roster.create_student(store, "A", "1", "R", "computer_science")
-    _answer_all(store, sid, "computer_science")
+    _answer_all(store, sid, "computer_science",
+                wrong_concepts={_widest("computer_science")})
 
-    reject = {"verdict": "rejected", "failed_check": "claim_strength",
-              "detail": "overclaims"}
-    call = _Scripted(_OK_REPORT, reject, _OK_REPORT, reject, _OK_REPORT, reject)
+    # A real overclaim, so check_claim_strength (code) rejects every draft -
+    # the check itself is no longer a model call, so only draft replies are
+    # scripted here.
+    overclaim = dict(_OK_REPORT, headline="You got 20 of 20 questions right.")
+    call = _Scripted(overclaim, overclaim, overclaim)
 
     # A clock that jumps past the deadline once the first draft has been
     # written. Driven by the scripted call rather than by a call count, because
@@ -505,8 +514,8 @@ def test_a_slow_report_stops_at_the_deadline_and_ships_what_it_has(store, monkey
     assert body["_revisions"] == 1, "kept drafting past the deadline"
     assert "deadline" in body["_unverified"]
     # It still shipped a usable report rather than raising.
-    assert body["headline"] == _OK_REPORT["headline"]
-    assert len(call.replies) == 4, "should have stopped after the first pair"
+    assert body["headline"] == overclaim["headline"]
+    assert len(call.replies) == 2, "should have stopped after the first draft"
 
 
 def test_a_cached_report_does_not_call_the_model_again(store):
