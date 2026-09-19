@@ -21,10 +21,26 @@ import '../../widgets/shared/sheets.dart';
 ///
 /// States: running; deadline near; everyone submitted; confirm ending early;
 /// closed.
-class LiveMonitorScreen extends StatelessWidget {
+class LiveMonitorScreen extends StatefulWidget {
   const LiveMonitorScreen({super.key, required this.controller});
 
+  /// Handed over by the Host Lobby once the quiz starts, so the roster and
+  /// the countdown carry across without a refetch. Ownership comes with it:
+  /// this screen is what disposes it.
   final HostSessionController controller;
+
+  @override
+  State<LiveMonitorScreen> createState() => _LiveMonitorScreenState();
+}
+
+class _LiveMonitorScreenState extends State<LiveMonitorScreen> {
+  HostSessionController get controller => widget.controller;
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
 
   Future<void> _confirmEnd(BuildContext context, int openAttempts) async {
     final end = await showAppSheet<bool>(

@@ -36,6 +36,10 @@ class HostLobbyScreen extends StatefulWidget {
 class _HostLobbyScreenState extends State<HostLobbyScreen> {
   late final HostSessionController _c;
 
+  /// The monitor takes ownership of the controller when the quiz starts, so
+  /// this screen must not dispose it on the way out.
+  bool _handedOff = false;
+
   @override
   void initState() {
     super.initState();
@@ -45,7 +49,7 @@ class _HostLobbyScreenState extends State<HostLobbyScreen> {
 
   @override
   void dispose() {
-    _c.dispose();
+    if (!_handedOff) _c.dispose();
     super.dispose();
   }
 
@@ -54,6 +58,7 @@ class _HostLobbyScreenState extends State<HostLobbyScreen> {
     if (!mounted) return;
     // The monitor takes over the same controller, so the roster and the
     // countdown carry across without a refetch.
+    _handedOff = true;
     Navigator.of(context)
         .pushReplacementNamed(Routes.liveMonitor, arguments: _c);
   }
