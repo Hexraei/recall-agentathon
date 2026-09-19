@@ -202,3 +202,6 @@ The mobile app reads this demo over a read-only JSON API
 it cited; it deliberately carries no field explaining *why* a sitting came out
 the way it did, because a person explains that live while the screen is up.
 Build notes for it: [`FLUTTER_CONTEXT.md`](../FLUTTER_CONTEXT.md).
+
+How this was built, in order, including the two things we got wrong and how the
+pipeline surfaced them: [`memory-demo-build-log.md`](memory-demo-build-log.md).
