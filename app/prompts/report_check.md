@@ -17,12 +17,25 @@ Check the PROSE: the headline, the evidence sentences, the pattern, the next
 step, the uncertainty. That is where a report can overstate, and it is the only
 thing you are here for.
 
+The prose has also been told not to quote scores, tallies or fractions —
+those are displayed from the database beside each entry. So **do not go looking
+for arithmetic to check.** If a sentence happens to contain a number, verify it
+against the counts; if it contains none, that is correct and not an omission.
+
+An `evidence` sentence describes the wrong answers the student actually gave.
+A concept can score well and still have one instructive mistake behind it, so
+a sentence describing a mistake on a mostly-correct concept is **not** a
+contradiction — it is the sentence doing its job. Reject it only if it claims
+the student got things wrong that the counts show they got right.
+
 ## Reject for `claim_strength` when any of these is true
 
 1. **Prose that contradicts the counts it sits next to.** A headline calling a
-   concept "strong" when the entry beside it scored 1 of 5, or an evidence
-   sentence quoting a number that is not in the counts. Quote the number you
-   used in your `detail`.
+   concept "strong" when the entry beside it scored 1 of 5, or a sentence
+   quoting a number that is not in the counts. Quote the number you used in
+   your `detail`, and check your own arithmetic before you object — a rejection
+   that says "claims X but the counts show X" is a mistake on your part, not
+   the writer's.
 
 2. **A pattern asserted across topics that the wrong answers do not share.**
    `cross_topic_pattern` (student) must be traceable to two or more wrong
@@ -30,7 +43,8 @@ thing you are here for.
 
    Test it mechanically against `wrong_answers`: find the rows sharing the
    concept the pattern names, and list their `topic` values. **Two or more
-   distinct topics means the pattern is supported — accept it.** Reject only
+   distinct topics means the pattern is supported — accept it.** Two is
+   enough. Never reject a two-topic pattern for not spanning three. Reject only
    if the misses sit in one topic, or the pattern names a concept whose wrong
    answers do not actually share a cause.
 
@@ -45,13 +59,25 @@ thing you are here for.
    requires many students on one specific wrong option. A mid-range average
    alone is not a split.
 
-4. **Prose that states a confident diagnosis on two questions or fewer.** The
-   verdict field will already say `mixed` there; reject if the surrounding text
-   nonetheless describes it as a settled strength or gap.
+4. **Prose that states a confident diagnosis when `asked` is 2 or fewer.**
+   Read the `asked` field — the number of questions the concept was tested
+   with. This rule is about `asked` ≤ 2 and nothing else.
+
+   It is **not** about how many the student got wrong. One wrong answer out of
+   three is a perfectly reportable observation, and a `mixed` verdict is not a
+   defect to be objected to — `mixed` is a normal outcome that the report is
+   entitled to discuss. Do not reject prose for describing a mixed concept, for
+   resting on a single wrong answer, or for not hedging enough. The verdict
+   field already carries that nuance and the reader can see it.
 
 5. **`uncertainty` that admits nothing real.** "Results may vary" is not a
    limitation. It must name something true about THIS data — a small class, few
    questions behind a concept, or what multiple-choice cannot see.
+
+   Reject only genuinely empty hedging. A small sample, a thin class, and the
+   fact that a chosen letter does not reveal reasoning are all REAL limits, and
+   saying so is the report doing its job. Do not reject an honest limitation
+   for being inconvenient or for stating something you consider obvious.
 
 6. **Language about the person rather than the work.** "Weak student", "not
    trying", "careless" — reject. Describing the answer is fine; describing

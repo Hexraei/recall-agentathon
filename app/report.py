@@ -121,9 +121,31 @@ def _prompt(name: str) -> str:
     return (_PROMPTS / f"{name}.md").read_text(encoding="utf-8")
 
 
+def _fenced(facts: dict, who: str) -> str:
+    """The facts, clearly marked as INPUT and nothing else.
+
+    Handed over as a bare JSON blob, the counts get echoed straight back: the
+    model emitted `department` and `score` as top-level keys because the thing
+    it was reading looked like the thing it was being asked to write, and the
+    reply failed schema validation. A fence and an explicit field list fixed
+    what no amount of instruction-wording did.
+    """
+    return (f"<counts>  ← INPUT. The measured counts for this {who}, computed "
+            "in SQL. Read them, treat them as fact, and do NOT copy any of "
+            "these keys into your reply.\n"
+            + json.dumps(facts, indent=2)
+            + "\n</counts>")
+
+
+_STUDENT_FIELDS = ("headline, strengths, gaps, cross_topic_pattern, "
+                   "next_step, uncertainty")
+_CLASS_FIELDS = "headline, teach_again, solid, split, next_step, uncertainty"
+
+
 def build_student_messages(facts: dict, rejected: dict | None) -> list[dict]:
-    user = ["The measured counts for this student (computed in SQL, not by you "
-            "— treat them as fact):\n" + json.dumps(facts, indent=2)]
+    user = [_fenced(facts, "student"),
+            f"Your reply is a JSON object with exactly these keys: "
+            f"{_STUDENT_FIELDS}. No others."]
     if rejected:
         user.append(
             "Your previous report was REJECTED.\n"
@@ -137,8 +159,9 @@ def build_student_messages(facts: dict, rejected: dict | None) -> list[dict]:
 
 
 def build_class_messages(facts: dict, rejected: dict | None) -> list[dict]:
-    user = ["The measured counts for this class (computed in SQL, not by you "
-            "— treat them as fact):\n" + json.dumps(facts, indent=2)]
+    user = [_fenced(facts, "class"),
+            f"Your reply is a JSON object with exactly these keys: "
+            f"{_CLASS_FIELDS}. No others."]
     if rejected:
         user.append(
             "Your previous report was REJECTED.\n"
@@ -162,17 +185,27 @@ def build_check_messages(report: dict, facts: dict, kind: str) -> list[dict]:
 # ----------------------------------------------------------------- the facts
 
 def student_facts(store, student_id: str) -> dict[str, Any]:
+    """Everything a student report is allowed to see: this student, and only
+    this student.
+
+    No class averages, no cohort context, no peer comparison of any kind. A
+    student's diagnosis stands on their own work or it is not a diagnosis - and
+    a report that says "below the class average" has told them where they rank,
+    which is not what this system is for and is not something a multiple-choice
+    quiz has earned the right to say.
+
+    The class view is a separate artifact for a separate reader (class_facts,
+    below). The two departments never meet at all: the questions differ, the
+    concepts differ, and every query is scoped to one department.
+    """
     stu = roster.student(store, student_id) or {}
     got, asked = roster.score(store, student_id)
-    dept = stu.get("department", "")
     return {
-        "department": dept,
+        "department": stu.get("department", ""),
         "score": {"correct": got, "asked": asked},
         "by_topic": roster.by_topic(store, student_id),
         "by_concept": roster.by_concept(store, student_id),
         "wrong_answers": roster.misconceptions(store, student_id),
-        "class_average_by_concept": roster.class_by_concept(store, dept),
-        "class_size": roster.class_size(store, dept),
     }
 
 
@@ -207,33 +240,78 @@ def verdict_for(correct: int, asked: int) -> str:
     """
     if asked <= 2:
         return "mixed"          # too few to separate a gap from a slip
-    if correct == asked or (asked >= 4 and correct == asked - 1):
+    # "All but one" is a student-scale rule - it means a single slip across a
+    # handful of questions. Past a handful, `asked` is a whole class's answers
+    # and one wrong out of thirty is not the same claim, so it goes
+    # proportional there too.
+    if correct == asked or (4 <= asked <= 8 and correct == asked - 1) \
+            or correct >= asked * 0.8:
         return "strong"
-    if correct <= 1:
+    # Proportional, not a fixed count. "One or none correct" reads right for a
+    # student answering 3-5 questions, and is nonsense for a class report where
+    # `asked` is every answer from every student - 2 correct out of 30 is
+    # plainly weak, and an absolute threshold called it `mixed`.
+    if correct <= 1 or correct <= asked * 0.34:
         return "weak"
     return "mixed"
 
 
-def enforce_verdicts(report: dict, facts: dict) -> list[str]:
-    """Overwrite every verdict with the one the counts earn, in place.
+# Which list an entry belongs in, once its verdict is known. `gaps` and
+# `teach_again` are the weak lists; `strengths` and `solid` the strong ones.
+_WEAK_LIST = {"strengths": "gaps", "solid": "teach_again"}
+_STRONG_LIST = {v: k for k, v in _WEAK_LIST.items()}
 
-    Returns the corrections made, for the record. Nothing is rejected over a
-    verdict any more - it is simply set correctly, which is faster and cannot
-    fail. The model's prose is left exactly as written.
+
+def enforce_verdicts(report: dict, facts: dict) -> list[str]:
+    """Set every verdict from the counts, and move the entry to the list that
+    verdict belongs in. Both, in place.
+
+    The move is the half that is easy to forget, and forgetting it is worse
+    than doing nothing: correcting a 4-of-5 concept to `strong` while leaving
+    it under `gaps` produces a report that says "gap: strong", which is a
+    contradiction the checker then rejects on every single draft. Measured:
+    reports sat at the redraft ceiling until the entry moved lists too.
+
+    A `mixed` entry stays where the model put it - mixed is legitimately
+    reportable as either a soft strength or a soft gap, and that IS a judgement
+    call, unlike the arithmetic.
+
+    Returns the corrections made, for the record.
     """
     counts = {r["concept"]: r for r in facts.get("by_concept", [])}
     fixed: list[str] = []
+    moves: list[tuple[str, str, dict]] = []
+
     for field in ("strengths", "gaps", "teach_again", "solid"):
         for row in report.get(field) or []:
             row_counts = counts.get(row["concept"])
             if not row_counts:
                 continue       # the citation gate handles invented concepts
-            want = verdict_for(row_counts["correct"],
-                               row_counts.get("asked", row_counts.get("answered", 0)))
-            if row.get("verdict") != want:
-                fixed.append(f"{row['concept']}: {row.get('verdict')} -> {want} "
-                             f"({row_counts['correct']} of {row_counts.get('asked', 0)})")
-                row["verdict"] = want
+            asked = row_counts.get("asked", row_counts.get("answered", 0))
+            want = verdict_for(row_counts["correct"], asked)
+            score = f"({row_counts['correct']} of {asked})"
+
+            changed = row.get("verdict") != want
+            was = row.get("verdict")
+            row["verdict"] = want
+
+            # A strong concept filed under gaps, or a weak one under strengths.
+            dest = (_STRONG_LIST.get(field) if want == "strong"
+                    else _WEAK_LIST.get(field) if want == "weak" else None)
+            if dest:
+                moves.append((field, dest, row))
+
+            if changed or dest:
+                note = f"{row['concept']}: "
+                note += f"{was} -> {want} {score}" if changed else f"{want} {score}"
+                if dest:
+                    note += f", moved {field} -> {dest}"
+                fixed.append(note)
+
+    for src, dest, row in moves:
+        report[src].remove(row)
+        report.setdefault(dest, []).append(row)
+
     return fixed
 
 

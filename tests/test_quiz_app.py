@@ -8,6 +8,8 @@ downstream will catch it. These tests are the only thing standing there.
 """
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from app import bank, report, roster
@@ -153,6 +155,16 @@ def test_students_in_one_department_do_not_pollute_the_other(store):
     (0, 2, "mixed"),     # two questions cannot separate a gap from a slip
     (2, 2, "mixed"),
     (0, 1, "mixed"),
+    # Class scale: `asked` is every answer from every student, so the
+    # thresholds go proportional. An absolute "one or none" rule called 2 of 30
+    # `mixed`, and "all but one" called 29 of 30 `strong` - neither is the
+    # claim a teacher would recognise.
+    (2, 30, "weak"),
+    (10, 30, "weak"),
+    (15, 30, "mixed"),
+    (24, 30, "strong"),
+    (29, 30, "strong"),
+    (10, 12, "strong"),
 ])
 def test_verdict_is_computed_from_the_counts(correct, asked, want):
     """The rule both models kept getting wrong. A full cohort run put EVERY
@@ -169,14 +181,73 @@ def test_a_wrong_verdict_is_corrected_not_rejected(store):
         {"concept": "refs", "asked": 3, "correct": 0},
     ]}
     body = {"gaps": [{"concept": "loops", "verdict": "weak", "evidence": "x"},
-                     {"concept": "refs", "verdict": "strong", "evidence": "y"}]}
+                     {"concept": "refs", "verdict": "strong", "evidence": "y"}],
+            "strengths": []}
 
     fixed = report.enforce_verdicts(body, facts)
 
-    assert body["gaps"][0]["verdict"] == "strong"   # 4 of 5
-    assert body["gaps"][1]["verdict"] == "weak"     # 0 of 3
+    # loops (4 of 5) is strong, so it leaves gaps; refs (0 of 3) is weak and
+    # belongs exactly where it already was.
+    assert [r["concept"] for r in body["strengths"]] == ["loops"]
+    assert [r["concept"] for r in body["gaps"]] == ["refs"]
+    assert body["strengths"][0]["verdict"] == "strong"
+    assert body["gaps"][0]["verdict"] == "weak"
     assert len(fixed) == 2
-    assert "loops" in fixed[0] and "4 of 5" in fixed[0]
+    assert any("loops" in f and "4 of 5" in f for f in fixed)
+
+
+def test_a_strong_concept_filed_under_gaps_is_moved_not_just_relabelled(store):
+    """The half that is easy to forget. Correcting a 4-of-5 concept to `strong`
+    while leaving it under `gaps` produces "gap: strong" - a contradiction the
+    checker rejected on EVERY draft, which is what pinned reports at the
+    redraft ceiling until the entry moved lists too."""
+    facts = {"by_concept": [{"concept": "loops", "asked": 5, "correct": 4}]}
+    body = {"gaps": [{"concept": "loops", "verdict": "weak", "evidence": "x"}],
+            "strengths": []}
+
+    fixed = report.enforce_verdicts(body, facts)
+
+    assert body["gaps"] == []
+    assert len(body["strengths"]) == 1
+    assert body["strengths"][0]["verdict"] == "strong"
+    assert "moved gaps -> strengths" in fixed[0]
+
+
+def test_a_weak_concept_filed_under_strengths_is_moved(store):
+    facts = {"by_concept": [{"concept": "refs", "asked": 3, "correct": 0}]}
+    body = {"strengths": [{"concept": "refs", "verdict": "strong", "evidence": "x"}]}
+
+    report.enforce_verdicts(body, facts)
+
+    assert body["strengths"] == []
+    assert body["gaps"][0]["verdict"] == "weak"
+
+
+def test_the_class_lists_move_the_same_way(store):
+    facts = {"by_concept": [{"concept": "loops", "answered": 30, "asked": 30,
+                             "correct": 2}]}
+    body = {"solid": [{"concept": "loops", "verdict": "strong", "evidence": "x"}]}
+    report.enforce_verdicts(body, facts)
+    assert body["solid"] == []
+    assert body["teach_again"][0]["verdict"] == "weak"
+
+
+def test_a_mixed_concept_stays_where_the_model_put_it(store):
+    """Mixed is legitimately reportable as either a soft strength or a soft
+    gap. That IS a judgement call, unlike the arithmetic, so code leaves it."""
+    facts = {"by_concept": [{"concept": "c", "asked": 5, "correct": 3}]}
+    body = {"gaps": [{"concept": "c", "verdict": "weak", "evidence": "x"}]}
+    report.enforce_verdicts(body, facts)
+    assert len(body["gaps"]) == 1
+    assert body["gaps"][0]["verdict"] == "mixed"
+
+
+def test_no_corrections_reported_when_nothing_changed(store):
+    """A no-op must not show up in the trail as a correction, or the
+    'how this was produced' panel fills with noise that means nothing."""
+    facts = {"by_concept": [{"concept": "loops", "asked": 5, "correct": 0}]}
+    body = {"gaps": [{"concept": "loops", "verdict": "weak", "evidence": "x"}]}
+    assert report.enforce_verdicts(body, facts) == []
 
 
 def test_verdict_correction_reads_class_counts_too(store):
@@ -380,6 +451,48 @@ def test_a_cached_report_does_not_call_the_model_again(store):
 
     again = report.for_student(store, sid, settings=None, call=_blow_up)
     assert again["headline"] == _OK_REPORT["headline"]
+
+
+def test_a_student_report_never_sees_another_student(store):
+    """No peer comparison, no class average, no ranking. A student's diagnosis
+    rests on their own work or it is not a diagnosis."""
+    a = roster.create_student(store, "A", "1", "R1", "computer_science")
+    b = roster.create_student(store, "B", "1", "R2", "computer_science")
+    _answer_all(store, a, "computer_science",
+                wrong_concepts={"counting work inside loops"})
+    _answer_all(store, b, "computer_science")     # a perfect scorer alongside
+
+    facts = report.student_facts(store, a)
+    blob = json.dumps(facts)
+    assert "class_average_by_concept" not in facts
+    assert "class_size" not in facts
+    assert b not in blob, "another student's id reached a student report"
+    # Only this student's own counts are present.
+    assert facts["score"]["asked"] == 20
+    assert set(facts) == {"department", "score", "by_topic", "by_concept",
+                          "wrong_answers"}
+
+
+def test_the_two_departments_never_mix(store):
+    """Separate questions, separate concepts, separate reports. A robotics
+    student's numbers must not move a CS report, in either direction."""
+    cs = roster.create_student(store, "C", "1", "R1", "computer_science")
+    rb = roster.create_student(store, "R", "1", "R2", "robotics")
+    _answer_all(store, cs, "computer_science")
+    _answer_all(store, rb, "robotics", wrong_concepts={
+        "reasoning about singularities and degeneracy"})
+
+    cs_facts = report.class_facts(store, "computer_science")
+    rb_facts = report.class_facts(store, "robotics")
+    assert cs_facts["students"] == 1 and rb_facts["students"] == 1
+
+    cs_concepts = {r["concept"] for r in cs_facts["by_concept"]}
+    assert "reasoning about singularities and degeneracy" not in cs_concepts
+    cs_topics = {r["topic"] for r in cs_facts["by_topic"]}
+    assert cs_topics.isdisjoint({r["topic"] for r in rb_facts["by_topic"]})
+
+    # The robotics student's wrong answers are absent from the CS class view.
+    assert all("rb_" not in q["question_id"] for q in cs_facts["hardest_questions"])
 
 
 def test_the_facts_handed_to_the_model_come_from_sql_not_the_model(store):

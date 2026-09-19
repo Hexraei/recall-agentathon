@@ -47,10 +47,40 @@ everywhere: this is a page a student reads in a minute, not a transcript.
 
 ## Evidence
 
-Every entry's `evidence` field must point at something in the counts: the
-score, the topics it spans, or the specific wrong option they chose. One
-sentence. "Missed 3 of 4, in both Recursion and Complexity" is evidence.
-"Struggles with this" is not.
+Every entry's `evidence` field says WHAT THE WRONG ANSWERS HAVE IN COMMON —
+the shared mistake, in one sentence, drawn from `wrong_answers`.
+
+**Do not put scores in it.** Not "missed 3 of 4", not "got 1 of 3", no counts
+and no fractions. The score is already displayed beside every entry, computed
+from the database; repeating it is how a number gets copied wrong, and a report
+whose prose contradicts its own figures is worse than one that never quoted
+them.
+
+Good: "Each of these counted the outer loop and skipped the work inside it —
+the inner shift, the membership scan, the merge at each level."
+Bad: "Missed 4 of 5 questions on this concept."
+
+Naming the topics is fine and useful — "in Recursion and in Correctness" —
+because that is the cross-topic point. Just not the arithmetic.
+
+### Never say more than the counts allow
+
+Not quoting numbers does not mean ignoring them. Before you write a sentence,
+look at that concept's `correct` out of `asked` and make sure the sentence is
+true of it:
+
+- If `correct` is less than `asked`, **they got something wrong there.** Never
+  write "you chose correctly in each case", "every answer here was right", or
+  anything else that implies a clean sweep. That is a false statement about
+  their work and it will be caught.
+- If `correct` is 0, never imply anything was right.
+- Write about the wrong answers that are actually listed in `wrong_answers`
+  for that concept — no more of them than are listed, and no fewer.
+
+A concept can be a `strength` and still have one mistake behind it. Say so:
+"mostly solid; the one miss chose a sorted structure where a hash lookup was
+available." That is accurate. "You chose the right structure every time" is
+not, and the difference is the whole point of the check.
 
 ## How to write
 
@@ -65,8 +95,11 @@ sentence. "Missed 3 of 4, in both Recursion and Complexity" is evidence.
   reasoning, and cannot rule out a concept that simply was not asked about. Say
   which of those limits actually bites here.
 
-If `class_average_by_concept` shows the whole class weak on a concept this
-student also missed, that is context worth one clause — it is a teaching gap,
-not a personal one. Do not turn it into an excuse for them.
+## This student only
+
+You are given this student's work and nothing else — no class average, no
+cohort, no ranking. Do not compare them to anyone, do not speculate about how
+others did, and never write "below average", "most students", or "compared to
+the class". You have not been shown that and it is not what this report is for.
 
 Return only the JSON object.
