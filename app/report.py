@@ -467,6 +467,57 @@ def check_citations(report: dict, facts: dict) -> ReportCheck | None:
 
 # ------------------------------------------------------------------- the loop
 
+def _run_check(body: dict, facts: dict, kind: str, settings, budget,
+               store, budget_run: str, trail: list, trace=None, call=None):
+    """The check step, with two engines behind one contract.
+
+    Jev (when TYPSAFE_JEV_MODEL is set) answers two typed questions - "is
+    something here false/unmeasurable/ad-hominem?" and "which claim?" - and
+    the answer is mapped onto the same ReportCheck the chat checker returns,
+    so downstream code cannot tell which engine ran. Any Jev error (HTTP,
+    quota, shape) falls back visibly: a trail record noting the fallback,
+    then the chat checker as before. Jev unset (or settings absent, which is
+    how the offline tests call the loop) = chat path untouched.
+
+    A low-confidence verdict is treated the way compare treats one: not
+    trusted, routed to a human. In the report loop that means the report
+    ships flagged `_unverified` with a note in the trail rather than being
+    silently accepted OR endlessly redrafted on a coin-flip.
+    """
+    if not getattr(settings, "jev_model", ""):
+        assert call is not None
+        return call(settings=settings, budget=budget,
+                    messages=build_check_messages(body, facts, kind),
+                    schema=ReportCheck, step="report_check")
+    from . import jev_report_check as jrc
+    try:
+        verdict, meta = jrc.judge(settings=settings, budget=budget,
+                                  report=body, facts=facts, kind=kind)
+    except Exception as e:
+        trail.append({"step": "jev_fallback", "revision": None,
+                      "body": {"detail": f"{type(e).__name__}: {str(e)[:200]}"}})
+        assert call is not None
+        return call(settings=settings, budget=budget,
+                    messages=build_check_messages(body, facts, kind),
+                    schema=ReportCheck, step="report_check")
+
+    # The trail gets the calibration numbers, not just the outcome - the
+    # same reason compare keeps a jev_verdict record.
+    check = ReportCheck(verdict="accepted" if verdict.accepted else "rejected",
+                        failed_check=verdict.failed_check,
+                        detail=(f"jev noul={verdict.noul:.2f} "
+                                f"confidence={verdict.confidence:.2f} "
+                                f"(model {verdict.model})"))
+    if meta["below_floor"]:
+        check = ReportCheck(
+            verdict="accepted", failed_check=None,
+            detail=check.detail + " BELOW CONFIDENCE FLOOR - unverified")
+        body["_unverified"] = (
+            f"Jev confidence {verdict.confidence:.2f} below "
+            f"{settings.jev_confidence_floor:.2f}; report shipped unverified.")
+    return check
+
+
 def _generate(store, kind: str, key: str, facts: dict, schema, build, call,
               settings, budget_run: str, trace=None) -> tuple[dict, list[dict]]:
     """Draft -> check -> accept or go back. Returns (report, trail).
@@ -525,9 +576,8 @@ def _generate(store, kind: str, key: str, facts: dict, schema, build, call,
 
         check = check_citations(body, facts)
         if check is None:
-            check = call(settings=settings, budget=budget,
-                         messages=build_check_messages(body, facts, kind),
-                         schema=ReportCheck, step="report_check")
+            check = _run_check(body, facts, kind, settings, budget,
+                               store, budget_run, trail, trace, call=call)
         trail.append({"step": "check", "revision": attempt,
                       "body": check.model_dump()})
         if trace:
