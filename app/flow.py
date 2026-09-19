@@ -21,10 +21,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from slice import callback
-from slice.llm import complete
+from slice.llm import complete, ModelError
 from slice.records import RunState
 
 from . import history, provenance
+from . import jev_compare as jev
 from .schema import Check, Comparison, EvidenceSet, Finding, Review
 
 # --------------------------------------------------------------- domain rules
@@ -249,16 +250,67 @@ def build_flow(call=complete, notes: str = "", trace=None):
         Kept apart from drafting so that "similar", "recurring", "improving" and
         "not enough evidence" is a record the checker can test, rather than a
         word buried inside a finding.
+
+        Two transports, one contract. When TYPSAFE_JEV_MODEL is set, the
+        verdict comes from the decisions model (jev_compare.judge) - a typed
+        answer with a probability distribution and a confidence score. Below
+        the confidence floor the verdict is not trusted and the run asks the
+        professor instead, whatever the label says. Anything Jev-side that
+        fails (network, unknown label, quota) falls back to the chat path -
+        the fallback is the same SchemaFailure family the runner already
+        handles, so a Jev outage degrades to the known-good transport rather
+        than failing the run.
         """
         attempt = ctx.latest("attempt")
         prior = history.prior_records(ctx.store, attempt["student_id"], ctx.run_id)
+        evidence_now = ctx.latest("evidence")
 
-        comparison = timed("compare", lambda: call(
-            settings=ctx.settings, budget=ctx.budget,
-            messages=build_compare_messages(ctx.latest("evidence"), prior,
-                                            attempt["learning_objectives"]),
-            schema=Comparison, step="compare",
-        ), lambda r: r.label)
+        comparison = None
+        if jev.jev_available(ctx.settings):
+            try:
+                verdict = jev.judge(
+                    settings=ctx.settings, budget=ctx.budget,
+                    evidence=evidence_now, prior=prior, attempt=attempt,
+                    week_gap=jev.compute_week_gap(
+                        [r.get("date") for r in prior["evidence"]],
+                        attempt.get("date", "")),
+                )
+                comparison = Comparison(
+                    label=verdict.label,
+                    related_refs=verdict.related_refs,
+                    explanation=verdict.explanation,
+                )
+                # The confidence number is the reason Jev was wired here. A
+                # low-confidence verdict on a consequential claim should be
+                # read by a person, not trusted silently.
+                if (verdict.label == "recurring"
+                        and verdict.confidence < ctx.settings.jev_confidence_floor):
+                    return _ask_professor(
+                        ctx,
+                        f"Jev judged this `{verdict.label}` but confidence "
+                        f"{verdict.confidence:.2f} is below the "
+                        f"{ctx.settings.jev_confidence_floor:.2f} floor.")
+                ctx.append("jev_verdict", {
+                    "label": verdict.label,
+                    "confidence": verdict.confidence,
+                    "probabilities": verdict.probabilities,
+                    "model": ctx.settings.jev_model,
+                }, produced_by="agent:jev")
+            except (ModelError, Exception) as e:
+                # Fall back, visibly: the failure is a record, not silent.
+                ctx.append("failure", {
+                    "kind": "jev_unavailable",
+                    "detail": f"{type(e).__name__}: {e}",
+                    "note": "fell back to the chat compare path",
+                }, produced_by="agent:compare")
+
+        if comparison is None:
+            comparison = timed("compare", lambda: call(
+                settings=ctx.settings, budget=ctx.budget,
+                messages=build_compare_messages(evidence_now, prior,
+                                                attempt["learning_objectives"]),
+                schema=Comparison, step="compare",
+            ), lambda r: r.label)
 
         # The model may not award `recurring` on a single assignment, whatever
         # it thinks it sees. Recurrence is a claim about more than one piece of
