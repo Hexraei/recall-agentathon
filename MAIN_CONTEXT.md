@@ -23,9 +23,13 @@ mid-event, `git pull`, then run:
 cd recall
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env   # paste the team's Groq key + OpenRouter key
-./test.sh                    # 22 tests, should be green
+./test.sh                    # 44 tests, should be green
 .venv/bin/python demo.py            # instant, stubbed, no key needed
 .venv/bin/python live.py --full     # real model, ~3-4s per encounter
+
+# the web app — this is what testers and judges actually see
+.venv/bin/python simulate.py --reset --warm   # 10 fake students + their reports (~8 min, once)
+.venv/bin/python webapp.py                    # http://localhost:8000
 ```
 
 **What changed since §7's build order was written**, in commit order:
@@ -67,12 +71,22 @@ cp .env.example .env   # paste the team's Groq key + OpenRouter key
    §15). Declares the kit spine, the Groq/OpenRouter setup, and the two extra libraries,
    with an honest note that it isn't literally the repo's first commit and why.
 
-**What has NOT changed, and is still the real gap:** `docs/evidence/` is empty. Zero
-walkthroughs, zero stress test, zero design rationale. Per the rubric pulled this
-morning (§15), evidence is **35 of 100 points — tied with the build itself** — and it is
-explicitly the thing that "cannot be produced on the last afternoon." This is the
-single most important open item on the whole project right now, more urgent than any
-remaining code.
+7. **The quiz web app is built** (`webapp.py`, `app/bank.py`, `app/roster.py`,
+   `app/report.py`). This is what testers and judges actually see. Signup (name, phone,
+   register number, department) → 20 questions, 5 topics, 4 each → one consolidated
+   agent-written report. Plus a teacher dashboard at `/teacher` with per-class and
+   per-student views, both agent-written. See §17 for the architecture and the one
+   decision in it that matters.
+8. **`docs/evidence/` started** — three real defects written up with measurements. See
+   §18. This was the 35-point gap; it is no longer empty, though walkthroughs with real
+   testers are still outstanding.
+
+**What is still the real gap:** `docs/evidence/` now has three defect writeups
+(`bug-01`, `bug-02`, `bug-03` — all real, all found by testing, none planted), but **zero
+walkthroughs with real people**. Per the rubric (§15) evidence is 35 of 100 points and
+explicitly "cannot be produced on the last afternoon." The app is now ready for testers,
+which was the blocker — the remaining work is running 3-4 people through it and writing
+down what they *do*, not what they say.
 
 ---
 
@@ -100,6 +114,14 @@ whether a student has a meaningful learning gap.
 No mobile app. No live in-class quiz hosting. No audio transcription. No OCR. No
 student-facing interface. These are the judges' own exclusions and they are not
 negotiable during the build.
+
+**On the web app built Day 1 afternoon (§17), against these exclusions:** it is a
+single-tester diagnostic used to *collect submissions for walkthrough evidence*, not a
+live in-class quiz. No simultaneous play, no session codes, no leaderboard, no timers —
+one tester at a time. It replaces hand-written fixture submissions with real ones from
+real people, which is what the evidence requirement needs. If a judge reads it as
+in-class quiz hosting, the honest answer is that the exclusion rules out running a class
+session, and this does not do that.
 
 ---
 
@@ -638,3 +660,112 @@ or `claude-haiku-4.5` — pick one, see `slice/llm.py`), specifically so a Groq 
 during the event degrades to a slower-but-working path instead of stopping the run. This
 is the "different provider family" the kit's own principles ask for — Groq alone,
 primary and fallback both, would mean one outage takes down both.
+
+---
+
+## 17. The quiz web app — built Day 1 afternoon
+
+`webapp.py` plus `app/bank.py`, `app/roster.py`, `app/report.py`. Run it:
+
+```bash
+.venv/bin/python simulate.py --reset --warm   # 10 fake students + reports, ~8 min, once
+.venv/bin/python webapp.py                    # http://localhost:8000
+```
+
+### Routes
+
+| route | what it is |
+|---|---|
+| `/` | signup — name, phone, register number, department |
+| `/quiz/{sid}` | one question at a time, progress bar, **no feedback** |
+| `/report/{sid}` | the consolidated agent report, after question 20 |
+| `/teacher` | pick a department |
+| `/teacher/{dept}` | class report + per-student list, both agent-written |
+
+`?force=1` on either report page re-runs the agent live. That is the button to press when
+a judge asks to watch it happen rather than read a cached result.
+
+### The question bank
+
+20 questions per department, 5 topics, 4 questions each. Robotics is theoretical and a
+step harder (Kinematics, Control, State Estimation, Path Planning, Dynamics); Computer
+Science is conceptual and kept simple (Time Complexity, Data Structures, Recursion,
+Memory & State, Correctness).
+
+**Every wrong option is pre-mapped to the specific misconception picking it reveals**, at
+authoring time, in `app/bank.py`. Not inferred live by a model from a bare option letter.
+Two reasons: a model has almost nothing to work with when the input is "B", and — more
+importantly — if the model invents both the question's diagnosis *and* the report, a wrong
+report can always be blamed on a bad diagnosis and the two failures are indistinguishable.
+Fixing the diagnosis makes the report falsifiable.
+
+**Concepts deliberately span several topics.** `counting work inside loops` appears in 5
+CS questions across 4 different topics. That is the whole design: it is what lets the
+agent say *"this is not a gap in sorting, it is a gap in counting nested work"* rather
+than listing three topics with low scores. Verified by
+`test_concepts_span_more_than_one_topic`.
+
+### The one architectural decision that matters
+
+**The quiz path makes zero model calls. One SQL insert per answer.** All the model work
+happens once, at the end, over all 20 answers together.
+
+Three reasons, and they compound:
+
+1. **Scale.** Running the full `flow.py` pipeline per answer would be 20 questions × 4
+   model calls = 80 calls per student, ~2 minutes of a tester watching a spinner, and an
+   instant collision with Groq's 8,000 tokens/minute limit.
+2. **Measurement validity.** A student told they got Q3 wrong answers Q4 differently. The
+   twenty answers stop being twenty independent observations of what they know. This is
+   why "no feedback per question" is load-bearing and not a UI preference.
+3. **It is the only point where the interesting question can be asked.** "Did they miss
+   this one" is a scoreboard. "Do these five misses share one cause" needs all five in
+   front of it at once.
+
+### The report agent is genuinely agentic
+
+Same back-edge as `flow.py`, different artifact. Draft → check → accept, or route back
+with the *reason*:
+
+- `citation` → the report named a concept the student never answered on. **Checked in
+  code, not by a model** (`report.check_citations`) — a model asked whether its own
+  citation is real will tell you yes.
+- `claim_strength` → the counts do not support the claim. Checked by a model against the
+  SQL-computed numbers.
+
+**The counts come from SQL; the model only interprets them.** If that ever inverts, a
+miscount becomes a confident diagnosis with nothing downstream to catch it. Guarded by
+`test_the_facts_handed_to_the_model_come_from_sql_not_the_model`.
+
+Three separate fences, never sharing a counter: `MAX_DRAFTS` (3 redrafts),
+`DEADLINE_SECONDS` (90s wall clock — see §18 bug 02), and the token budget.
+
+**Observed live, and worth demoing:** the robotics class report was *rejected on
+`claim_strength` and redrafted*, because a 4-student class does not support class-wide
+claims. The agent refused to invent a teaching problem that was not there and told the
+teacher to do one-on-ones instead. That is the "agent, not workflow" property visible on
+screen — the "How this report was produced" panel at the bottom of each report page shows
+the draft/check trail.
+
+---
+
+## 18. Evidence — three real defects, found by testing
+
+`docs/evidence/` — see its [README](docs/evidence/README.md) for the full index.
+
+| # | defect | the point |
+|---|---|---|
+| 01 | Report agent crashed on the **lowest-scoring student** | The failure scaled with how badly a student was doing. Would have passed every spot check and failed live on whoever did worst. Fixed by bounding the schema — which also made the report *better*, not just safer |
+| 02 | Three correct timeouts composed into a **39-minute hang** | Found by accident during a real network outage. Every component was individually correct. Bounded × bounded ≠ usefully bounded. Fixed with a third separate wall-clock fence |
+| 03 | Comparison step wrong **9 times in 10** | The bias was in a prompt *we wrote*. An instruction stating a preference rather than a procedure gets followed to its limit. Measured 1/10 → 8/8, with the negative control holding at 8/8 |
+
+The through-line, which is the thing to say out loud if a judge asks: **in all three cases
+the first plausible explanation was wrong, and measuring beat assuming.** "The model is
+flaky" (it wasn't — we had written the bias), "the token limit is too low" (raising it
+moves the failure rather than removing it), "a timeout is misconfigured" (none of them
+were).
+
+What we have NOT tested, stated in the README because an evidence directory that only
+lists wins is not evidence: degraded-network behaviour (found 02 by accident, still no
+deliberate test), extraction-step consistency (never measured — only comparison's has),
+and the checker enforcing rules on prose as well as on structured verdicts.
