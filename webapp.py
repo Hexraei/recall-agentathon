@@ -580,24 +580,41 @@ def live(request: Request):
 
     Refreshes itself every 15s via a plain meta tag - no JS, nothing to break
     if a phone's browser is being awkward, and it survives a page reload the
-    same way. Counts, not names: this is glanced at while people are mid-quiz,
-    not a place to read anyone's score.
+    same way. Shows names and scores, not just counts - it's meant to answer
+    "who's done and how did they do" at a glance while people are mid-quiz.
     """
     if request.client is None or request.client.host not in ("127.0.0.1", "::1"):
         return HTMLResponse("Not found", status_code=404)
 
     s = store()
-    rows = []
+    summary_rows = []
+    student_rows = []
     total_done = total_seen = 0
+
     for dept, label in bank.DEPARTMENTS.items():
         people = roster.students_in(s, dept)
         done = sum(1 for p in people if roster.score(s, p["id"])[1] >= 20)
         seen = len(people)
         total_done += done
         total_seen += seen
-        rows.append(f"<tr><td>{esc(label)}</td><td>{done}</td>"
-                    f"<td class=\"muted\">{seen - done} still going</td>"
-                    f"<td class=\"muted\">{seen} total</td></tr>")
+        summary_rows.append(
+            f"<tr><td>{esc(label)}</td><td>{done}</td>"
+            f"<td class=\"muted\">{seen - done} still going</td>"
+            f"<td class=\"muted\">{seen} total</td></tr>")
+
+        for p in people:
+            got, asked = roster.score(s, p["id"])
+            finished = asked >= 20
+            student_rows.append((
+                p["created_at"],
+                f"<tr><td>{esc(p['name'])}</td><td>{esc(label)}</td>"
+                f"<td class=\"muted\">{esc(p['register_no'])}</td>"
+                f"<td>{got}/{asked}</td>"
+                f"<td class=\"muted\">{'Complete' if finished else 'In progress'}</td></tr>"))
+
+    # Newest signup first, so a new arrival is visible at the top without
+    # scrolling - the point of watching this live.
+    student_rows.sort(key=lambda r: r[0], reverse=True)
 
     import datetime
     stamp = datetime.datetime.now().strftime("%H:%M:%S")
@@ -606,14 +623,18 @@ def live(request: Request):
 <meta http-equiv="refresh" content="15">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Recall — live</title><style>{CSS}</style></head>
-<body><div class="wrap">
+<body><div class="wrap wide">
 <a class="brand" href="/">Recall</a>
 <h1>Live count</h1>
 <div class="big">{total_done}<span class="muted" style="font-size:1.2rem">
  /{total_seen} finished</span></div>
 <p class="muted">Refreshes every 15 seconds. Last updated {stamp}.</p>
 <table><tr><th>Department</th><th>Finished</th><th></th><th></th></tr>
-{"".join(rows)}</table>
+{"".join(summary_rows)}</table>
+<h2>Students</h2>
+<table><tr><th>Name</th><th>Department</th><th>Register No.</th>
+<th>Score</th><th>Status</th></tr>
+{"".join(r[1] for r in student_rows)}</table>
 </div></body></html>""")
 
 
