@@ -25,6 +25,7 @@ Run it:
 """
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 
@@ -37,7 +38,22 @@ from slice.store import Store
 
 from app import bank, report, roster
 
-DB = Path(__file__).parent / "webapp.db"
+DB = Path(__file__).parent / os.environ.get("RECALL_DB", "webapp.db")
+"""Which database this process writes to.
+
+Two are kept deliberately separate:
+
+    webapp.db   real people. Every row is someone who actually took the quiz,
+                which is what makes it usable later as evidence that state
+                persisted across sessions.
+    demo.db     ten simulated students with designed misconceptions, for
+                rehearsing the teacher dashboard without inventing a cohort.
+
+Mixing them would mean a class report that is part measurement and part
+fiction, with no way to tell afterwards which rows were which.
+
+    RECALL_DB=demo.db .venv/bin/python webapp.py
+"""
 
 app = FastAPI()
 _settings = load_settings()
