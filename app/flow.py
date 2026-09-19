@@ -266,6 +266,7 @@ def build_flow(call=complete, notes: str = "", trace=None):
         evidence_now = ctx.latest("evidence")
 
         comparison = None
+        jev_verdict = None
         if jev.jev_available(ctx.settings):
             try:
                 verdict = jev.judge(
@@ -280,22 +281,12 @@ def build_flow(call=complete, notes: str = "", trace=None):
                     related_refs=verdict.related_refs,
                     explanation=verdict.explanation,
                 )
-                # The confidence number is the reason Jev was wired here. A
-                # low-confidence verdict on a consequential claim should be
-                # read by a person, not trusted silently.
-                if (verdict.label == "recurring"
-                        and verdict.confidence < ctx.settings.jev_confidence_floor):
-                    return _ask_professor(
-                        ctx,
-                        f"Jev judged this `{verdict.label}` but confidence "
-                        f"{verdict.confidence:.2f} is below the "
-                        f"{ctx.settings.jev_confidence_floor:.2f} floor.")
-                ctx.append("jev_verdict", {
+                jev_verdict = {
                     "label": verdict.label,
                     "confidence": verdict.confidence,
                     "probabilities": verdict.probabilities,
                     "model": ctx.settings.jev_model,
-                }, produced_by="agent:jev")
+                }
             except (ModelError, Exception) as e:
                 # Fall back, visibly: the failure is a record, not silent.
                 ctx.append("failure", {
@@ -326,7 +317,9 @@ def build_flow(call=complete, notes: str = "", trace=None):
             })
 
         ctx.append("comparison", comparison.model_dump(), produced_by="agent:compare")
-        return RunState.DRAFT_FINDING
+
+        return _route_after_compare(ctx, comparison.model_dump(), jev_verdict,
+                                    _ask_professor)
 
     def handle_draft_finding(ctx) -> RunState:
         """Write a bounded finding, addressing the last rejection if there was one."""
@@ -471,14 +464,53 @@ def build_flow(call=complete, notes: str = "", trace=None):
 
     # ---------------------------------------------------------------- helpers
 
+    def _route_after_compare(ctx, comparison: dict, jev_verdict: dict | None,
+                             ask) -> RunState:
+        """Decide where compare's verdict goes, with the record already stored.
+
+        Everything here reads the PERSISTED comparison, not an in-frame object.
+        That is what fixes the sent-back calibration: the earlier version
+        appended `jev_verdict` and asked the professor from INSIDE the try
+        block, before the comparison row existed - the ask itself fetched
+        `latest('comparison')`, found None, and its TypeError was swallowed by
+        the same except that discards Jev outages. One record, one routing
+        decision, in this order:
+
+            1. the calibration row (the model did judge this)
+            2. the comparison row      (what the run will act on)
+            3. the floor's question    (only when the label is consequential
+                                        AND the confidence is a coin flip)
+        """
+        if jev_verdict:
+            ctx.append("jev_verdict", jev_verdict, produced_by="agent:jev")
+
+        if (jev_verdict
+                and comparison["label"] == "recurring"
+                and jev_verdict["confidence"] < ctx.settings.jev_confidence_floor):
+            return ask(
+                ctx,
+                f"Jev judged this `recurring` but confidence "
+                f"{jev_verdict['confidence']:.2f} is below the "
+                f"{ctx.settings.jev_confidence_floor:.2f} floor.")
+
+        return RunState.DRAFT_FINDING
+
     def _ask_professor(ctx, why: str) -> RunState:
         finding = ctx.latest("finding")
         comparison = ctx.latest("comparison")
+        # The Jev floor routes to review AFTER comparing has persisted its
+        # comparison but BEFORE any finding exists - so `finding` may
+        # legitimately be None here, while the checker's routes (a rejected
+        # draft / max revisions) always have one. Build the question from what
+        # exists rather than assuming.
+        finding_line = (f"Finding: {finding['statement']}\n"
+                        if finding and finding.get("statement")
+                        else "Finding: (none drafted yet)\n")
         callback.ask(
             ctx.store, ctx.run_id,
             question=(
                 f"{why}\n\n"
-                f"Finding: {finding['statement']}\n"
+                f"{finding_line}"
                 f"Comparison: {comparison['label']} - {comparison['explanation']}\n\n"
                 "Confirm, revise, reject, or request more evidence."
             ),
