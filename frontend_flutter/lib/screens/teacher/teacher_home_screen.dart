@@ -44,9 +44,13 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     final quizRepo = context.read<QuizRepository>();
     final results = context.read<ResultsRepository>();
 
-    final quizzes = await quizRepo.myQuizzes();
-    final findings = await results.findings();
-    final averages = await results.classAverages();
+    // These three do not depend on one another, so they are fetched
+    // together rather than one after the next.
+    final (quizzes, findings, averages) = await (
+      quizRepo.myQuizzes(),
+      results.findings(),
+      results.classAverages(),
+    ).wait;
 
     ClassQuizResult? recent;
     final lastRun = quizzes.where((q) => q.hasRun).toList()
@@ -57,14 +61,17 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
 
     return _HomeData(
       quizzes: quizzes,
-      pendingFindings:
-          findings.where((f) => f.status == FindingStatus.awaitingReview).length,
+      pendingFindings: findings
+          .where((f) => f.status == FindingStatus.awaitingReview)
+          .length,
       quizzesClosed: averages.length,
       recent: recent,
     );
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+    _future = _load();
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -83,14 +90,16 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DashboardHeader(
-                  greeting:
-                      DashboardHeader.greetingForHour(DateTime.now().hour),
+                  greeting: DashboardHeader.greetingForHour(
+                    DateTime.now().hour,
+                  ),
                   name: user?.name ?? 'Teacher',
                   onSignOut: () async {
                     await context.read<AuthController>().signOut();
                     if (context.mounted) {
-                      Navigator.of(context)
-                          .pushNamedAndRemoveUntil(Routes.auth, (_) => false);
+                      Navigator.of(
+                        context,
+                      ).pushNamedAndRemoveUntil(Routes.auth, (_) => false);
                     }
                   },
                 ),
@@ -128,11 +137,13 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
       children: [
         InvitationCard(
           title: 'Build your first quiz',
-          body: 'Write four-option questions, set one deadline for the whole '
+          body:
+              'Write four-option questions, set one deadline for the whole '
               'attempt, then host it and read the class PIN aloud.',
           actionLabel: 'Create a quiz',
-          onAction: () =>
-              Navigator.of(context).pushNamed(Routes.quizBuilder).then((_) => _reload()),
+          onAction: () => Navigator.of(
+            context,
+          ).pushNamed(Routes.quizBuilder).then((_) => _reload()),
         ),
         const SizedBox(height: 20),
         const PrimaryActionCard(
@@ -142,23 +153,28 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
           enabled: false,
         ),
         const SizedBox(height: 10),
-        const NavList(rows: [
-          NavRow(
+        const NavList(
+          rows: [
+            NavRow(
               icon: Icons.description_outlined,
               title: 'My quizzes',
               secondary: 'Empty',
-              enabled: false),
-          NavRow(
+              enabled: false,
+            ),
+            NavRow(
               icon: Icons.bar_chart,
               title: 'Class analytics',
               secondary: 'Opens once a quiz has run',
-              enabled: false),
-          NavRow(
+              enabled: false,
+            ),
+            NavRow(
               icon: Icons.check_circle_outline,
               title: 'Review findings',
               secondary: 'Needs a few quizzes before patterns appear',
-              enabled: false),
-        ]),
+              enabled: false,
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -171,36 +187,41 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
           icon: Icons.play_circle_outline,
           title: 'Host a quiz',
           subtitle: 'Open a lobby and share the PIN',
-          onTap: () => Navigator.of(context)
-              .pushNamed(Routes.myQuizzes, arguments: const MyQuizzesArgs(hosting: true)),
+          onTap: () => Navigator.of(context).pushNamed(
+            Routes.myQuizzes,
+            arguments: const MyQuizzesArgs(hosting: true),
+          ),
         ),
         const SizedBox(height: 16),
-        NavList(rows: [
-          NavRow(
-            icon: Icons.description_outlined,
-            title: 'My quizzes',
-            secondary: '${d.quizzes.length} saved',
-            onTap: () => Navigator.of(context)
-                .pushNamed(Routes.myQuizzes)
-                .then((_) => _reload()),
-          ),
-          NavRow(
-            icon: Icons.bar_chart,
-            title: 'Class analytics',
-            secondary: 'Trends across ${d.quizzesClosed} quizzes',
-            onTap: () => Navigator.of(context).pushNamed(Routes.classAnalytics),
-          ),
-          NavRow(
-            icon: Icons.check_circle_outline,
-            title: 'Review findings',
-            secondary: 'Confirm before students see them',
-            // The badge disappears entirely when the queue is empty.
-            badge: d.pendingFindings > 0 ? '${d.pendingFindings}' : null,
-            onTap: () => Navigator.of(context)
-                .pushNamed(Routes.reviewFindings)
-                .then((_) => _reload()),
-          ),
-        ]),
+        NavList(
+          rows: [
+            NavRow(
+              icon: Icons.description_outlined,
+              title: 'My quizzes',
+              secondary: '${d.quizzes.length} saved',
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamed(Routes.myQuizzes).then((_) => _reload()),
+            ),
+            NavRow(
+              icon: Icons.bar_chart,
+              title: 'Class analytics',
+              secondary: 'Trends across ${d.quizzesClosed} quizzes',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(Routes.classAnalytics),
+            ),
+            NavRow(
+              icon: Icons.check_circle_outline,
+              title: 'Review findings',
+              secondary: 'Confirm before students see them',
+              // The badge disappears entirely when the queue is empty.
+              badge: d.pendingFindings > 0 ? '${d.pendingFindings}' : null,
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamed(Routes.reviewFindings).then((_) => _reload()),
+            ),
+          ],
+        ),
         if (d.recent != null) ...[
           const SectionLabel('Recent activity'),
           _RecentActivity(result: d.recent!),
@@ -232,12 +253,20 @@ class _RecentActivity extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  quiz.week == null ? quiz.title : '${quiz.week} · ${quiz.title}',
-                  style: AppText.rowTitle.copyWith(fontSize: 16, letterSpacing: -0.1),
+                  quiz.week == null
+                      ? quiz.title
+                      : '${quiz.week} · ${quiz.title}',
+                  style: AppText.rowTitle.copyWith(
+                    fontSize: 16,
+                    letterSpacing: -0.1,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
-              Text(ran == null ? '' : _shortDate(ran), style: AppText.rowSecondary),
+              Text(
+                ran == null ? '' : _shortDate(ran),
+                style: AppText.rowSecondary,
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -248,12 +277,15 @@ class _RecentActivity extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           GestureDetector(
-            onTap: () => Navigator.of(context)
-                .pushNamed(Routes.quizResults, arguments: quiz.id),
+            onTap: () => Navigator.of(
+              context,
+            ).pushNamed(Routes.quizResults, arguments: quiz.id),
             child: Text(
               'See full results',
-              style: AppText.rowTitle
-                  .copyWith(fontSize: 13.5, color: AppColors.accent),
+              style: AppText.rowTitle.copyWith(
+                fontSize: 13.5,
+                color: AppColors.accent,
+              ),
             ),
           ),
         ],
@@ -267,8 +299,18 @@ class _RecentActivity extends StatelessWidget {
   static String _shortDate(DateTime d) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${days[d.weekday - 1]}, ${d.day} ${months[d.month - 1]}';
   }

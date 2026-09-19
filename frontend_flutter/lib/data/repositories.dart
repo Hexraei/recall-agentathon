@@ -10,7 +10,10 @@ import 'fixtures.dart';
 /// not touching a single screen.
 
 abstract class AuthRepository {
-  Future<AppUser> signIn({required String identifier, required String password});
+  Future<AppUser> signIn({
+    required String identifier,
+    required String password,
+  });
   Future<AppUser> signUp({
     required String name,
     required String identifier,
@@ -81,7 +84,10 @@ abstract class ResultsRepository {
   Future<List<TopicScore>> myTopicScores();
 
   Future<List<QuizAverage>> studentAverages(String studentId);
-  Future<List<TopicScore>> studentTopicScores(String studentId, {bool recent = true});
+  Future<List<TopicScore>> studentTopicScores(
+    String studentId, {
+    bool recent = true,
+  });
   Future<List<AttemptSummary>> studentAttempts(String studentId);
   Future<QuizResultData> studentAttemptDetail(String studentId, String quizId);
 }
@@ -176,8 +182,7 @@ class MockQuizRepository implements QuizRepository {
     final fromQuizzes = <String>{
       for (final q in _quizzes) ...q.topics,
       ...Fixtures.knownTopics,
-    }.toList()
-      ..sort();
+    }.toList()..sort();
     return fromQuizzes;
   }
 }
@@ -197,16 +202,19 @@ class MockSessionRepository implements SessionRepository {
   }
 
   @override
-  Stream<List<AppUser>> joinedStudents() async* {
+  Stream<List<AppUser>> joinedStudents() {
     // Students arrive a second or so apart, so the lobby is a live list
-    // rather than a static snapshot.
-    yield List.unmodifiable(_joined);
-    for (final s in Fixtures.roster) {
-      if (_started) break;
-      await Future<void>.delayed(const Duration(milliseconds: 1100));
-      _joined.add(s);
-      yield List.unmodifiable(_joined);
-    }
+    // rather than a static snapshot. Stream.periodic is used rather than an
+    // async* loop because cancelling it cancels the underlying timer, which
+    // an in-flight Future.delayed would not.
+    return Stream<void>.periodic(
+      const Duration(milliseconds: 1100),
+    ).take(Fixtures.roster.length).map((_) {
+      if (!_started && _joined.length < Fixtures.roster.length) {
+        _joined.add(Fixtures.roster[_joined.length]);
+      }
+      return List<AppUser>.unmodifiable(_joined);
+    });
   }
 
   @override
@@ -216,13 +224,15 @@ class MockSessionRepository implements SessionRepository {
   }
 
   @override
-  Stream<List<StudentProgress>> progress() async* {
+  Stream<List<StudentProgress>> progress() {
     final total = _quiz?.questionCount ?? 15;
-    final students = _joined.isEmpty ? Fixtures.roster : _joined;
+    final students = List<AppUser>.from(
+      _joined.isEmpty ? Fixtures.roster : _joined,
+    );
     final rnd = Random(7);
     final answered = [for (final _ in students) rnd.nextInt(total ~/ 2)];
 
-    while (true) {
+    List<StudentProgress> tick() {
       final rows = <StudentProgress>[];
       for (var i = 0; i < students.length; i++) {
         if (answered[i] < total && rnd.nextDouble() < 0.45) answered[i]++;
@@ -230,17 +240,30 @@ class MockSessionRepository implements SessionRepository {
         final stage = a >= total
             ? (i.isEven ? AttemptStage.submitted : AttemptStage.allAnswered)
             : AttemptStage.answering;
-        rows.add(StudentProgress(
-          student: students[i],
-          stage: stage,
-          answered: a,
-          total: total,
-          submittedAt: stage == AttemptStage.submitted ? DateTime.now() : null,
-        ));
+        rows.add(
+          StudentProgress(
+            student: students[i],
+            stage: stage,
+            answered: a,
+            total: total,
+            submittedAt: stage == AttemptStage.submitted
+                ? DateTime.now()
+                : null,
+          ),
+        );
       }
-      yield rows;
-      await Future<void>.delayed(const Duration(milliseconds: 1500));
+      return rows;
     }
+
+    // The first frame is immediate so the monitor is never briefly empty;
+    // the rest tick on a cancellable periodic timer.
+    return Stream<List<StudentProgress>>.multi((controller) {
+      controller.add(tick());
+      final sub = Stream<void>.periodic(
+        const Duration(milliseconds: 1500),
+      ).listen((_) => controller.add(tick()));
+      controller.onCancel = sub.cancel;
+    });
   }
 
   @override
@@ -272,13 +295,17 @@ class MockAttemptRepository implements AttemptRepository {
   }
 
   @override
-  Stream<int> othersWaiting() async* {
+  Stream<int> othersWaiting() {
     var n = 6;
-    while (true) {
-      yield n;
-      await Future<void>.delayed(const Duration(milliseconds: 1800));
-      n = min(n + 1, Fixtures.classSize - 1);
-    }
+    return Stream<int>.multi((controller) {
+      controller.add(n);
+      final sub = Stream<void>.periodic(const Duration(milliseconds: 1800))
+          .listen((_) {
+            n = min(n + 1, Fixtures.classSize - 1);
+            controller.add(n);
+          });
+      controller.onCancel = sub.cancel;
+    });
   }
 
   @override
@@ -334,7 +361,8 @@ class MockResultsRepository implements ResultsRepository {
       statement:
           '14 of 42 students chose the outermost frame as the first to return',
       quizTitle: 'Recursion',
-      questionStem: 'Tracing a recursive call stack, which frame returns first?',
+      questionStem:
+          'Tracing a recursive call stack, which frame returns first?',
       chosenCount: 14,
       classSize: 42,
       uncertainty:
@@ -353,15 +381,17 @@ class MockResultsRepository implements ResultsRepository {
     // two tiles cannot disagree, which they did on the canvas.
     const dist = [1, 4, 11, 17, 9];
     final topics = _topicScoresFor(quiz);
-    return _latency(ClassQuizResult(
-      quiz: quiz,
-      tookIt: quizId == 'q-recursion' ? 38 : 42,
-      classSize: Fixtures.classSize,
-      medianScore: 11,
-      distribution: dist,
-      topicScores: topics,
-      breakdowns: _breakdownsFor(quiz),
-    ));
+    return _latency(
+      ClassQuizResult(
+        quiz: quiz,
+        tookIt: quizId == 'q-recursion' ? 38 : 42,
+        classSize: Fixtures.classSize,
+        medianScore: 11,
+        distribution: dist,
+        topicScores: topics,
+        breakdowns: _breakdownsFor(quiz),
+      ),
+    );
   }
 
   List<TopicScore> _topicScoresFor(Quiz quiz) {
@@ -395,8 +425,13 @@ class MockResultsRepository implements ResultsRepository {
         final spill = (q.correctIndex + 1) % 4;
         shares[spill] += left;
       }
-      out.add(QuestionBreakdown(
-          question: q, shares: shares, respondents: respondents));
+      out.add(
+        QuestionBreakdown(
+          question: q,
+          shares: shares,
+          respondents: respondents,
+        ),
+      );
     }
     out.sort((a, b) => a.correctPercent.compareTo(b.correctPercent));
     return out;
@@ -404,13 +439,13 @@ class MockResultsRepository implements ResultsRepository {
 
   @override
   Future<List<QuizAverage>> classAverages() => _latency(const [
-        QuizAverage(quizTitle: 'Arrays', shortLabel: 'W4', percent: 71),
-        QuizAverage(quizTitle: 'Linked lists', shortLabel: 'W5', percent: 66),
-        QuizAverage(quizTitle: 'Recursion', shortLabel: 'W6', percent: 58),
-        QuizAverage(quizTitle: 'Trees', shortLabel: 'W7', percent: 69),
-        QuizAverage(quizTitle: 'Hash tables', shortLabel: 'W8', percent: 62),
-        QuizAverage(quizTitle: 'Graphs', shortLabel: 'W9', percent: 67),
-      ]);
+    QuizAverage(quizTitle: 'Arrays', shortLabel: 'W4', percent: 71),
+    QuizAverage(quizTitle: 'Linked lists', shortLabel: 'W5', percent: 66),
+    QuizAverage(quizTitle: 'Recursion', shortLabel: 'W6', percent: 58),
+    QuizAverage(quizTitle: 'Trees', shortLabel: 'W7', percent: 69),
+    QuizAverage(quizTitle: 'Hash tables', shortLabel: 'W8', percent: 62),
+    QuizAverage(quizTitle: 'Graphs', shortLabel: 'W9', percent: 67),
+  ]);
 
   @override
   Future<List<TopicAggregate>> topicAggregates() async {
@@ -420,43 +455,75 @@ class MockResultsRepository implements ResultsRepository {
     }
     final aggregates = [
       TopicAggregate(
-          topic: 'Collisions',
-          percent: 44,
-          questionCount: 7,
-          gaps: byTopic['Collisions'] ?? const [],
-          gapsAwaitingReview: _awaiting(byTopic['Collisions'])),
+        topic: 'Collisions',
+        percent: 44,
+        questionCount: 7,
+        gaps: byTopic['Collisions'] ?? const [],
+        gapsAwaitingReview: _awaiting(byTopic['Collisions']),
+      ),
       TopicAggregate(
-          topic: 'Shortest paths',
-          percent: 51,
-          questionCount: 5,
-          gaps: byTopic['Shortest paths'] ?? const [],
-          gapsAwaitingReview: _awaiting(byTopic['Shortest paths'])),
+        topic: 'Shortest paths',
+        percent: 51,
+        questionCount: 5,
+        gaps: byTopic['Shortest paths'] ?? const [],
+        gapsAwaitingReview: _awaiting(byTopic['Shortest paths']),
+      ),
       TopicAggregate(
-          topic: 'Call stack',
-          percent: 56,
-          questionCount: 4,
-          gaps: byTopic['Call stack'] ?? const [],
-          gapsAwaitingReview: _awaiting(byTopic['Call stack'])),
+        topic: 'Call stack',
+        percent: 56,
+        questionCount: 4,
+        gaps: byTopic['Call stack'] ?? const [],
+        gapsAwaitingReview: _awaiting(byTopic['Call stack']),
+      ),
       const TopicAggregate(
-          topic: 'Recurrence', percent: 61, questionCount: 3, gapsAwaitingReview: 0),
+        topic: 'Recurrence',
+        percent: 61,
+        questionCount: 3,
+        gapsAwaitingReview: 0,
+      ),
       const TopicAggregate(
-          topic: 'Load factor', percent: 64, questionCount: 4, gapsAwaitingReview: 0),
+        topic: 'Load factor',
+        percent: 64,
+        questionCount: 4,
+        gapsAwaitingReview: 0,
+      ),
       const TopicAggregate(
-          topic: 'Traversal', percent: 72, questionCount: 5, gapsAwaitingReview: 0),
+        topic: 'Traversal',
+        percent: 72,
+        questionCount: 5,
+        gapsAwaitingReview: 0,
+      ),
       const TopicAggregate(
-          topic: 'Representation', percent: 74, questionCount: 5, gapsAwaitingReview: 0),
+        topic: 'Representation',
+        percent: 74,
+        questionCount: 5,
+        gapsAwaitingReview: 0,
+      ),
       const TopicAggregate(
-          topic: 'Hashing', percent: 78, questionCount: 4, gapsAwaitingReview: 0),
+        topic: 'Hashing',
+        percent: 78,
+        questionCount: 4,
+        gapsAwaitingReview: 0,
+      ),
       const TopicAggregate(
-          topic: 'Base cases', percent: 81, questionCount: 3, gapsAwaitingReview: 0),
+        topic: 'Base cases',
+        percent: 81,
+        questionCount: 3,
+        gapsAwaitingReview: 0,
+      ),
       const TopicAggregate(
-          topic: 'Complexity', percent: 83, questionCount: 2, gapsAwaitingReview: 0),
+        topic: 'Complexity',
+        percent: 83,
+        questionCount: 2,
+        gapsAwaitingReview: 0,
+      ),
     ];
     return _latency(aggregates);
   }
 
-  int _awaiting(List<Finding>? fs) =>
-      (fs ?? const []).where((f) => f.status == FindingStatus.awaitingReview).length;
+  int _awaiting(List<Finding>? fs) => (fs ?? const [])
+      .where((f) => f.status == FindingStatus.awaitingReview)
+      .length;
 
   @override
   Future<List<RosterEntry>> roster() async {
@@ -472,12 +539,18 @@ class MockResultsRepository implements ResultsRepository {
   Future<List<Finding>> findings() => _latency(List.unmodifiable(_findings));
 
   @override
-  Future<void> decideFinding(String id, FindingStatus status,
-      {String? reason}) async {
+  Future<void> decideFinding(
+    String id,
+    FindingStatus status, {
+    String? reason,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 700));
     final i = _findings.indexWhere((f) => f.id == id);
     if (i != -1) {
-      _findings[i] = _findings[i].copyWith(status: status, rejectionReason: reason);
+      _findings[i] = _findings[i].copyWith(
+        status: status,
+        rejectionReason: reason,
+      );
     }
   }
 
@@ -547,7 +620,8 @@ class MockResultsRepository implements ResultsRepository {
       studentAttempts(Fixtures.student.id);
 
   @override
-  Future<List<QuizAverage>> myAverages() => studentAverages(Fixtures.student.id);
+  Future<List<QuizAverage>> myAverages() =>
+      studentAverages(Fixtures.student.id);
 
   @override
   Future<List<TopicScore>> myTopicScores() =>
@@ -559,19 +633,23 @@ class MockResultsRepository implements ResultsRepository {
     for (final q in Fixtures.allQuizzes.reversed) {
       // One quiz the student did not take, so the dash state is reachable.
       final absent = studentId == Fixtures.student.id && q.id == 'q-recursion';
-      out.add(QuizAverage(
-        quizTitle: q.title,
-        shortLabel: q.week?.replaceAll('Week ', 'W') ?? q.title,
-        percent: absent ? 0 : _resultFor(q, studentId).percent,
-        absent: absent,
-      ));
+      out.add(
+        QuizAverage(
+          quizTitle: q.title,
+          shortLabel: q.week?.replaceAll('Week ', 'W') ?? q.title,
+          percent: absent ? 0 : _resultFor(q, studentId).percent,
+          absent: absent,
+        ),
+      );
     }
     return _latency(out);
   }
 
   @override
-  Future<List<TopicScore>> studentTopicScores(String studentId,
-      {bool recent = true}) async {
+  Future<List<TopicScore>> studentTopicScores(
+    String studentId, {
+    bool recent = true,
+  }) async {
     final merged = <String, List<int>>{};
     for (final q in Fixtures.allQuizzes) {
       for (final t in _resultFor(q, studentId).topicScores) {
@@ -593,12 +671,14 @@ class MockResultsRepository implements ResultsRepository {
     for (final q in Fixtures.allQuizzes) {
       if (studentId == Fixtures.student.id && q.id == 'q-recursion') continue;
       final r = _resultFor(q, studentId);
-      out.add(AttemptSummary(
-        quiz: q,
-        correct: r.correct,
-        total: r.total,
-        takenOn: q.lastRun ?? DateTime.now(),
-      ));
+      out.add(
+        AttemptSummary(
+          quiz: q,
+          correct: r.correct,
+          total: r.total,
+          takenOn: q.lastRun ?? DateTime.now(),
+        ),
+      );
     }
     out.sort((a, b) => b.takenOn.compareTo(a.takenOn));
     return _latency(out);
@@ -606,7 +686,9 @@ class MockResultsRepository implements ResultsRepository {
 
   @override
   Future<QuizResultData> studentAttemptDetail(
-      String studentId, String quizId) async {
+    String studentId,
+    String quizId,
+  ) async {
     final quiz = Fixtures.allQuizzes.firstWhere((q) => q.id == quizId);
     return _latency(_resultFor(quiz, studentId));
   }

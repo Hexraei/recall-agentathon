@@ -33,8 +33,10 @@ class DashboardHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(greeting,
-                  style: AppText.bodySmall.copyWith(color: AppColors.grey2)),
+              Text(
+                greeting,
+                style: AppText.bodySmall.copyWith(color: AppColors.grey2),
+              ),
               const SizedBox(height: 2),
               Text(name, style: AppText.pageTitle),
             ],
@@ -52,8 +54,11 @@ class DashboardHeader extends StatelessWidget {
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: onSignOut,
-                child: const Icon(Icons.logout,
-                    size: 20, color: AppColors.grey2),
+                child: const Icon(
+                  Icons.logout,
+                  size: 20,
+                  color: AppColors.grey2,
+                ),
               ),
             ),
           ),
@@ -102,13 +107,19 @@ class PrimaryActionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(title,
-                      style: AppText.rowTitle
-                          .copyWith(color: AppColors.disabledText)),
+                  Text(
+                    title,
+                    style: AppText.rowTitle.copyWith(
+                      color: AppColors.disabledText,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: AppText.rowSecondary
-                          .copyWith(color: AppColors.disabledText)),
+                  Text(
+                    subtitle,
+                    style: AppText.rowSecondary.copyWith(
+                      color: AppColors.disabledText,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -134,14 +145,19 @@ class PrimaryActionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(title,
-                        style: AppText.button
-                            .copyWith(fontSize: 17, color: AppColors.white)),
+                    Text(
+                      title,
+                      style: AppText.button.copyWith(
+                        fontSize: 17,
+                        color: AppColors.white,
+                      ),
+                    ),
                     const SizedBox(height: 3),
                     Text(
                       subtitle,
-                      style: AppText.rowSecondary
-                          .copyWith(color: AppColors.white.withValues(alpha: 0.82)),
+                      style: AppText.rowSecondary.copyWith(
+                        color: AppColors.white.withValues(alpha: 0.82),
+                      ),
                     ),
                   ],
                 ),
@@ -184,11 +200,12 @@ class InvitationCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(title,
-              style: AppText.sheetTitle.copyWith(color: AppColors.accentDeep)),
+          Text(
+            title,
+            style: AppText.sheetTitle.copyWith(color: AppColors.accentDeep),
+          ),
           const SizedBox(height: 8),
-          Text(body,
-              style: AppText.bodySmall.copyWith(color: AppColors.grey1)),
+          Text(body, style: AppText.bodySmall.copyWith(color: AppColors.grey1)),
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.centerLeft,
@@ -202,9 +219,13 @@ class InvitationCard extends StatelessWidget {
                   height: 46,
                   alignment: Alignment.center,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(actionLabel,
-                      style: AppText.button
-                          .copyWith(fontSize: 15, color: AppColors.white)),
+                  child: Text(
+                    actionLabel,
+                    style: AppText.button.copyWith(
+                      fontSize: 15,
+                      color: AppColors.white,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -251,18 +272,28 @@ class LiveBanner extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(title,
-                        style: AppText.rowTitle
-                            .copyWith(fontSize: 14, color: AppColors.accentDeep)),
+                    Text(
+                      title,
+                      style: AppText.rowTitle.copyWith(
+                        fontSize: 14,
+                        color: AppColors.accentDeep,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(detail,
-                        style: AppText.rowSecondary
-                            .copyWith(color: AppColors.grey1)),
+                    Text(
+                      detail,
+                      style: AppText.rowSecondary.copyWith(
+                        color: AppColors.grey1,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right,
-                  size: 18, color: AppColors.accent),
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: AppColors.accent,
+              ),
             ],
           ),
         ),

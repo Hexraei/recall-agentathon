@@ -43,14 +43,16 @@ class _QuizBuilderScreenState extends State<QuizBuilderScreen> {
   @override
   void initState() {
     super.initState();
-    _c = QuizBuilderController(context.read<QuizRepository>(),
-        existing: widget.quiz)
-      ..loadTopics();
+    _c = QuizBuilderController(
+      context.read<QuizRepository>(),
+      existing: widget.quiz,
+    )..loadTopics();
     _title = TextEditingController(text: _c.title);
     _questionText = TextEditingController();
     _topic = TextEditingController();
     _topicFocus.addListener(
-        () => setState(() => _topicOpen = _topicFocus.hasFocus));
+      () => setState(() => _topicOpen = _topicFocus.hasFocus),
+    );
   }
 
   @override
@@ -73,7 +75,8 @@ class _QuizBuilderScreenState extends State<QuizBuilderScreen> {
       context: context,
       builder: (context) => ConfirmSheet(
         title: 'Leave without saving?',
-        body: 'A title, a time limit and $n question${n == 1 ? '' : 's'} are '
+        body:
+            'A title, a time limit and $n question${n == 1 ? '' : 's'} are '
             'not saved yet. Leaving now loses all of it.',
         // Keep editing is the filled action: the safe path is the one being
         // recommended, and discarding is the red outline beneath it.
@@ -111,7 +114,7 @@ class _QuizBuilderScreenState extends State<QuizBuilderScreen> {
               subtitle: n == 0
                   ? 'No questions yet'
                   : '$n question${n == 1 ? '' : 's'} added · '
-                      '${c.dirty ? 'not saved yet' : 'saved'}',
+                        '${c.dirty ? 'not saved yet' : 'saved'}',
               backLabel: 'Back to my quizzes',
               onBack: () async {
                 if (await _confirmLeave() && context.mounted) {
@@ -154,7 +157,8 @@ class _QuizBuilderScreenState extends State<QuizBuilderScreen> {
                   SectionLabel('Questions so far · $n', bottom: 10),
                   if (c.questions.isEmpty)
                     const DashedSlot(
-                      text: 'No questions yet. The first one you add appears here.',
+                      text:
+                          'No questions yet. The first one you add appears here.',
                     )
                   else
                     RowCard(
@@ -276,9 +280,13 @@ class _QuizBuilderScreenState extends State<QuizBuilderScreen> {
           ],
           if (c.correctError != null) ...[
             const SizedBox(height: 8),
-            Text(c.correctError!,
-                style:
-                    AppText.caption.copyWith(fontSize: 12.5, color: AppColors.red)),
+            Text(
+              c.correctError!,
+              style: AppText.caption.copyWith(
+                fontSize: 12.5,
+                color: AppColors.red,
+              ),
+            ),
           ],
           const SizedBox(height: 18),
           OutlinedAction(
@@ -326,7 +334,8 @@ class _TimeLimitStepper extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.white,
             border: Border.all(
-                color: error != null ? AppColors.red : AppColors.hairlineStrong),
+              color: error != null ? AppColors.red : AppColors.hairlineStrong,
+            ),
             borderRadius: AppRadii.controlR,
           ),
           child: Row(
@@ -343,8 +352,10 @@ class _TimeLimitStepper extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Text('$value',
-                          style: AppText.rowTitle.copyWith(fontSize: 17)),
+                      Text(
+                        '$value',
+                        style: AppText.rowTitle.copyWith(fontSize: 17),
+                      ),
                       const SizedBox(width: 5),
                       Text('min', style: AppText.rowSecondary),
                     ],
@@ -361,8 +372,13 @@ class _TimeLimitStepper extends StatelessWidget {
         ),
         if (error != null) ...[
           const SizedBox(height: 6),
-          Text(error!,
-              style: AppText.caption.copyWith(fontSize: 12.5, color: AppColors.red)),
+          Text(
+            error!,
+            style: AppText.caption.copyWith(
+              fontSize: 12.5,
+              color: AppColors.red,
+            ),
+          ),
         ],
       ],
     );
@@ -388,9 +404,11 @@ class _StepButton extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            child: Icon(icon,
-                size: 18,
-                color: onTap == null ? AppColors.disabled : AppColors.grey1),
+            child: Icon(
+              icon,
+              size: 18,
+              color: onTap == null ? AppColors.disabled : AppColors.grey1,
+            ),
           ),
         ),
       ),
@@ -433,7 +451,8 @@ class _TopicCombobox extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.white,
             border: Border.all(
-                color: error != null ? AppColors.red : AppColors.hairlineStrong),
+              color: error != null ? AppColors.red : AppColors.hairlineStrong,
+            ),
             borderRadius: AppRadii.controlR,
           ),
           child: Row(
@@ -446,18 +465,25 @@ class _TopicCombobox extends StatelessWidget {
                   style: AppText.bodyLarge.copyWith(color: AppColors.ink),
                   decoration: InputDecoration(
                     hintText: 'Collisions',
-                    hintStyle: AppText.bodyLarge
-                        .copyWith(color: AppColors.disabledText),
+                    hintStyle: AppText.bodyLarge.copyWith(
+                      color: AppColors.disabledText,
+                    ),
                     border: InputBorder.none,
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 15),
+                      horizontal: 14,
+                      vertical: 15,
+                    ),
                   ),
                 ),
               ),
               const Padding(
                 padding: EdgeInsets.only(right: 12),
-                child: Icon(Icons.expand_more, size: 18, color: AppColors.grey3),
+                child: Icon(
+                  Icons.expand_more,
+                  size: 18,
+                  color: AppColors.grey3,
+                ),
               ),
             ],
           ),
@@ -486,7 +512,8 @@ class _TopicCombobox extends StatelessWidget {
                     border: i == 0
                         ? null
                         : const Border(
-                            top: BorderSide(color: AppColors.hairlineSoft)),
+                            top: BorderSide(color: AppColors.hairlineSoft),
+                          ),
                   ),
                   child: Text(suggestions[i], style: AppText.bodySmall),
                 ),
@@ -495,8 +522,13 @@ class _TopicCombobox extends StatelessWidget {
           ),
         if (error != null) ...[
           const SizedBox(height: 6),
-          Text(error!,
-              style: AppText.caption.copyWith(fontSize: 12.5, color: AppColors.red)),
+          Text(
+            error!,
+            style: AppText.caption.copyWith(
+              fontSize: 12.5,
+              color: AppColors.red,
+            ),
+          ),
         ],
       ],
     );
@@ -563,9 +595,13 @@ class _OptionRow extends StatelessWidget {
             ),
             SizedBox(
               width: 20,
-              child: Text(letter,
-                  style: AppText.rowTitle
-                      .copyWith(fontSize: 13.5, color: AppColors.grey2)),
+              child: Text(
+                letter,
+                style: AppText.rowTitle.copyWith(
+                  fontSize: 13.5,
+                  color: AppColors.grey2,
+                ),
+              ),
             ),
             Expanded(
               child: Container(
@@ -573,8 +609,10 @@ class _OptionRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.white,
                   border: Border.all(
-                      color:
-                          error != null ? AppColors.red : AppColors.hairlineStrong),
+                    color: error != null
+                        ? AppColors.red
+                        : AppColors.hairlineStrong,
+                  ),
                   borderRadius: AppRadii.controlR,
                 ),
                 child: TextField(
@@ -585,8 +623,10 @@ class _OptionRow extends StatelessWidget {
                   decoration: const InputDecoration(
                     border: InputBorder.none,
                     isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 13,
+                    ),
                   ),
                 ),
               ),
@@ -596,9 +636,13 @@ class _OptionRow extends StatelessWidget {
         if (error != null)
           Padding(
             padding: const EdgeInsets.only(left: 64, top: 4),
-            child: Text(error!,
-                style: AppText.caption
-                    .copyWith(fontSize: 12, color: AppColors.red)),
+            child: Text(
+              error!,
+              style: AppText.caption.copyWith(
+                fontSize: 12,
+                color: AppColors.red,
+              ),
+            ),
           ),
       ],
     );
@@ -630,9 +674,13 @@ class _QuestionRow extends StatelessWidget {
               color: AppColors.ground,
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Text('$index',
-                style: AppText.captionSmall
-                    .copyWith(fontWeight: FontWeight.w600, color: AppColors.grey2)),
+            child: Text(
+              '$index',
+              style: AppText.captionSmall.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.grey2,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -640,10 +688,12 @@ class _QuestionRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(question.text,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.bodySmall.copyWith(color: AppColors.ink)),
+                Text(
+                  question.text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.bodySmall.copyWith(color: AppColors.ink),
+                ),
                 const SizedBox(height: 5),
                 TagPill(text: question.topic),
               ],

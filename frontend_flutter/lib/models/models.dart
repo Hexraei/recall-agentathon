@@ -117,17 +117,16 @@ class Quiz {
     DateTime? lastRun,
     String? pin,
     DateTime? closedAt,
-  }) =>
-      Quiz(
-        id: id,
-        title: title ?? this.title,
-        questions: questions ?? this.questions,
-        timeLimitMinutes: timeLimitMinutes ?? this.timeLimitMinutes,
-        week: week ?? this.week,
-        lastRun: lastRun ?? this.lastRun,
-        pin: pin ?? this.pin,
-        closedAt: closedAt ?? this.closedAt,
-      );
+  }) => Quiz(
+    id: id,
+    title: title ?? this.title,
+    questions: questions ?? this.questions,
+    timeLimitMinutes: timeLimitMinutes ?? this.timeLimitMinutes,
+    week: week ?? this.week,
+    lastRun: lastRun ?? this.lastRun,
+    pin: pin ?? this.pin,
+    closedAt: closedAt ?? this.closedAt,
+  );
 }
 
 /// Where one student has got to, as the Live Monitor states it in words.
@@ -165,7 +164,7 @@ class StudentProgress {
         final stamp = t == null
             ? ''
             : ' at ${t.hour.toString().padLeft(2, '0')}:'
-                '${t.minute.toString().padLeft(2, '0')}';
+                  '${t.minute.toString().padLeft(2, '0')}';
         return autoSubmitted ? 'Submitted at the deadline' : 'Submitted$stamp';
     }
   }
@@ -317,18 +316,18 @@ class Finding {
   final String? rejectionReason;
 
   Finding copyWith({FindingStatus? status, String? rejectionReason}) => Finding(
-        id: id,
-        topic: topic,
-        statement: statement,
-        quizTitle: quizTitle,
-        questionStem: questionStem,
-        chosenCount: chosenCount,
-        classSize: classSize,
-        uncertainty: uncertainty,
-        nextStep: nextStep,
-        status: status ?? this.status,
-        rejectionReason: rejectionReason ?? this.rejectionReason,
-      );
+    id: id,
+    topic: topic,
+    statement: statement,
+    quizTitle: quizTitle,
+    questionStem: questionStem,
+    chosenCount: chosenCount,
+    classSize: classSize,
+    uncertainty: uncertainty,
+    nextStep: nextStep,
+    status: status ?? this.status,
+    rejectionReason: rejectionReason ?? this.rejectionReason,
+  );
 }
 
 /// A class-wide result for one quiz, as Quiz Results reads it.

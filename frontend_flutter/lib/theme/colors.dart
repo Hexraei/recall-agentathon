@@ -64,8 +64,12 @@ class AppRadii {
   /// Containers: cards, bands, sheets.
   static const double container = 14;
 
-  static const BorderRadius controlR = BorderRadius.all(Radius.circular(control));
-  static const BorderRadius containerR = BorderRadius.all(Radius.circular(container));
+  static const BorderRadius controlR = BorderRadius.all(
+    Radius.circular(control),
+  );
+  static const BorderRadius containerR = BorderRadius.all(
+    Radius.circular(container),
+  );
 }
 
 class AppMetrics {

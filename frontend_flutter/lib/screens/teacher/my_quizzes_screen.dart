@@ -37,8 +37,9 @@ class _MyQuizzesScreenState extends State<MyQuizzesScreen> {
     _future = context.read<QuizRepository>().myQuizzes();
   }
 
-  void _reload() =>
-      setState(() => _future = context.read<QuizRepository>().myQuizzes());
+  void _reload() => setState(() {
+    _future = context.read<QuizRepository>().myQuizzes();
+  });
 
   Future<void> _confirmDelete(Quiz quiz) async {
     final confirmed = await showAppSheet<bool>(
@@ -47,7 +48,8 @@ class _MyQuizzesScreenState extends State<MyQuizzesScreen> {
         title: 'Delete “${quiz.title}”?',
         // The cascade is an assumption in the design, so the copy says it
         // out loud rather than deleting quietly.
-        body: 'Its results, and everything the analysis built from it, go with '
+        body:
+            'Its results, and everything the analysis built from it, go with '
             "it. This can't be undone.",
         confirmLabel: 'Delete quiz',
         cancelLabel: 'Keep it',
@@ -92,9 +94,8 @@ class _MyQuizzesScreenState extends State<MyQuizzesScreen> {
                     for (final q in quizzes)
                       _QuizRow(
                         quiz: q,
-                        onOpen: () => widget.hosting
-                            ? _openLobby(q)
-                            : _openBuilder(q),
+                        onOpen: () =>
+                            widget.hosting ? _openLobby(q) : _openBuilder(q),
                         onHost: () => _openLobby(q),
                         onDelete: () => _confirmDelete(q),
                       ),
@@ -108,9 +109,9 @@ class _MyQuizzesScreenState extends State<MyQuizzesScreen> {
     );
   }
 
-  void _openBuilder(Quiz? quiz) => Navigator.of(context)
-      .pushNamed(Routes.quizBuilder, arguments: quiz)
-      .then((_) => _reload());
+  void _openBuilder(Quiz? quiz) => Navigator.of(
+    context,
+  ).pushNamed(Routes.quizBuilder, arguments: quiz).then((_) => _reload());
 
   void _openLobby(Quiz quiz) =>
       Navigator.of(context).pushNamed(Routes.hostLobby, arguments: quiz);
@@ -141,9 +142,13 @@ class _NewQuizButton extends StatelessWidget {
             children: [
               const Icon(Icons.add, size: 18, color: AppColors.accent),
               const SizedBox(width: 8),
-              Text('New quiz',
-                  style: AppText.button
-                      .copyWith(fontSize: 15, color: AppColors.accent)),
+              Text(
+                'New quiz',
+                style: AppText.button.copyWith(
+                  fontSize: 15,
+                  color: AppColors.accent,
+                ),
+              ),
             ],
           ),
         ),
@@ -189,8 +194,12 @@ class _QuizRow extends StatelessWidget {
                   Text(quiz.summaryLine, style: AppText.rowSecondary),
                   const SizedBox(height: 2),
                   Text(
-                    quiz.hasRun ? 'Ran ${_shortDate(quiz.lastRun!)}' : 'Not run yet',
-                    style: AppText.captionSmall.copyWith(color: AppColors.grey4),
+                    quiz.hasRun
+                        ? 'Ran ${_shortDate(quiz.lastRun!)}'
+                        : 'Not run yet',
+                    style: AppText.captionSmall.copyWith(
+                      color: AppColors.grey4,
+                    ),
                   ),
                 ],
               ),
@@ -203,7 +212,11 @@ class _QuizRow extends StatelessWidget {
             height: 44,
             child: PopupMenuButton<String>(
               tooltip: 'More options for ${quiz.title}',
-              icon: const Icon(Icons.more_vert, size: 20, color: AppColors.grey3),
+              icon: const Icon(
+                Icons.more_vert,
+                size: 20,
+                color: AppColors.grey3,
+              ),
               color: AppColors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: AppRadii.controlR,
@@ -217,8 +230,10 @@ class _QuizRow extends StatelessWidget {
                 ),
                 PopupMenuItem(
                   value: 'delete',
-                  child: Text('Delete',
-                      style: AppText.bodySmall.copyWith(color: AppColors.red)),
+                  child: Text(
+                    'Delete',
+                    style: AppText.bodySmall.copyWith(color: AppColors.red),
+                  ),
                 ),
               ],
             ),
@@ -231,8 +246,18 @@ class _QuizRow extends StatelessWidget {
   static String _shortDate(DateTime d) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${days[d.weekday - 1]} ${d.day} ${months[d.month - 1]}';
   }
@@ -257,8 +282,10 @@ class _EmptyQuizzes extends StatelessWidget {
         children: [
           Text('No quizzes yet', style: AppText.sheetTitle),
           const SizedBox(height: 8),
-          Text('Three steps and the first one is ready to host.',
-              style: AppText.bodySmall),
+          Text(
+            'Three steps and the first one is ready to host.',
+            style: AppText.bodySmall,
+          ),
           const SizedBox(height: 18),
           for (var i = 0; i < _steps.length; i++) ...[
             if (i > 0) const SizedBox(height: 14),
@@ -273,10 +300,13 @@ class _EmptyQuizzes extends StatelessWidget {
                     color: AppColors.accentTint,
                     borderRadius: BorderRadius.circular(11),
                   ),
-                  child: Text('${i + 1}',
-                      style: AppText.captionSmall.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.accent)),
+                  child: Text(
+                    '${i + 1}',
+                    style: AppText.captionSmall.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.accent,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Text(_steps[i], style: AppText.bodySmall)),

@@ -43,7 +43,9 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       case Routes.teacherHome:
         return const TeacherHomeScreen();
       case Routes.myQuizzes:
-        return MyQuizzesScreen(hosting: (a as MyQuizzesArgs?)?.hosting ?? false);
+        return MyQuizzesScreen(
+          hosting: (a as MyQuizzesArgs?)?.hosting ?? false,
+        );
       case Routes.quizBuilder:
         return QuizBuilderScreen(quiz: a as Quiz?);
       case Routes.hostLobby:
@@ -63,7 +65,9 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       case Routes.studentAttempt:
         final args = a as StudentAttemptArgs;
         return StudentAttemptScreen(
-            studentId: args.studentId, quizId: args.quizId);
+          studentId: args.studentId,
+          quizId: args.quizId,
+        );
 
       // ------------------------------------------------------------ student
       case Routes.studentHome:

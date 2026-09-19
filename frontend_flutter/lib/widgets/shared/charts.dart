@@ -5,7 +5,11 @@ import '../../theme/text_styles.dart';
 
 /// One bar of a [ColumnChart].
 class ColumnDatum {
-  const ColumnDatum({required this.label, required this.value, this.absent = false});
+  const ColumnDatum({
+    required this.label,
+    required this.value,
+    this.absent = false,
+  });
 
   final String label;
   final double value;
@@ -33,8 +37,8 @@ class ColumnChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final peak = maxValue ??
-        data.fold<double>(1, (m, d) => d.value > m ? d.value : m);
+    final peak =
+        maxValue ?? data.fold<double>(1, (m, d) => d.value > m ? d.value : m);
 
     return SizedBox(
       height: height,
@@ -52,7 +56,7 @@ class ColumnChart extends StatelessWidget {
                       d.absent
                           ? '—'
                           : (valueFormatter?.call(d.value) ??
-                              d.value.toStringAsFixed(0)),
+                                d.value.toStringAsFixed(0)),
                       style: AppText.caption.copyWith(
                         fontWeight: FontWeight.w600,
                         color: d.absent ? AppColors.grey4 : AppColors.grey1,
@@ -62,7 +66,10 @@ class ColumnChart extends StatelessWidget {
                     if (!d.absent)
                       Container(
                         width: 24,
-                        height: (d.value / peak * (height - 40)).clamp(3.0, height),
+                        height: (d.value / peak * (height - 40)).clamp(
+                          3.0,
+                          height,
+                        ),
                         decoration: const BoxDecoration(
                           color: AppColors.accent,
                           borderRadius: BorderRadius.vertical(
@@ -168,7 +175,9 @@ class SegmentStrip extends StatelessWidget {
             child: Container(
               height: height,
               decoration: BoxDecoration(
-                color: i < correct ? AppColors.accent : AppColors.accentTintDeep,
+                color: i < correct
+                    ? AppColors.accent
+                    : AppColors.accentTintDeep,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

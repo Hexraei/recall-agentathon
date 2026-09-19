@@ -51,14 +51,18 @@ class _ReviewFindingsScreenState extends State<ReviewFindingsScreen> {
     return _queue;
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+    _future = _load();
+  });
 
   Future<void> _decide(FindingStatus status, {String? reason}) async {
     final finding = _queue[_index];
     setState(() => _saving = true);
-    await context
-        .read<ResultsRepository>()
-        .decideFinding(finding.id, status, reason: reason);
+    await context.read<ResultsRepository>().decideFinding(
+      finding.id,
+      status,
+      reason: reason,
+    );
     if (!mounted) return;
     setState(() {
       _saving = false;
@@ -100,9 +104,9 @@ class _ReviewFindingsScreenState extends State<ReviewFindingsScreen> {
           subtitle: !done
               ? null
               : empty
-                  ? 'Nothing waiting'
-                  : '${_queue.length} class gap'
-                      '${_queue.length == 1 ? '' : 's'} waiting',
+              ? 'Nothing waiting'
+              : '${_queue.length} class gap'
+                    '${_queue.length == 1 ? '' : 's'} waiting',
           backLabel: 'Back to dashboard',
           bottomBar: done && !empty ? _actions() : null,
           child: Column(
@@ -134,8 +138,9 @@ class _ReviewFindingsScreenState extends State<ReviewFindingsScreen> {
               child: FilledAction(
                 label: 'Accept',
                 busy: _saving,
-                onPressed:
-                    _saving ? null : () => _decide(FindingStatus.accepted),
+                onPressed: _saving
+                    ? null
+                    : () => _decide(FindingStatus.accepted),
               ),
             ),
             const SizedBox(width: 10),
@@ -172,9 +177,13 @@ class _ReviewFindingsScreenState extends State<ReviewFindingsScreen> {
         ],
         Row(
           children: [
-            Text('${_index + 1} of ${_queue.length}',
-                style: AppText.rowTitle
-                    .copyWith(fontSize: 13, color: AppColors.grey2)),
+            Text(
+              '${_index + 1} of ${_queue.length}',
+              style: AppText.rowTitle.copyWith(
+                fontSize: 13,
+                color: AppColors.grey2,
+              ),
+            ),
             const Spacer(),
             Flexible(
               child: Text(
@@ -198,8 +207,10 @@ class _ReviewFindingsScreenState extends State<ReviewFindingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(f.quizTitle,
-                  style: AppText.rowTitle.copyWith(fontSize: 13.5)),
+              Text(
+                f.quizTitle,
+                style: AppText.rowTitle.copyWith(fontSize: 13.5),
+              ),
               const SizedBox(height: 4),
               Text(f.questionStem, style: AppText.bodySmall),
               const SizedBox(height: 8),
@@ -207,8 +218,10 @@ class _ReviewFindingsScreenState extends State<ReviewFindingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Text('${f.chosenCount} of ${f.classSize}',
-                      style: AppText.rowTitle.copyWith(fontSize: 14)),
+                  Text(
+                    '${f.chosenCount} of ${f.classSize}',
+                    style: AppText.rowTitle.copyWith(fontSize: 14),
+                  ),
                   const SizedBox(width: 6),
                   Text('chose it', style: AppText.rowSecondary),
                 ],
@@ -219,9 +232,7 @@ class _ReviewFindingsScreenState extends State<ReviewFindingsScreen> {
         const SectionLabel('What is uncertain'),
         InfoBand(text: f.uncertainty),
         const SectionLabel('Next step students would see'),
-        AppCard(
-          child: Text(f.nextStep, style: AppText.bodySmall),
-        ),
+        AppCard(child: Text(f.nextStep, style: AppText.bodySmall)),
         const SizedBox(height: 8),
       ],
     );
@@ -253,8 +264,10 @@ class _RejectSheetState extends State<_RejectSheet> {
         children: [
           Text('Reject this gap?', style: AppText.sheetTitle),
           const SizedBox(height: 8),
-          Text('Students will not see a next step for it.',
-              style: AppText.bodySmall),
+          Text(
+            'Students will not see a next step for it.',
+            style: AppText.bodySmall,
+          ),
           const SizedBox(height: 18),
           AppField(
             label: 'Reason (optional)',
@@ -303,8 +316,10 @@ class _Empty extends StatelessWidget {
             children: [
               Text('Nothing to review.', style: AppText.sheetTitle),
               const SizedBox(height: 8),
-              Text('New class gaps appear here after a quiz closes.',
-                  style: AppText.bodySmall),
+              Text(
+                'New class gaps appear here after a quiz closes.',
+                style: AppText.bodySmall,
+              ),
               const SizedBox(height: 20),
               OutlinedAction(
                 label: 'Back to dashboard',

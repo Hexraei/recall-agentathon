@@ -63,8 +63,10 @@ class TagPill extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: AppText.captionSmall
-            .copyWith(fontWeight: FontWeight.w600, color: tone),
+        style: AppText.captionSmall.copyWith(
+          fontWeight: FontWeight.w600,
+          color: tone,
+        ),
       ),
     );
   }
@@ -94,7 +96,8 @@ class RowCard extends StatelessWidget {
                 border: i == 0
                     ? null
                     : const Border(
-                        top: BorderSide(color: AppColors.hairlineSoft)),
+                        top: BorderSide(color: AppColors.hairlineSoft),
+                      ),
               ),
               child: children[i],
             ),
@@ -133,8 +136,10 @@ class FactRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(label,
-                    style: AppText.optionText.copyWith(color: AppColors.ink)),
+                Text(
+                  label,
+                  style: AppText.optionText.copyWith(color: AppColors.ink),
+                ),
                 if (secondary != null) ...[
                   const SizedBox(height: 2),
                   Text(secondary!, style: AppText.rowSecondary),
@@ -230,12 +235,15 @@ class AppField extends StatelessWidget {
                   style: AppText.bodyLarge.copyWith(color: AppColors.ink),
                   decoration: InputDecoration(
                     hintText: hint,
-                    hintStyle: AppText.bodyLarge
-                        .copyWith(color: AppColors.disabledText),
+                    hintStyle: AppText.bodyLarge.copyWith(
+                      color: AppColors.disabledText,
+                    ),
                     border: InputBorder.none,
                     isDense: true,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 15,
+                    ),
                   ),
                 ),
               ),
@@ -249,9 +257,13 @@ class AppField extends StatelessWidget {
         ),
         if (hasError) ...[
           const SizedBox(height: 6),
-          Text(error!,
-              style:
-                  AppText.caption.copyWith(fontSize: 12.5, color: AppColors.red)),
+          Text(
+            error!,
+            style: AppText.caption.copyWith(
+              fontSize: 12.5,
+              color: AppColors.red,
+            ),
+          ),
         ],
       ],
     );
@@ -292,8 +304,11 @@ class NoticeOverlay extends StatelessWidget {
                 children: [
                   Icon(icon, size: 34, color: AppColors.accent),
                   const SizedBox(height: 18),
-                  Text(title,
-                      textAlign: TextAlign.center, style: AppText.sectionTitle),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: AppText.sectionTitle,
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     message,
@@ -374,8 +389,10 @@ class ErrorState extends StatelessWidget {
                 onTap: onRetry,
                 child: Text(
                   'Try again',
-                  style: AppText.rowTitle
-                      .copyWith(fontSize: 13.5, color: AppColors.accent),
+                  style: AppText.rowTitle.copyWith(
+                    fontSize: 13.5,
+                    color: AppColors.accent,
+                  ),
                 ),
               ),
             ],
@@ -420,7 +437,10 @@ class _MarkPainter extends CustomPainter {
 
     // An arc from the top of the circle round to its left, leaving the gap
     // the arrowhead sits in.
-    final rect = Rect.fromCircle(center: Offset(24 * s, 24 * s), radius: 15 * s);
+    final rect = Rect.fromCircle(
+      center: Offset(24 * s, 24 * s),
+      radius: 15 * s,
+    );
     canvas.drawArc(rect, -1.5708, 4.7124, false, paint);
 
     final head = Path()

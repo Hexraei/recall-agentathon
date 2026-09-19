@@ -34,22 +34,22 @@ class InfoBand extends StatelessWidget {
   final Widget? action;
 
   Color get _bg => switch (tone) {
-        BandTone.neutral => AppColors.neutralBand,
-        BandTone.accent => AppColors.accentTint,
-        BandTone.danger => AppColors.redTint,
-      };
+    BandTone.neutral => AppColors.neutralBand,
+    BandTone.accent => AppColors.accentTint,
+    BandTone.danger => AppColors.redTint,
+  };
 
   Color get _border => switch (tone) {
-        BandTone.neutral => AppColors.neutralBandBorder,
-        BandTone.accent => AppColors.accentBorder,
-        BandTone.danger => AppColors.redBorder,
-      };
+    BandTone.neutral => AppColors.neutralBandBorder,
+    BandTone.accent => AppColors.accentBorder,
+    BandTone.danger => AppColors.redBorder,
+  };
 
   Color get _fg => switch (tone) {
-        BandTone.neutral => AppColors.grey1,
-        BandTone.accent => AppColors.accentDeep,
-        BandTone.danger => AppColors.red,
-      };
+    BandTone.neutral => AppColors.grey1,
+    BandTone.accent => AppColors.accentDeep,
+    BandTone.danger => AppColors.red,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -74,17 +74,19 @@ class InfoBand extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (title != null) ...[
-                  Text(title!,
-                      style: AppText.rowTitle.copyWith(fontSize: 14, color: _fg)),
+                  Text(
+                    title!,
+                    style: AppText.rowTitle.copyWith(fontSize: 14, color: _fg),
+                  ),
                   const SizedBox(height: 4),
                 ],
-                Text(text,
-                    style: AppText.bodySmall.copyWith(
-                        color: tone == BandTone.neutral ? AppColors.grey1 : _fg)),
-                if (action != null) ...[
-                  const SizedBox(height: 10),
-                  action!,
-                ],
+                Text(
+                  text,
+                  style: AppText.bodySmall.copyWith(
+                    color: tone == BandTone.neutral ? AppColors.grey1 : _fg,
+                  ),
+                ),
+                if (action != null) ...[const SizedBox(height: 10), action!],
               ],
             ),
           ),
@@ -170,8 +172,10 @@ class StatTile extends StatelessWidget {
           Text(
             figure,
             textAlign: TextAlign.center,
-            style: AppText.tileFigure
-                .copyWith(fontSize: 24, color: tone ?? AppColors.ink),
+            style: AppText.tileFigure.copyWith(
+              fontSize: 24,
+              color: tone ?? AppColors.ink,
+            ),
           ),
           const SizedBox(height: 2),
           Text(

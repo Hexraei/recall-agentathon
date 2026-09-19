@@ -15,8 +15,9 @@ Future<void> _bootToAuth(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('Splash shows the lockup while the session restores',
-      (tester) async {
+  testWidgets('Splash shows the lockup while the session restores', (
+    tester,
+  ) async {
     await tester.pumpWidget(const RecallApp());
     await tester.pump();
 
@@ -35,16 +36,18 @@ void main() {
     expect(find.text('Use your college email or roll number.'), findsOneWidget);
   });
 
-  testWidgets('The ground colour is the warm off-white, not white',
-      (tester) async {
+  testWidgets('The ground colour is the warm off-white, not white', (
+    tester,
+  ) async {
     await _bootToAuth(tester);
 
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
     expect(scaffold.backgroundColor, AppColors.ground);
   });
 
-  testWidgets('Sign in is where the account is created from too',
-      (tester) async {
+  testWidgets('Sign in is where the account is created from too', (
+    tester,
+  ) async {
     await _bootToAuth(tester);
 
     // The toggle is one Text.rich, so its label only matches with

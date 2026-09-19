@@ -43,9 +43,12 @@ class TopicRow extends StatelessWidget {
                     Row(
                       children: [
                         Flexible(
-                          child: Text(topic,
-                              style: AppText.optionText
-                                  .copyWith(color: AppColors.ink)),
+                          child: Text(
+                            topic,
+                            style: AppText.optionText.copyWith(
+                              color: AppColors.ink,
+                            ),
+                          ),
                         ),
                         if (tag != null) ...[
                           const SizedBox(width: 8),
@@ -69,21 +72,26 @@ class TopicRow extends StatelessWidget {
                     const SizedBox(width: 10),
                     SizedBox(
                       width: 34,
-                      child: Text('$percent%',
-                          textAlign: TextAlign.right,
-                          style: AppText.body.copyWith(
-                            fontWeight: FontWeight.w600,
-                            // Text never wears the data colour.
-                            color: AppColors.grey1,
-                          )),
+                      child: Text(
+                        '$percent%',
+                        textAlign: TextAlign.right,
+                        style: AppText.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                          // Text never wears the data colour.
+                          color: AppColors.grey1,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
               if (onTap != null) ...[
                 const SizedBox(width: 6),
-                const Icon(Icons.chevron_right,
-                    size: 18, color: AppColors.grey4),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: AppColors.grey4,
+                ),
               ],
             ],
           ),

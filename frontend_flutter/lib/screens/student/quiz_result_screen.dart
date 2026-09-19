@@ -45,7 +45,9 @@ class _StudentQuizResultScreenState extends State<StudentQuizResultScreen> {
   Future<QuizResultData?> _load() =>
       context.read<ResultsRepository>().myResult(widget.args.quizId);
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+    _future = _load();
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +100,8 @@ class _StudentQuizResultScreenState extends State<StudentQuizResultScreen> {
     return [
       const InfoBand(
         title: 'Not marked yet',
-        text: 'The quiz is still open for the rest of the class. Your result '
+        text:
+            'The quiz is still open for the rest of the class. Your result '
             'appears once it closes.',
       ),
       const SizedBox(height: 16),
@@ -131,12 +134,16 @@ class _StudentQuizResultScreenState extends State<StudentQuizResultScreen> {
             // second line.
             Text('${r.correct} of ${r.total}', style: AppText.displayResult),
             const SizedBox(height: 2),
-            Text('answered correctly · ${r.percent}%',
-                style: AppText.body.copyWith(color: AppColors.grey1)),
+            Text(
+              'answered correctly · ${r.percent}%',
+              style: AppText.body.copyWith(color: AppColors.grey1),
+            ),
             if (r.autoSubmitted && r.blanks > 0) ...[
               const SizedBox(height: 6),
-              Text('${r.blanks} left blank when time ran out',
-                  style: AppText.rowSecondary),
+              Text(
+                '${r.blanks} left blank when time ran out',
+                style: AppText.rowSecondary,
+              ),
             ],
             const SizedBox(height: 16),
             SegmentStrip(total: r.total, correct: r.correct),
@@ -169,8 +176,18 @@ class _StudentQuizResultScreenState extends State<StudentQuizResultScreen> {
 
   static String _longDate(DateTime d) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${d.day} ${months[d.month - 1]}';
   }
@@ -201,16 +218,23 @@ class _QuestionResultRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('${result.position}. ${result.question.text}',
-                    style: AppText.rowTitle
-                        .copyWith(fontSize: 14, height: 20 / 14)),
+                Text(
+                  '${result.position}. ${result.question.text}',
+                  style: AppText.rowTitle.copyWith(
+                    fontSize: 14,
+                    height: 20 / 14,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Text(
                   result.isBlank
                       ? 'You left this blank'
                       : 'You chose ${result.chosenLetter} · ${result.chosenOption}',
-                  style: AppText.caption
-                      .copyWith(fontSize: 13, height: 19 / 13, color: AppColors.grey2),
+                  style: AppText.caption.copyWith(
+                    fontSize: 13,
+                    height: 19 / 13,
+                    color: AppColors.grey2,
+                  ),
                 ),
                 // The correct answer is shown only when the student got it
                 // wrong; naming it on a correct answer would be noise.
@@ -220,7 +244,10 @@ class _QuestionResultRow extends StatelessWidget {
                     'Correct answer ${result.question.correctLetter} · '
                     '${result.question.correctOption}',
                     style: AppText.caption.copyWith(
-                        fontSize: 13, height: 19 / 13, color: AppColors.ink),
+                      fontSize: 13,
+                      height: 19 / 13,
+                      color: AppColors.ink,
+                    ),
                   ),
                 ],
               ],

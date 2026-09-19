@@ -47,22 +47,20 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
 
   Future<_AnalyticsData> _load() async {
     final r = context.read<ResultsRepository>();
-    return _AnalyticsData(
-      averages: await r.classAverages(),
-      topics: await r.topicAggregates(),
-      roster: await r.roster(),
-    );
+    final (averages, topics, roster) =
+        await (r.classAverages(), r.topicAggregates(), r.roster()).wait;
+    return _AnalyticsData(averages: averages, topics: topics, roster: roster);
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+    _future = _load();
+  });
 
   Future<void> _openFilter(int available) async {
     final picked = await showAppSheet<int>(
       context: context,
-      builder: (context) => _FilterSheet(
-        available: available,
-        selected: _quizzesInView,
-      ),
+      builder: (context) =>
+          _FilterSheet(available: available, selected: _quizzesInView),
     );
     if (picked != null) setState(() => _quizzesInView = picked);
   }
@@ -77,7 +75,11 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
         final averages = d == null
             ? const <QuizAverage>[]
             : d.averages.sublist(
-                (d.averages.length - _quizzesInView).clamp(0, d.averages.length));
+                (d.averages.length - _quizzesInView).clamp(
+                  0,
+                  d.averages.length,
+                ),
+              );
 
         return PageScaffold(
           title: 'Class analytics',
@@ -99,7 +101,8 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
               else if (d.averages.isEmpty)
                 const InfoBand(
                   title: 'No quizzes have closed yet',
-                  text: 'Once a quiz you hosted closes, its results feed the '
+                  text:
+                      'Once a quiz you hosted closes, its results feed the '
                       'trend, the topics and the roster here.',
                 )
               else
@@ -112,12 +115,17 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
   }
 
   List<Widget> _content(
-      BuildContext context, _AnalyticsData d, List<QuizAverage> averages) {
+    BuildContext context,
+    _AnalyticsData d,
+    List<QuizAverage> averages,
+  ) {
     final topics = _showAllTopics ? d.topics : d.topics.take(5).toList();
     final roster = d.roster
-        .where((e) =>
-            _search.isEmpty ||
-            e.student.name.toLowerCase().contains(_search.toLowerCase()))
+        .where(
+          (e) =>
+              _search.isEmpty ||
+              e.student.name.toLowerCase().contains(_search.toLowerCase()),
+        )
         .toList();
     final shownRoster = _showAllStudents ? roster : roster.take(5).toList();
 
@@ -143,21 +151,24 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Average score on each quiz, in order run.',
-                  style: AppText.bodySmall),
+              Text(
+                'Average score on each quiz, in order run.',
+                style: AppText.bodySmall,
+              ),
               const SizedBox(height: 14),
               ColumnChart(
                 maxValue: 100,
                 data: [
                   for (final a in averages)
                     ColumnDatum(
-                        label: a.shortLabel, value: a.percent.toDouble()),
+                      label: a.shortLabel,
+                      value: a.percent.toDouble(),
+                    ),
                 ],
                 valueFormatter: (v) => '${v.round()}%',
               ),
               const SizedBox(height: 8),
-              ChartAxisLabels(
-                  labels: [for (final a in averages) a.shortLabel]),
+              ChartAxisLabels(labels: [for (final a in averages) a.shortLabel]),
             ],
           ),
         ),
@@ -198,9 +209,9 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
               secondary: e.attendanceLine,
               value: '',
               chevron: true,
-              onTap: () => Navigator.of(context).pushNamed(
-                  Routes.studentAnalytics,
-                  arguments: e.student.id),
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamed(Routes.studentAnalytics, arguments: e.student.id),
             ),
         ],
       ),
@@ -279,8 +290,10 @@ class _FilterSheet extends StatelessWidget {
         children: [
           Text('Which quizzes?', style: AppText.sheetTitle),
           const SizedBox(height: 6),
-          Text('Everything on the screen is recalculated from what you pick.',
-              style: AppText.bodySmall),
+          Text(
+            'Everything on the screen is recalculated from what you pick.',
+            style: AppText.bodySmall,
+          ),
           const SizedBox(height: 18),
           RowCard(
             children: [
@@ -327,7 +340,8 @@ class _TooFewForTrend extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         const InfoBand(
-          text: 'A trend needs at least three quizzes in view. These are the '
+          text:
+              'A trend needs at least three quizzes in view. These are the '
               'averages so far.',
         ),
       ],
@@ -359,12 +373,15 @@ class _SearchField extends StatelessWidget {
               style: AppText.bodyLarge.copyWith(color: AppColors.ink),
               decoration: InputDecoration(
                 hintText: 'Search students',
-                hintStyle:
-                    AppText.bodyLarge.copyWith(color: AppColors.disabledText),
+                hintStyle: AppText.bodyLarge.copyWith(
+                  color: AppColors.disabledText,
+                ),
                 border: InputBorder.none,
                 isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 15,
+                ),
               ),
             ),
           ),

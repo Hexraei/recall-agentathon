@@ -59,8 +59,9 @@ class _HostLobbyScreenState extends State<HostLobbyScreen> {
     // The monitor takes over the same controller, so the roster and the
     // countdown carry across without a refetch.
     _handedOff = true;
-    Navigator.of(context)
-        .pushReplacementNamed(Routes.liveMonitor, arguments: _c);
+    Navigator.of(
+      context,
+    ).pushReplacementNamed(Routes.liveMonitor, arguments: _c);
   }
 
   @override
@@ -89,9 +90,9 @@ class _HostLobbyScreenState extends State<HostLobbyScreen> {
                 starting
                     ? 'Sending question 1 to everyone who joined.'
                     : joined.isEmpty
-                        ? 'You can start once at least one student has joined.'
-                        : 'The ${widget.quiz.timeLimitMinutes} minutes begins '
-                            'for everyone the moment you start.',
+                    ? 'You can start once at least one student has joined.'
+                    : 'The ${widget.quiz.timeLimitMinutes} minutes begins '
+                          'for everyone the moment you start.',
                 textAlign: TextAlign.center,
                 style: AppText.caption.copyWith(fontSize: 12.5),
               ),
@@ -115,13 +116,17 @@ class _HostLobbyScreenState extends State<HostLobbyScreen> {
                     TextSpan(
                       text: '${widget.quiz.questionCount} questions',
                       style: AppText.bodySmall.copyWith(
-                          fontWeight: FontWeight.w600, color: AppColors.grey1),
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.grey1,
+                      ),
                     ),
                     const TextSpan(text: ' · '),
                     TextSpan(
                       text: '${widget.quiz.timeLimitMinutes} minutes',
                       style: AppText.bodySmall.copyWith(
-                          fontWeight: FontWeight.w600, color: AppColors.grey1),
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.grey1,
+                      ),
                     ),
                   ],
                 ),
@@ -133,8 +138,10 @@ class _HostLobbyScreenState extends State<HostLobbyScreen> {
                 children: [
                   const LiveDot(),
                   const SizedBox(width: 8),
-                  Text('${joined.length} joined',
-                      style: AppText.rowTitle.copyWith(fontSize: 14)),
+                  Text(
+                    '${joined.length} joined',
+                    style: AppText.rowTitle.copyWith(fontSize: 14),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -212,17 +219,23 @@ class _StudentChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: emphasised ? AppColors.accentTint : AppColors.white,
         border: Border.all(
-            color: emphasised ? AppColors.accentBorder : AppColors.hairline),
+          color: emphasised ? AppColors.accentBorder : AppColors.hairline,
+        ),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           InitialsChip(
-              initials: student.initials, size: 26, emphasised: emphasised),
+            initials: student.initials,
+            size: 26,
+            emphasised: emphasised,
+          ),
           const SizedBox(width: 8),
-          Text(student.name,
-              style: AppText.bodySmall.copyWith(color: AppColors.ink)),
+          Text(
+            student.name,
+            style: AppText.bodySmall.copyWith(color: AppColors.ink),
+          ),
         ],
       ),
     );

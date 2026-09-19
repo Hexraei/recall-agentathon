@@ -43,7 +43,9 @@ class _ClassTopicScreenState extends State<ClassTopicScreen> {
     return null;
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+    _future = _load();
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +57,9 @@ class _ClassTopicScreenState extends State<ClassTopicScreen> {
 
         return PageScaffold(
           title: widget.topic,
-          subtitle: t == null ? null : '${t.questionCount} questions across quizzes',
+          subtitle: t == null
+              ? null
+              : '${t.questionCount} questions across quizzes',
           backLabel: 'Back to class analytics',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,15 +77,19 @@ class _ClassTopicScreenState extends State<ClassTopicScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Answered correctly across the class.',
-                          style: AppText.bodySmall),
+                      Text(
+                        'Answered correctly across the class.',
+                        style: AppText.bodySmall,
+                      ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(child: TopicBar(fraction: t.percent / 100)),
                           const SizedBox(width: 12),
-                          Text('${t.percent}%',
-                              style: AppText.rowTitle.copyWith(fontSize: 15)),
+                          Text(
+                            '${t.percent}%',
+                            style: AppText.rowTitle.copyWith(fontSize: 15),
+                          ),
                         ],
                       ),
                     ],
@@ -141,13 +149,18 @@ class _GapCard extends StatelessWidget {
                 children: [
                   _StatusTag(status: finding.status),
                   const Spacer(),
-                  const Icon(Icons.chevron_right,
-                      size: 18, color: AppColors.grey4),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: AppColors.grey4,
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
-              Text('${finding.statement}.',
-                  style: AppText.bodySmall.copyWith(color: AppColors.ink)),
+              Text(
+                '${finding.statement}.',
+                style: AppText.bodySmall.copyWith(color: AppColors.ink),
+              ),
               const SizedBox(height: 8),
               Text(
                 // Evidence is quiz plus question. No student names.
@@ -171,12 +184,21 @@ class _StatusTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color, bg) = switch (status) {
-      FindingStatus.awaitingReview =>
-        ('Awaiting review', AppColors.accent, AppColors.accentTint),
-      FindingStatus.accepted =>
-        ('Accepted', AppColors.accentDeep, AppColors.accentTint),
-      FindingStatus.rejected =>
-        ('Rejected', AppColors.grey2, AppColors.neutralBand),
+      FindingStatus.awaitingReview => (
+        'Awaiting review',
+        AppColors.accent,
+        AppColors.accentTint,
+      ),
+      FindingStatus.accepted => (
+        'Accepted',
+        AppColors.accentDeep,
+        AppColors.accentTint,
+      ),
+      FindingStatus.rejected => (
+        'Rejected',
+        AppColors.grey2,
+        AppColors.neutralBand,
+      ),
     };
 
     return Container(
@@ -192,9 +214,13 @@ class _StatusTag extends StatelessWidget {
             const LiveDot(size: 6),
             const SizedBox(width: 6),
           ],
-          Text(label,
-              style: AppText.captionSmall
-                  .copyWith(fontWeight: FontWeight.w600, color: color)),
+          Text(
+            label,
+            style: AppText.captionSmall.copyWith(
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
         ],
       ),
     );

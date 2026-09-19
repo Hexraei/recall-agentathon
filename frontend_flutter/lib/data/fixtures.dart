@@ -26,16 +26,66 @@ class Fixtures {
   static const classSize = 42;
 
   static const roster = <AppUser>[
-    AppUser(id: 's1', name: 'Nithya Prasad', role: UserRole.student, rollNumber: '2021CS042'),
-    AppUser(id: 's2', name: 'Divya Krishnan', role: UserRole.student, rollNumber: '2021CS011'),
-    AppUser(id: 's3', name: 'Arjun Menon', role: UserRole.student, rollNumber: '2021CS004'),
-    AppUser(id: 's4', name: 'Kavya Rao', role: UserRole.student, rollNumber: '2021CS023'),
-    AppUser(id: 's5', name: 'Rahul Iyer', role: UserRole.student, rollNumber: '2021CS051'),
-    AppUser(id: 's6', name: 'Sneha Balaji', role: UserRole.student, rollNumber: '2021CS058'),
-    AppUser(id: 's7', name: 'Vikram Shetty', role: UserRole.student, rollNumber: '2021CS067'),
-    AppUser(id: 's8', name: 'Meera Nair', role: UserRole.student, rollNumber: '2021CS036'),
-    AppUser(id: 's9', name: 'Karthik Subramanian', role: UserRole.student, rollNumber: '2021CS029'),
-    AppUser(id: 's10', name: 'Priya Venkat', role: UserRole.student, rollNumber: '2021CS047'),
+    AppUser(
+      id: 's1',
+      name: 'Nithya Prasad',
+      role: UserRole.student,
+      rollNumber: '2021CS042',
+    ),
+    AppUser(
+      id: 's2',
+      name: 'Divya Krishnan',
+      role: UserRole.student,
+      rollNumber: '2021CS011',
+    ),
+    AppUser(
+      id: 's3',
+      name: 'Arjun Menon',
+      role: UserRole.student,
+      rollNumber: '2021CS004',
+    ),
+    AppUser(
+      id: 's4',
+      name: 'Kavya Rao',
+      role: UserRole.student,
+      rollNumber: '2021CS023',
+    ),
+    AppUser(
+      id: 's5',
+      name: 'Rahul Iyer',
+      role: UserRole.student,
+      rollNumber: '2021CS051',
+    ),
+    AppUser(
+      id: 's6',
+      name: 'Sneha Balaji',
+      role: UserRole.student,
+      rollNumber: '2021CS058',
+    ),
+    AppUser(
+      id: 's7',
+      name: 'Vikram Shetty',
+      role: UserRole.student,
+      rollNumber: '2021CS067',
+    ),
+    AppUser(
+      id: 's8',
+      name: 'Meera Nair',
+      role: UserRole.student,
+      rollNumber: '2021CS036',
+    ),
+    AppUser(
+      id: 's9',
+      name: 'Karthik Subramanian',
+      role: UserRole.student,
+      rollNumber: '2021CS029',
+    ),
+    AppUser(
+      id: 's10',
+      name: 'Priya Venkat',
+      role: UserRole.student,
+      rollNumber: '2021CS047',
+    ),
   ];
 
   /// The topic vocabulary the builder combobox filters against.
@@ -115,7 +165,8 @@ class Fixtures {
     ),
     const Question(
       id: 'h5',
-      text: 'Lookup in a chained hash table degrades to linear time when what is true?',
+      text:
+          'Lookup in a chained hash table degrades to linear time when what is true?',
       topic: 'Collisions',
       options: [
         'The table is more than half empty',
@@ -127,7 +178,8 @@ class Fixtures {
     ),
     const Question(
       id: 'h6',
-      text: 'Why is a table resized once the load factor grows past a threshold?',
+      text:
+          'Why is a table resized once the load factor grows past a threshold?',
       topic: 'Load factor',
       options: [
         'To keep the average chain short',
@@ -151,7 +203,8 @@ class Fixtures {
     ),
     const Question(
       id: 'h8',
-      text: 'In open addressing with linear probing, where does a key go if its slot is taken?',
+      text:
+          'In open addressing with linear probing, where does a key go if its slot is taken?',
       topic: 'Collisions',
       options: [
         'Into a chain hanging off that slot',
@@ -175,7 +228,8 @@ class Fixtures {
     ),
     const Question(
       id: 'h10',
-      text: 'What is the average-case cost of a lookup in a well-sized hash table?',
+      text:
+          'What is the average-case cost of a lookup in a well-sized hash table?',
       topic: 'Complexity',
       options: ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'],
       correctIndex: 0,
@@ -189,7 +243,8 @@ class Fixtures {
     ),
     const Question(
       id: 'h12',
-      text: 'Why can a hash table not answer "give me the smallest key" quickly?',
+      text:
+          'Why can a hash table not answer "give me the smallest key" quickly?',
       topic: 'Hashing',
       options: [
         'It stores no ordering between keys',
@@ -258,7 +313,8 @@ class Fixtures {
     ),
     const Question(
       id: 'g2',
-      text: 'A graph with 8 vertices has 7 edges and no cycles. What must be true of it?',
+      text:
+          'A graph with 8 vertices has 7 edges and no cycles. What must be true of it?',
       topic: 'Representation',
       options: [
         'It is a tree',
@@ -325,7 +381,8 @@ class Fixtures {
     ),
     const Question(
       id: 'g8',
-      text: 'Which traversal naturally finds the fewest-edge path in an unweighted graph?',
+      text:
+          'Which traversal naturally finds the fewest-edge path in an unweighted graph?',
       topic: 'Traversal',
       options: [
         'Breadth-first search',
@@ -361,7 +418,8 @@ class Fixtures {
     ),
     const Question(
       id: 'g11',
-      text: 'How is a cycle detected during a depth-first search of a directed graph?',
+      text:
+          'How is a cycle detected during a depth-first search of a directed graph?',
       topic: 'Traversal',
       options: [
         'By finding an edge back to a vertex still on the stack',
@@ -521,7 +579,8 @@ class Fixtures {
     ),
     const Question(
       id: 'r9',
-      text: 'How many base cases does a recursion over two shrinking arguments usually need?',
+      text:
+          'How many base cases does a recursion over two shrinking arguments usually need?',
       topic: 'Base cases',
       options: [
         'Exactly one',

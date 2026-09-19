@@ -56,10 +56,10 @@ class AuthController extends ChangeNotifier {
 /// question, its options and its correct answer are all resolved.
 class QuizBuilderController extends ChangeNotifier {
   QuizBuilderController(this._repo, {Quiz? existing})
-      : _questions = [...?existing?.questions],
-        title = existing?.title ?? '',
-        timeLimit = existing?.timeLimitMinutes.toString() ?? '',
-        _existing = existing;
+    : _questions = [...?existing?.questions],
+      title = existing?.title ?? '',
+      timeLimit = existing?.timeLimitMinutes.toString() ?? '',
+      _existing = existing;
 
   final QuizRepository _repo;
   final Quiz? _existing;
@@ -100,9 +100,7 @@ class QuizBuilderController extends ChangeNotifier {
   List<String> filteredTopics() {
     final q = topic.trim().toLowerCase();
     if (q.isEmpty) return _topicSuggestions;
-    return _topicSuggestions
-        .where((t) => t.toLowerCase().contains(q))
-        .toList();
+    return _topicSuggestions.where((t) => t.toLowerCase().contains(q)).toList();
   }
 
   void touch() {
@@ -121,16 +119,14 @@ class QuizBuilderController extends ChangeNotifier {
     return null;
   }
 
-  String? get questionError => _showErrors && questionText.trim().isEmpty
-      ? 'Write the question.'
-      : null;
+  String? get questionError =>
+      _showErrors && questionText.trim().isEmpty ? 'Write the question.' : null;
 
   String? get topicError =>
       _showErrors && topic.trim().isEmpty ? 'Choose a topic.' : null;
 
-  String? optionError(int i) => _showErrors && options[i].trim().isEmpty
-      ? 'Fill this option in.'
-      : null;
+  String? optionError(int i) =>
+      _showErrors && options[i].trim().isEmpty ? 'Fill this option in.' : null;
 
   String? get correctError => _showErrors && correctIndex == null
       ? 'Mark which option is correct.'
@@ -153,13 +149,15 @@ class QuizBuilderController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-    _questions.add(Question(
-      id: 'q${DateTime.now().microsecondsSinceEpoch}',
-      text: questionText.trim(),
-      topic: topic.trim(),
-      options: [for (final o in options) o.trim()],
-      correctIndex: correctIndex!,
-    ));
+    _questions.add(
+      Question(
+        id: 'q${DateTime.now().microsecondsSinceEpoch}',
+        text: questionText.trim(),
+        topic: topic.trim(),
+        options: [for (final o in options) o.trim()],
+        correctIndex: correctIndex!,
+      ),
+    );
 
     // The composer carries the last topic forward, since consecutive
     // questions usually share one.
@@ -189,18 +187,19 @@ class QuizBuilderController extends ChangeNotifier {
     _saving = true;
     notifyListeners();
 
-    final quiz = (_existing ??
-            Quiz(
-              id: 'q${DateTime.now().microsecondsSinceEpoch}',
-              title: '',
-              questions: const [],
-              timeLimitMinutes: 20,
-            ))
-        .copyWith(
-      title: title.trim(),
-      timeLimitMinutes: int.parse(timeLimit.trim()),
-      questions: _questions,
-    );
+    final quiz =
+        (_existing ??
+                Quiz(
+                  id: 'q${DateTime.now().microsecondsSinceEpoch}',
+                  title: '',
+                  questions: const [],
+                  timeLimitMinutes: 20,
+                ))
+            .copyWith(
+              title: title.trim(),
+              timeLimitMinutes: int.parse(timeLimit.trim()),
+              questions: _questions,
+            );
     await _repo.saveQuiz(quiz);
 
     _saving = false;
@@ -211,7 +210,14 @@ class QuizBuilderController extends ChangeNotifier {
 }
 
 /// The teacher's live session: the lobby, then the monitor.
-enum HostPhase { lobby, starting, running, deadlineNear, everyoneSubmitted, closed }
+enum HostPhase {
+  lobby,
+  starting,
+  running,
+  deadlineNear,
+  everyoneSubmitted,
+  closed,
+}
 
 class HostSessionController extends ChangeNotifier {
   HostSessionController(this._repo, this.quiz);
@@ -249,7 +255,12 @@ class HostSessionController extends ChangeNotifier {
     notifyListeners();
 
     await _repo.start();
-    await _joinSub?.cancel();
+
+    // The lobby's roster feed has done its job. Cancelling it is teardown,
+    // not a step the handoff has to wait on: awaiting it here left the lobby
+    // stuck on "Sending question 1" and the monitor never opened.
+    unawaited(_joinSub?.cancel() ?? Future<void>.value());
+    _joinSub = null;
 
     remaining = quiz.duration;
     phase = HostPhase.running;
@@ -285,7 +296,12 @@ class HostSessionController extends ChangeNotifier {
   /// quiz still running.
   Future<void> close() async {
     _ticker?.cancel();
-    await _progressSub?.cancel();
+
+    // Teardown of the progress feed is not something closing the window has
+    // to wait on, for the same reason the handoff in start() does not.
+    unawaited(_progressSub?.cancel() ?? Future<void>.value());
+    _progressSub = null;
+
     await _repo.endQuiz();
     phase = HostPhase.closed;
     notifyListeners();
@@ -311,8 +327,8 @@ class HostSessionController extends ChangeNotifier {
 /// A student's attempt: the lobby, the questions, and the submission.
 class AttemptController extends ChangeNotifier {
   AttemptController(this._repo, this.quiz, {Duration? startingFrom})
-      : remaining = startingFrom ?? quiz.duration,
-        attempt = Attempt(quizId: quiz.id, studentId: 'me');
+    : remaining = startingFrom ?? quiz.duration,
+      attempt = Attempt(quizId: quiz.id, studentId: 'me');
 
   final AttemptRepository _repo;
   final Quiz quiz;
@@ -333,9 +349,9 @@ class AttemptController extends ChangeNotifier {
   bool get deadlineNear => remaining <= const Duration(minutes: 1);
 
   List<int> get unansweredPositions => [
-        for (var i = 0; i < quiz.questions.length; i++)
-          if (!attempt.answers.containsKey(quiz.questions[i].id)) i + 1,
-      ];
+    for (var i = 0; i < quiz.questions.length; i++)
+      if (!attempt.answers.containsKey(quiz.questions[i].id)) i + 1,
+  ];
 
   int? answerFor(int i) => attempt.answers[quiz.questions[i].id];
 

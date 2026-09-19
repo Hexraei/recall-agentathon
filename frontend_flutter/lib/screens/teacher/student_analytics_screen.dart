@@ -47,17 +47,27 @@ class _StudentAnalyticsScreenState extends State<StudentAnalyticsScreen> {
     final entry = roster.firstWhere(
       (e) => e.student.id == widget.studentId,
       orElse: () => RosterEntry(
-          student: Fixtures.roster.first, attended: 0, totalQuizzes: 6),
+        student: Fixtures.roster.first,
+        attended: 0,
+        totalQuizzes: 6,
+      ),
     );
+    final (averages, topics, attempts) = await (
+      r.studentAverages(widget.studentId),
+      r.studentTopicScores(widget.studentId),
+      r.studentAttempts(widget.studentId),
+    ).wait;
     return _StudentData(
       entry: entry,
-      averages: await r.studentAverages(widget.studentId),
-      topics: await r.studentTopicScores(widget.studentId),
-      attempts: await r.studentAttempts(widget.studentId),
+      averages: averages,
+      topics: topics,
+      attempts: attempts,
     );
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+    _future = _load();
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +82,7 @@ class _StudentAnalyticsScreenState extends State<StudentAnalyticsScreen> {
           subtitle: d == null
               ? null
               : 'Roll no. ${d.entry.student.rollNumber ?? '—'} · '
-                  '${d.entry.attendanceLine}',
+                    '${d.entry.attendanceLine}',
           backLabel: 'Back to class analytics',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,8 +117,10 @@ class _StudentAnalyticsScreenState extends State<StudentAnalyticsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Each quiz as a share of marks. A dash means not taken.',
-                  style: AppText.bodySmall),
+              Text(
+                'Each quiz as a share of marks. A dash means not taken.',
+                style: AppText.bodySmall,
+              ),
               const SizedBox(height: 14),
               ColumnChart(
                 maxValue: 100,
@@ -123,7 +135,9 @@ class _StudentAnalyticsScreenState extends State<StudentAnalyticsScreen> {
                 valueFormatter: (v) => '${v.round()}%',
               ),
               const SizedBox(height: 8),
-              ChartAxisLabels(labels: [for (final a in d.averages) a.shortLabel]),
+              ChartAxisLabels(
+                labels: [for (final a in d.averages) a.shortLabel],
+              ),
             ],
           ),
         ),
@@ -146,7 +160,9 @@ class _StudentAnalyticsScreenState extends State<StudentAnalyticsScreen> {
                 onTap: () => Navigator.of(context).pushNamed(
                   Routes.studentAttempt,
                   arguments: StudentAttemptArgs(
-                      studentId: widget.studentId, quizId: a.quiz.id),
+                    studentId: widget.studentId,
+                    quizId: a.quiz.id,
+                  ),
                 ),
               ),
           ],
@@ -156,8 +172,18 @@ class _StudentAnalyticsScreenState extends State<StudentAnalyticsScreen> {
 
   static String _shortDate(DateTime d) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${d.day} ${months[d.month - 1]}';
   }
@@ -209,23 +235,33 @@ class _TopicTable extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                    child: Text('Correct / total',
-                        style: AppText.captionSmall
-                            .copyWith(fontWeight: FontWeight.w600))),
+                  child: Text(
+                    'Correct / total',
+                    style: AppText.captionSmall.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
                 SizedBox(
                   width: 54,
-                  child: Text('Earlier',
-                      textAlign: TextAlign.right,
-                      style: AppText.captionSmall
-                          .copyWith(fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Earlier',
+                    textAlign: TextAlign.right,
+                    style: AppText.captionSmall.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 if (!singleColumn)
                   SizedBox(
                     width: 54,
-                    child: Text('Recent',
-                        textAlign: TextAlign.right,
-                        style: AppText.captionSmall
-                            .copyWith(fontWeight: FontWeight.w600)),
+                    child: Text(
+                      'Recent',
+                      textAlign: TextAlign.right,
+                      style: AppText.captionSmall.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -236,14 +272,20 @@ class _TopicTable extends StatelessWidget {
                 border: Border(top: BorderSide(color: AppColors.hairlineSoft)),
               ),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Expanded(
-                        child: Text(t.topic,
-                            style: AppText.optionText
-                                .copyWith(color: AppColors.ink))),
+                      child: Text(
+                        t.topic,
+                        style: AppText.optionText.copyWith(
+                          color: AppColors.ink,
+                        ),
+                      ),
+                    ),
                     SizedBox(
                       width: 54,
                       child: Text(
@@ -311,7 +353,9 @@ class _StudentAttemptScreenState extends State<StudentAttemptScreen> {
       .read<ResultsRepository>()
       .studentAttemptDetail(widget.studentId, widget.quizId);
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+    _future = _load();
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -325,8 +369,8 @@ class _StudentAttemptScreenState extends State<StudentAttemptScreen> {
           title: r == null
               ? 'Attempt'
               : (r.quiz.week == null
-                  ? r.quiz.title
-                  : '${r.quiz.week} · ${r.quiz.title}'),
+                    ? r.quiz.title
+                    : '${r.quiz.week} · ${r.quiz.title}'),
           subtitle: r == null ? null : '${r.correct} of ${r.total} correct',
           backLabel: 'Back to the student',
           child: Column(
@@ -344,9 +388,13 @@ class _StudentAttemptScreenState extends State<StudentAttemptScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${q.position}. ${q.question.text}',
-                            style: AppText.rowTitle
-                                .copyWith(fontSize: 14, height: 20 / 14)),
+                        Text(
+                          '${q.position}. ${q.question.text}',
+                          style: AppText.rowTitle.copyWith(
+                            fontSize: 14,
+                            height: 20 / 14,
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         for (var i = 0; i < 4; i++) ...[
                           if (i > 0) const SizedBox(height: 8),
@@ -356,14 +404,13 @@ class _StudentAttemptScreenState extends State<StudentAttemptScreen> {
                             state: i == q.question.correctIndex
                                 ? OptionState.correct
                                 : (i == q.chosenIndex
-                                    ? OptionState.incorrect
-                                    : OptionState.unselected),
+                                      ? OptionState.incorrect
+                                      : OptionState.unselected),
                           ),
                         ],
                         if (q.isBlank) ...[
                           const SizedBox(height: 8),
-                          Text('Left blank',
-                              style: AppText.rowSecondary),
+                          Text('Left blank', style: AppText.rowSecondary),
                         ],
                       ],
                     ),

@@ -49,7 +49,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     );
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+    _future = _load();
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -68,14 +70,16 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DashboardHeader(
-                  greeting:
-                      DashboardHeader.greetingForHour(DateTime.now().hour),
+                  greeting: DashboardHeader.greetingForHour(
+                    DateTime.now().hour,
+                  ),
                   name: user?.name ?? 'Student',
                   onSignOut: () async {
                     await context.read<AuthController>().signOut();
                     if (context.mounted) {
-                      Navigator.of(context)
-                          .pushNamedAndRemoveUntil(Routes.auth, (_) => false);
+                      Navigator.of(
+                        context,
+                      ).pushNamedAndRemoveUntil(Routes.auth, (_) => false);
                     }
                   },
                 ),
@@ -112,24 +116,29 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       children: [
         InvitationCard(
           title: 'Join your first quiz',
-          body: 'Your teacher will share a PIN. Type it in, wait for them to '
+          body:
+              'Your teacher will share a PIN. Type it in, wait for them to '
               'start, then answer in any order and submit before time runs out.',
           actionLabel: 'Join a quiz',
           onAction: () => Navigator.of(context).pushNamed(Routes.join),
         ),
         const SizedBox(height: 20),
-        const NavList(rows: [
-          NavRow(
+        const NavList(
+          rows: [
+            NavRow(
               icon: Icons.assignment_outlined,
               title: 'My results',
               secondary: 'Appear after your first quiz closes',
-              enabled: false),
-          NavRow(
+              enabled: false,
+            ),
+            NavRow(
               icon: Icons.trending_up,
               title: 'My performance',
               secondary: 'Builds up as you take quizzes',
-              enabled: false),
-        ]),
+              enabled: false,
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -153,25 +162,28 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           onTap: () => Navigator.of(context).pushNamed(Routes.join),
         ),
         const SizedBox(height: 16),
-        NavList(rows: [
-          NavRow(
-            icon: Icons.assignment_outlined,
-            title: 'My results',
-            secondary: '${d.attempts.length} quizzes taken',
-            // "My results" points at the most recent one; the full list of
-            // past results lives at the bottom of My Performance.
-            onTap: () => Navigator.of(context).pushNamed(
-              Routes.quizResult,
-              arguments: QuizResultArgs(quizId: d.latest!.quiz.id),
+        NavList(
+          rows: [
+            NavRow(
+              icon: Icons.assignment_outlined,
+              title: 'My results',
+              secondary: '${d.attempts.length} quizzes taken',
+              // "My results" points at the most recent one; the full list of
+              // past results lives at the bottom of My Performance.
+              onTap: () => Navigator.of(context).pushNamed(
+                Routes.quizResult,
+                arguments: QuizResultArgs(quizId: d.latest!.quiz.id),
+              ),
             ),
-          ),
-          NavRow(
-            icon: Icons.trending_up,
-            title: 'My performance',
-            secondary: 'Across ${d.attempts.length} quizzes',
-            onTap: () => Navigator.of(context).pushNamed(Routes.myPerformance),
-          ),
-        ]),
+            NavRow(
+              icon: Icons.trending_up,
+              title: 'My performance',
+              secondary: 'Across ${d.attempts.length} quizzes',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(Routes.myPerformance),
+            ),
+          ],
+        ),
         if (d.latest != null) ...[
           const SectionLabel('Latest result'),
           _LatestResult(attempt: d.latest!),
@@ -200,9 +212,13 @@ class _LatestResult extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  quiz.week == null ? quiz.title : '${quiz.week} · ${quiz.title}',
-                  style:
-                      AppText.rowTitle.copyWith(fontSize: 16, letterSpacing: -0.1),
+                  quiz.week == null
+                      ? quiz.title
+                      : '${quiz.week} · ${quiz.title}',
+                  style: AppText.rowTitle.copyWith(
+                    fontSize: 16,
+                    letterSpacing: -0.1,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -211,17 +227,23 @@ class _LatestResult extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           // A count, not a rank: nothing here compares this student to anyone.
-          Text('${attempt.correct} of ${attempt.total} answered correctly.',
-              style: AppText.bodySmall),
+          Text(
+            '${attempt.correct} of ${attempt.total} answered correctly.',
+            style: AppText.bodySmall,
+          ),
           const SizedBox(height: 10),
           GestureDetector(
             onTap: () => Navigator.of(context).pushNamed(
               Routes.quizResult,
               arguments: QuizResultArgs(quizId: quiz.id),
             ),
-            child: Text('See full result',
-                style: AppText.rowTitle
-                    .copyWith(fontSize: 13.5, color: AppColors.accent)),
+            child: Text(
+              'See full result',
+              style: AppText.rowTitle.copyWith(
+                fontSize: 13.5,
+                color: AppColors.accent,
+              ),
+            ),
           ),
         ],
       ),
@@ -231,8 +253,18 @@ class _LatestResult extends StatelessWidget {
   static String _shortDate(DateTime d) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${days[d.weekday - 1]}, ${d.day} ${months[d.month - 1]}';
   }

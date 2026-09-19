@@ -65,8 +65,9 @@ class _StudentLobbyScreenState extends State<StudentLobbyScreen> {
       context.read<AttemptRepository>(),
       widget.quiz,
     )..startClock();
-    Navigator.of(context)
-        .pushReplacementNamed(Routes.questionView, arguments: controller);
+    Navigator.of(
+      context,
+    ).pushReplacementNamed(Routes.questionView, arguments: controller);
   }
 
   @override
@@ -101,8 +102,10 @@ class _StudentLobbyScreenState extends State<StudentLobbyScreen> {
             style: AppText.pageTitle,
           ),
           const SizedBox(height: 4),
-          Text('${quiz.questionCount} questions · ${quiz.timeLimitMinutes} minutes',
-              style: AppText.bodyLarge),
+          Text(
+            '${quiz.questionCount} questions · ${quiz.timeLimitMinutes} minutes',
+            style: AppText.bodyLarge,
+          ),
           const SizedBox(height: 26),
           _statusBlock(),
           const Spacer(),
@@ -165,8 +168,11 @@ class _StudentLobbyScreenState extends State<StudentLobbyScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const _Status(
-              leading: Icon(Icons.cloud_off_outlined,
-                  size: 18, color: AppColors.grey1),
+              leading: Icon(
+                Icons.cloud_off_outlined,
+                size: 18,
+                color: AppColors.grey1,
+              ),
               title: 'Connection lost',
               detail: 'Trying again on its own',
               background: AppColors.neutralBand,

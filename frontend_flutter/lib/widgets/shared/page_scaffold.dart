@@ -61,8 +61,11 @@ class PageScaffold extends StatelessWidget {
                     child: InkWell(
                       customBorder: const CircleBorder(),
                       onTap: onBack ?? () => Navigator.of(context).maybePop(),
-                      child: const Icon(Icons.arrow_back,
-                          size: 22, color: AppColors.ink),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        size: 22,
+                        color: AppColors.ink,
+                      ),
                     ),
                   ),
                 ),
@@ -76,8 +79,10 @@ class PageScaffold extends StatelessWidget {
         Text(title, style: AppText.pageTitle),
         if (subtitle != null) ...[
           const SizedBox(height: 3),
-          Text(subtitle!,
-              style: AppText.bodySmall.copyWith(color: AppColors.grey2)),
+          Text(
+            subtitle!,
+            style: AppText.bodySmall.copyWith(color: AppColors.grey2),
+          ),
         ],
       ],
     );
@@ -140,8 +145,9 @@ class TakeoverScaffold extends StatelessWidget {
                 actionLabel,
                 style: AppText.bodyLarge.copyWith(
                   fontWeight: FontWeight.w500,
-                  color:
-                      actionEnabled ? AppColors.grey2 : AppColors.disabledText,
+                  color: actionEnabled
+                      ? AppColors.grey2
+                      : AppColors.disabledText,
                 ),
               ),
             ),
@@ -189,27 +195,28 @@ class _Frame extends StatelessWidget {
             ),
           )
         else
-          Expanded(child: Padding(padding: pad, child: child)),
-        if (bottomBar != null)
-          Padding(
-            padding: pad.copyWith(bottom: 26, top: 4),
-            child: bottomBar,
+          Expanded(
+            child: Padding(padding: pad, child: child),
           ),
+        if (bottomBar != null)
+          Padding(padding: pad.copyWith(bottom: 26, top: 4), child: bottomBar),
       ],
     );
 
     if (overlay != null) {
-      body = Stack(children: [Positioned.fill(child: body), overlay!]);
+      body = Stack(
+        children: [
+          Positioned.fill(child: body),
+          overlay!,
+        ],
+      );
     }
 
     return Scaffold(
       backgroundColor: AppColors.ground,
       body: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 16),
-          child: body,
-        ),
+        child: Padding(padding: const EdgeInsets.only(top: 16), child: body),
       ),
     );
   }

@@ -56,8 +56,9 @@ class _JoinScreenState extends State<JoinScreen> {
     });
 
     if (r.outcome == JoinOutcome.ok && r.quiz != null) {
-      Navigator.of(context)
-          .pushReplacementNamed(Routes.studentLobby, arguments: r.quiz);
+      Navigator.of(
+        context,
+      ).pushReplacementNamed(Routes.studentLobby, arguments: r.quiz);
     }
   }
 
@@ -69,8 +70,9 @@ class _JoinScreenState extends State<JoinScreen> {
       quiz,
       startingFrom: remaining,
     )..startClock();
-    Navigator.of(context)
-        .pushReplacementNamed(Routes.questionView, arguments: controller);
+    Navigator.of(
+      context,
+    ).pushReplacementNamed(Routes.questionView, arguments: controller);
   }
 
   @override
@@ -117,7 +119,7 @@ class _JoinScreenState extends State<JoinScreen> {
                     text: r.outcome == JoinOutcome.closed
                         ? 'The deadline has passed, so it can no longer be joined.'
                         : 'Your answers are in. Results appear once the quiz '
-                            'closes for everyone.',
+                              'closes for everyone.',
                   ),
                   const SizedBox(height: 16),
                   OutlinedAction(
@@ -190,8 +192,10 @@ class _JoinScreenState extends State<JoinScreen> {
         const SizedBox(height: 10),
         Text('Already started', style: AppText.pageTitle),
         const SizedBox(height: 4),
-        Text('You can still join, with the time that is left.',
-            style: AppText.bodyLarge),
+        Text(
+          'You can still join, with the time that is left.',
+          style: AppText.bodyLarge,
+        ),
         const SizedBox(height: 24),
         AppCard(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),

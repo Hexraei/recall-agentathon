@@ -47,7 +47,8 @@ class _LiveMonitorScreenState extends State<LiveMonitorScreen> {
       context: context,
       builder: (context) => ConfirmSheet(
         title: 'End the quiz now?',
-        body: '$openAttempts attempt${openAttempts == 1 ? ' is' : 's are'} '
+        body:
+            '$openAttempts attempt${openAttempts == 1 ? ' is' : 's are'} '
             'still open. Ending now submits each of them exactly as '
             'it stands, unanswered questions included.',
         confirmLabel: 'End it now',
@@ -79,8 +80,9 @@ class _LiveMonitorScreenState extends State<LiveMonitorScreen> {
           child: TakeoverScaffold(
             actionLabel: closed ? 'Done' : 'Exit quiz',
             onAction: closed
-                ? () => Navigator.of(context)
-                    .popUntil(ModalRoute.withName(Routes.teacherHome))
+                ? () => Navigator.of(
+                    context,
+                  ).popUntil(ModalRoute.withName(Routes.teacherHome))
                 : () => _confirmEnd(context, openAttempts),
             scrollable: true,
             bottomBar: _bottomBar(context, closed, everyone, openAttempts),
@@ -89,7 +91,9 @@ class _LiveMonitorScreenState extends State<LiveMonitorScreen> {
               children: [
                 const SizedBox(height: 10),
                 Text(
-                  quiz.week == null ? quiz.title : '${quiz.week} · ${quiz.title}',
+                  quiz.week == null
+                      ? quiz.title
+                      : '${quiz.week} · ${quiz.title}',
                   style: AppText.sectionTitle,
                 ),
                 const SizedBox(height: 6),
@@ -109,8 +113,10 @@ class _LiveMonitorScreenState extends State<LiveMonitorScreen> {
                         ),
                       ),
                       const SizedBox(width: 7),
-                      Text('Closed at ${_hhmm(DateTime.now())}',
-                          style: AppText.bodySmall),
+                      Text(
+                        'Closed at ${_hhmm(DateTime.now())}',
+                        style: AppText.bodySmall,
+                      ),
                     ],
                   ],
                 ),
@@ -129,30 +135,36 @@ class _LiveMonitorScreenState extends State<LiveMonitorScreen> {
                   children: [
                     Expanded(
                       child: StatTile(
-                          figure: '${rows.length}', label: 'Joined'),
+                        figure: '${rows.length}',
+                        label: 'Joined',
+                      ),
                     ),
                     const SizedBox(width: 8),
                     if (closed)
                       Expanded(
                         child: StatTile(
-                            figure: '${controller.submitted}',
-                            label: 'Submitted'),
+                          figure: '${controller.submitted}',
+                          label: 'Submitted',
+                        ),
                       )
                     else
                       Expanded(
                         child: StatTile(
-                            figure: '${controller.answering}',
-                            label: 'Answering'),
+                          figure: '${controller.answering}',
+                          label: 'Answering',
+                        ),
                       ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: closed
                           ? StatTile(
                               figure: '${controller.autoSubmitted}',
-                              label: 'Auto-submitted')
+                              label: 'Auto-submitted',
+                            )
                           : StatTile(
                               figure: '${controller.submitted}',
-                              label: 'Submitted'),
+                              label: 'Submitted',
+                            ),
                     ),
                   ],
                 ),
@@ -176,12 +188,18 @@ class _LiveMonitorScreenState extends State<LiveMonitorScreen> {
   }
 
   Widget _bottomBar(
-      BuildContext context, bool closed, bool everyone, int openAttempts) {
+    BuildContext context,
+    bool closed,
+    bool everyone,
+    int openAttempts,
+  ) {
     if (closed) {
       return FilledAction(
         label: 'See class results',
-        onPressed: () => Navigator.of(context)
-            .pushReplacementNamed(Routes.quizResults, arguments: controller.quiz.id),
+        onPressed: () => Navigator.of(context).pushReplacementNamed(
+          Routes.quizResults,
+          arguments: controller.quiz.id,
+        ),
       );
     }
     if (everyone) {
@@ -264,9 +282,13 @@ class _ProgressRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(row.student.name,
-                    style: AppText.optionText.copyWith(
-                        fontWeight: FontWeight.w500, color: AppColors.ink)),
+                Text(
+                  row.student.name,
+                  style: AppText.optionText.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.ink,
+                  ),
+                ),
                 const SizedBox(height: 1),
                 Text(row.progressLine, style: AppText.rowSecondary),
               ],

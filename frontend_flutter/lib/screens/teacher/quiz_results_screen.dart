@@ -45,7 +45,9 @@ class _QuizResultsScreenState extends State<QuizResultsScreen> {
   Future<ClassQuizResult> _load() =>
       context.read<ResultsRepository>().classResult(widget.quizId);
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+    _future = _load();
+  });
 
   static const _bands = ['0–3', '4–6', '7–9', '10–12', '13–15'];
 
@@ -60,7 +62,9 @@ class _QuizResultsScreenState extends State<QuizResultsScreen> {
         return PageScaffold(
           title: quiz == null
               ? 'Quiz results'
-              : (quiz.week == null ? quiz.title : '${quiz.week} · ${quiz.title}'),
+              : (quiz.week == null
+                    ? quiz.title
+                    : '${quiz.week} · ${quiz.title}'),
           subtitle: quiz?.lastRun == null
               ? null
               : 'Ran ${_range(quiz!.lastRun!, quiz.closedAt)}',
@@ -111,7 +115,8 @@ class _QuizResultsScreenState extends State<QuizResultsScreen> {
         const SizedBox(height: 12),
         InfoBand(
           icon: Icons.info_outline,
-          text: '${r.neverOpened} students never opened this quiz. Everything '
+          text:
+              '${r.neverOpened} students never opened this quiz. Everything '
               'below counts only the ${r.tookIt} who did.',
         ),
       ],
@@ -126,7 +131,7 @@ class _QuizResultsScreenState extends State<QuizResultsScreen> {
               r.fullParticipation
                   ? 'Students in each score band, out of ${r.quiz.questionCount}.'
                   : 'The $denominator students who took it, by score band, '
-                      'out of ${r.quiz.questionCount}.',
+                        'out of ${r.quiz.questionCount}.',
               style: AppText.bodySmall.copyWith(height: 19 / 13.5),
             ),
             const SizedBox(height: 14),
@@ -134,7 +139,9 @@ class _QuizResultsScreenState extends State<QuizResultsScreen> {
               data: [
                 for (var i = 0; i < r.distribution.length; i++)
                   ColumnDatum(
-                      label: _bands[i], value: r.distribution[i].toDouble()),
+                    label: _bands[i],
+                    value: r.distribution[i].toDouble(),
+                  ),
               ],
             ),
             const SizedBox(height: 8),
@@ -148,45 +155,57 @@ class _QuizResultsScreenState extends State<QuizResultsScreen> {
           for (final t in r.topicScores)
             TopicRow(
               topic: t.topic,
-              secondary:
-                  '${t.total} question${t.total == 1 ? '' : 's'}',
+              secondary: '${t.total} question${t.total == 1 ? '' : 's'}',
               percent: t.percent,
               onTap: () => _openTopic(context, r, t),
             ),
         ],
       ),
       const SizedBox(height: 16),
-      NavList(rows: [
-        NavRow(
-          icon: Icons.person_outline,
-          title: 'Open a student',
-          secondary: '${r.tookIt} took it',
-          onTap: () => Navigator.of(context).pushNamed(
-              Routes.studentAnalytics,
-              arguments: 's1'),
-        ),
-        NavRow(
-          icon: Icons.bar_chart,
-          title: 'Class analytics',
-          secondary: 'All quizzes',
-          onTap: () =>
-              Navigator.of(context).pushNamed(Routes.classAnalytics),
-        ),
-      ]),
+      NavList(
+        rows: [
+          NavRow(
+            icon: Icons.person_outline,
+            title: 'Open a student',
+            secondary: '${r.tookIt} took it',
+            onTap: () => Navigator.of(
+              context,
+            ).pushNamed(Routes.studentAnalytics, arguments: 's1'),
+          ),
+          NavRow(
+            icon: Icons.bar_chart,
+            title: 'Class analytics',
+            secondary: 'All quizzes',
+            onTap: () => Navigator.of(context).pushNamed(Routes.classAnalytics),
+          ),
+        ],
+      ),
     ];
   }
 
   void _openTopic(BuildContext context, ClassQuizResult r, TopicScore t) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => _QuizTopicScreen(result: r, topic: t),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _QuizTopicScreen(result: r, topic: t),
+      ),
+    );
   }
 
   static String _range(DateTime from, DateTime? to) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final d = '${days[from.weekday - 1]} ${from.day} ${months[from.month - 1]}';
     final f = _hhmm(from);
@@ -219,9 +238,13 @@ class _WideTile extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(figure,
-                style: AppText.tileFigure
-                    .copyWith(fontSize: 26, letterSpacing: -0.5)),
+            child: Text(
+              figure,
+              style: AppText.tileFigure.copyWith(
+                fontSize: 26,
+                letterSpacing: -0.5,
+              ),
+            ),
           ),
           const SizedBox(height: 3),
           Text(label, style: AppText.caption.copyWith(color: AppColors.grey2)),
@@ -246,12 +269,14 @@ class _QuizTopicScreen extends StatelessWidget {
         .where((b) => b.question.topic == topic.topic)
         .toList();
     final belowHalf = questions.where((q) => q.correctPercent < 50).length;
-    final worst = result.topicScores.isNotEmpty &&
+    final worst =
+        result.topicScores.isNotEmpty &&
         result.topicScores.first.topic == topic.topic;
 
     return PageScaffold(
       title: topic.topic,
-      subtitle: '${questions.length} question${questions.length == 1 ? '' : 's'} '
+      subtitle:
+          '${questions.length} question${questions.length == 1 ? '' : 's'} '
           'in ${quiz.week == null ? quiz.title : '${quiz.week} · ${quiz.title}'}',
       backLabel: 'Back to quiz results',
       child: Column(
@@ -264,15 +289,19 @@ class _QuizTopicScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Answered correctly across the topic',
-                    style: AppText.caption.copyWith(fontSize: 12.5)),
+                Text(
+                  'Answered correctly across the topic',
+                  style: AppText.caption.copyWith(fontSize: 12.5),
+                ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(child: TopicBar(fraction: topic.fraction)),
                     const SizedBox(width: 12),
-                    Text('${topic.percent}%',
-                        style: AppText.rowTitle.copyWith(fontSize: 15)),
+                    Text(
+                      '${topic.percent}%',
+                      style: AppText.rowTitle.copyWith(fontSize: 15),
+                    ),
                   ],
                 ),
               ],
@@ -280,7 +309,8 @@ class _QuizTopicScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           InfoBand(
-            text: '${worst ? 'The weakest topic in this quiz. ' : ''}'
+            text:
+                '${worst ? 'The weakest topic in this quiz. ' : ''}'
                 '$belowHalf of its ${questions.length} question'
                 '${questions.length == 1 ? '' : 's'} '
                 '${belowHalf == 1 ? 'was' : 'were'} answered correctly by fewer '
@@ -330,27 +360,35 @@ class _QuestionRow extends StatelessWidget {
             children: [
               SizedBox(
                 width: 30,
-                child: Text('Q$position',
-                    style: AppText.captionSmall
-                        .copyWith(fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Q$position',
+                  style: AppText.captionSmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(breakdown.question.text,
-                        style: AppText.bodySmall.copyWith(color: AppColors.ink)),
+                    Text(
+                      breakdown.question.text,
+                      style: AppText.bodySmall.copyWith(color: AppColors.ink),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
                           child: TopicBar(
-                              fraction: breakdown.correctPercent / 100),
+                            fraction: breakdown.correctPercent / 100,
+                          ),
                         ),
                         const SizedBox(width: 10),
-                        Text('${breakdown.correctPercent}%',
-                            style: AppText.rowTitle.copyWith(fontSize: 13)),
+                        Text(
+                          '${breakdown.correctPercent}%',
+                          style: AppText.rowTitle.copyWith(fontSize: 13),
+                        ),
                       ],
                     ),
                   ],
@@ -382,7 +420,10 @@ class _QuestionSheet extends StatelessWidget {
         children: [
           Text(q.text, style: AppText.sheetTitle),
           const SizedBox(height: 6),
-          Text('${breakdown.respondents} answered', style: AppText.rowSecondary),
+          Text(
+            '${breakdown.respondents} answered',
+            style: AppText.rowSecondary,
+          ),
           const SizedBox(height: 18),
           for (var i = 0; i < 4; i++) ...[
             if (i > 0) const SizedBox(height: 10),
@@ -434,23 +475,28 @@ class _OptionShare extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: isCorrect ? AppColors.accent : AppColors.ground,
-                border:
-                    isCorrect ? null : Border.all(color: AppColors.hairlineStrong),
+                border: isCorrect
+                    ? null
+                    : Border.all(color: AppColors.hairlineStrong),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(letter,
-                  style: AppText.captionSmall.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isCorrect ? AppColors.white : AppColors.grey2,
-                  )),
+              child: Text(
+                letter,
+                style: AppText.captionSmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isCorrect ? AppColors.white : AppColors.grey2,
+                ),
+              ),
             ),
             const SizedBox(width: 11),
             Expanded(
-              child: Text(text,
-                  style: AppText.optionText.copyWith(
-                    color: AppColors.ink,
-                    fontWeight: isCorrect ? FontWeight.w600 : FontWeight.w400,
-                  )),
+              child: Text(
+                text,
+                style: AppText.optionText.copyWith(
+                  color: AppColors.ink,
+                  fontWeight: isCorrect ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
             ),
             if (isCorrect) ...[
               const SizedBox(width: 8),
@@ -487,10 +533,14 @@ class _OptionShare extends StatelessWidget {
               const SizedBox(width: 10),
               SizedBox(
                 width: 38,
-                child: Text('$percent%',
-                    textAlign: TextAlign.right,
-                    style: AppText.caption.copyWith(
-                        fontWeight: FontWeight.w600, color: AppColors.grey1)),
+                child: Text(
+                  '$percent%',
+                  textAlign: TextAlign.right,
+                  style: AppText.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.grey1,
+                  ),
+                ),
               ),
             ],
           ),

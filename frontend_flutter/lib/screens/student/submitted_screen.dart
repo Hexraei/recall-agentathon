@@ -48,8 +48,10 @@ class SubmittedScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 22),
-              Text(args.auto ? 'Time ran out' : 'Submitted',
-                  style: AppText.pageTitle),
+              Text(
+                args.auto ? 'Time ran out' : 'Submitted',
+                style: AppText.pageTitle,
+              ),
               const SizedBox(height: 6),
               Text(
                 args.auto
@@ -64,8 +66,7 @@ class SubmittedScreen extends StatelessWidget {
                     label: 'Questions answered',
                     value: '${args.answered} of $total',
                   ),
-                  if (args.auto)
-                    FactRow(label: 'Left blank', value: '$blank'),
+                  if (args.auto) FactRow(label: 'Left blank', value: '$blank'),
                   FactRow(
                     label: 'Submitted at',
                     value: args.auto
@@ -80,16 +81,17 @@ class SubmittedScreen extends StatelessWidget {
               Text(
                 args.auto
                     ? 'Everything you had answered was saved. Your result '
-                        'appears once the quiz closes for everyone.'
+                          'appears once the quiz closes for everyone.'
                     : 'Your result appears once the quiz closes for everyone. '
-                        'Nothing is marked before then.',
+                          'Nothing is marked before then.',
                 style: AppText.bodySmall,
               ),
               const Spacer(),
               FilledAction(
                 label: 'Back to home',
-                onPressed: () => Navigator.of(context)
-                    .popUntil(ModalRoute.withName(Routes.studentHome)),
+                onPressed: () => Navigator.of(
+                  context,
+                ).popUntil(ModalRoute.withName(Routes.studentHome)),
               ),
             ],
           ),

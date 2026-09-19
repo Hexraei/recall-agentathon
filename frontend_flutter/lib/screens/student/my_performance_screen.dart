@@ -39,14 +39,18 @@ class _MyPerformanceScreenState extends State<MyPerformanceScreen> {
 
   Future<_PerformanceData> _load() async {
     final r = context.read<ResultsRepository>();
+    final (averages, topics, attempts) =
+        await (r.myAverages(), r.myTopicScores(), r.myAttempts()).wait;
     return _PerformanceData(
-      averages: await r.myAverages(),
-      topics: await r.myTopicScores(),
-      attempts: await r.myAttempts(),
+      averages: averages,
+      topics: topics,
+      attempts: attempts,
     );
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+    _future = _load();
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -100,8 +104,10 @@ class _MyPerformanceScreenState extends State<MyPerformanceScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('A dash means you did not take that one.',
-                  style: AppText.bodySmall),
+              Text(
+                'A dash means you did not take that one.',
+                style: AppText.bodySmall,
+              ),
               const SizedBox(height: 14),
               ColumnChart(
                 maxValue: 100,
@@ -116,7 +122,9 @@ class _MyPerformanceScreenState extends State<MyPerformanceScreen> {
                 valueFormatter: (v) => '${v.round()}%',
               ),
               const SizedBox(height: 8),
-              ChartAxisLabels(labels: [for (final a in d.averages) a.shortLabel]),
+              ChartAxisLabels(
+                labels: [for (final a in d.averages) a.shortLabel],
+              ),
             ],
           ),
         ),
@@ -125,8 +133,10 @@ class _MyPerformanceScreenState extends State<MyPerformanceScreen> {
         const SectionLabel('Steady'),
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: Text('Answered correctly most times these came up.',
-              style: AppText.bodySmall),
+          child: Text(
+            'Answered correctly most times these came up.',
+            style: AppText.bodySmall,
+          ),
         ),
         RowCard(
           children: [
@@ -144,8 +154,10 @@ class _MyPerformanceScreenState extends State<MyPerformanceScreen> {
         const SectionLabel('To work on'),
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: Text('Answered wrongly more often than not.',
-              style: AppText.bodySmall),
+          child: Text(
+            'Answered wrongly more often than not.',
+            style: AppText.bodySmall,
+          ),
         ),
         RowCard(
           children: [
@@ -182,8 +194,18 @@ class _MyPerformanceScreenState extends State<MyPerformanceScreen> {
 
   static String _longDate(DateTime d) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${d.day} ${months[d.month - 1]}';
   }
@@ -207,7 +229,9 @@ class _OneQuizOnly extends StatelessWidget {
           children: [
             Expanded(
               child: StatTile(
-                  figure: '${average!.percent}%', label: average!.quizTitle),
+                figure: '${average!.percent}%',
+                label: average!.quizTitle,
+              ),
             ),
             const SizedBox(width: 8),
             const Expanded(
@@ -217,7 +241,8 @@ class _OneQuizOnly extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         const InfoBand(
-          text: 'One quiz so far, so there is nothing to compare it against '
+          text:
+              'One quiz so far, so there is nothing to compare it against '
               'yet. A trend appears once you have taken a second.',
         ),
       ],

@@ -38,7 +38,8 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
         context: context,
         builder: (context) => ConfirmSheet(
           title: 'Submit with ${blanks.length} blank?',
-          body: 'Question${blanks.length == 1 ? '' : 's'} ${_listWords(blanks)} '
+          body:
+              'Question${blanks.length == 1 ? '' : 's'} ${_listWords(blanks)} '
               'ha${blanks.length == 1 ? 's' : 've'} no answer. They will be '
               'counted as unanswered, and you cannot reopen the quiz after '
               'submitting.',
@@ -90,7 +91,7 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
                 blanks.isEmpty
                     ? 'All ${_c.total} questions have an answer.'
                     : '${blanks.length} question${blanks.length == 1 ? ' has' : 's have'} '
-                        'no answer yet. Tap a number to go back to it.',
+                          'no answer yet. Tap a number to go back to it.',
                 textAlign: TextAlign.center,
                 style: AppText.bodySmall,
               ),
@@ -129,10 +130,7 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  _LegendSwatch(
-                    answered: true,
-                    label: 'Answered ($answered)',
-                  ),
+                  _LegendSwatch(answered: true, label: 'Answered ($answered)'),
                   const SizedBox(width: 20),
                   _LegendSwatch(
                     answered: false,
@@ -173,11 +171,8 @@ class _Grid extends StatelessWidget {
         childAspectRatio: 1,
       ),
       itemCount: total,
-      itemBuilder: (context, i) => _Cell(
-        number: i + 1,
-        answered: isAnswered(i),
-        onTap: () => onTap(i),
-      ),
+      itemBuilder: (context, i) =>
+          _Cell(number: i + 1, answered: isAnswered(i), onTap: () => onTap(i)),
     );
   }
 }
@@ -208,9 +203,13 @@ class _Cell extends StatelessWidget {
               border: Border.all(color: AppColors.accent),
               borderRadius: AppRadii.controlR,
             ),
-            child: Text('$number',
-                style: AppText.rowTitle
-                    .copyWith(fontSize: 15, color: AppColors.accentDeep)),
+            child: Text(
+              '$number',
+              style: AppText.rowTitle.copyWith(
+                fontSize: 15,
+                color: AppColors.accentDeep,
+              ),
+            ),
           ),
         ),
       );
@@ -225,9 +224,13 @@ class _Cell extends StatelessWidget {
         child: CustomPaint(
           painter: _DashedCellPainter(),
           child: Center(
-            child: Text('$number',
-                style: AppText.rowTitle
-                    .copyWith(fontSize: 15, color: AppColors.grey3)),
+            child: Text(
+              '$number',
+              style: AppText.rowTitle.copyWith(
+                fontSize: 15,
+                color: AppColors.grey3,
+              ),
+            ),
           ),
         ),
       ),

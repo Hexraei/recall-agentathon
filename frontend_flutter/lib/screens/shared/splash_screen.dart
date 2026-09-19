@@ -37,7 +37,9 @@ class _SplashScreenState extends State<SplashScreen> {
         Navigator.of(context).pushReplacementNamed(Routes.auth);
       } else {
         Navigator.of(context).pushReplacementNamed(
-          user.role == UserRole.teacher ? Routes.teacherHome : Routes.studentHome,
+          user.role == UserRole.teacher
+              ? Routes.teacherHome
+              : Routes.studentHome,
         );
       }
     } catch (_) {
@@ -59,7 +61,9 @@ class _SplashScreenState extends State<SplashScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     RecallMark(
-                      color: _failed ? AppColors.disabledText : AppColors.accent,
+                      color: _failed
+                          ? AppColors.disabledText
+                          : AppColors.accent,
                     ),
                     const SizedBox(height: 22),
                     Text(
@@ -80,49 +84,49 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   List<Widget> _restoring() => [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 72),
-          child: Column(
-            children: [
-              const _IndeterminateBar(),
-              const SizedBox(height: 18),
-              Text(
-                'Restoring your session',
-                style: AppText.caption.copyWith(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.3,
-                  color: AppColors.grey2,
-                ),
-              ),
-            ],
+    Padding(
+      padding: const EdgeInsets.only(bottom: 72),
+      child: Column(
+        children: [
+          const _IndeterminateBar(),
+          const SizedBox(height: 18),
+          Text(
+            'Restoring your session',
+            style: AppText.caption.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.3,
+              color: AppColors.grey2,
+            ),
           ),
-        ),
-      ];
+        ],
+      ),
+    ),
+  ];
 
   List<Widget> _cannotConnect() => [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 28),
-          child: Column(
-            children: [
-              Text("Can't reach Recall", style: AppText.dialogTitle),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: 280,
-                child: Text(
-                  'Check your connection and try again.',
-                  textAlign: TextAlign.center,
-                  style: AppText.bodyLarge,
-                ),
-              ),
-            ],
+    Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: Column(
+        children: [
+          Text("Can't reach Recall", style: AppText.dialogTitle),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: 280,
+            child: Text(
+              'Check your connection and try again.',
+              textAlign: TextAlign.center,
+              style: AppText.bodyLarge,
+            ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 56),
-          child: FilledAction(label: 'Try again', onPressed: _restore),
-        ),
-      ];
+        ],
+      ),
+    ),
+    Padding(
+      padding: const EdgeInsets.only(bottom: 56),
+      child: FilledAction(label: 'Try again', onPressed: _restore),
+    ),
+  ];
 }
 
 /// The 96px hairline bar under the lockup, with a fill that slides.

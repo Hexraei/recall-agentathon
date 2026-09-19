@@ -121,10 +121,7 @@ class ConfirmSheet extends StatelessWidget {
           Text(title, style: AppText.sheetTitle),
           const SizedBox(height: 10),
           Text(body, style: AppText.bodySmall.copyWith(height: 20 / 13.5)),
-          if (detail != null) ...[
-            const SizedBox(height: 16),
-            detail!,
-          ],
+          if (detail != null) ...[const SizedBox(height: 16), detail!],
           const SizedBox(height: 22),
           confirm,
           const SizedBox(height: 10),

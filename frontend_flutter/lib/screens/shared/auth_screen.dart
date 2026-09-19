@@ -111,13 +111,17 @@ class _AuthScreenState extends State<AuthScreen> {
                   children: [
                     const RecallMark(size: 26),
                     const SizedBox(width: 10),
-                    Text('Recall',
-                        style: AppText.sheetTitle.copyWith(fontSize: 20)),
+                    Text(
+                      'Recall',
+                      style: AppText.sheetTitle.copyWith(fontSize: 20),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 30),
-                Text(_signUp ? 'Create your account' : 'Sign in',
-                    style: AppText.pageTitle),
+                Text(
+                  _signUp ? 'Create your account' : 'Sign in',
+                  style: AppText.pageTitle,
+                ),
                 const SizedBox(height: 6),
                 Text(
                   _signUp
@@ -137,14 +141,17 @@ class _AuthScreenState extends State<AuthScreen> {
                 ],
                 if (_networkFailed) ...[
                   InfoBand(
-                    text: "We couldn't reach Recall. Your details weren't sent.",
+                    text:
+                        "We couldn't reach Recall. Your details weren't sent.",
                     icon: Icons.cloud_off_outlined,
                     action: GestureDetector(
                       onTap: _submit,
                       child: Text(
                         'Try again',
                         style: AppText.rowTitle.copyWith(
-                            fontSize: 13.5, color: AppColors.accent),
+                          fontSize: 13.5,
+                          color: AppColors.accent,
+                        ),
                       ),
                     ),
                   ),
@@ -186,8 +193,10 @@ class _AuthScreenState extends State<AuthScreen> {
                     enabled: !_submitting,
                   ),
                   const SizedBox(height: 6),
-                  Text('This is the name your teacher sees on the roster.',
-                      style: AppText.caption.copyWith(fontSize: 12.5)),
+                  Text(
+                    'This is the name your teacher sees on the roster.',
+                    style: AppText.caption.copyWith(fontSize: 12.5),
+                  ),
                   const SizedBox(height: 16),
                 ],
 
@@ -207,8 +216,10 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
                 if (_signUp) ...[
                   const SizedBox(height: 6),
-                  Text('At least 8 characters.',
-                      style: AppText.caption.copyWith(fontSize: 12.5)),
+                  Text(
+                    'At least 8 characters.',
+                    style: AppText.caption.copyWith(fontSize: 12.5),
+                  ),
                 ],
 
                 if (!_signUp) ...[
@@ -249,19 +260,22 @@ class _AuthScreenState extends State<AuthScreen> {
                     onTap: _submitting
                         ? null
                         : () => setState(() {
-                              _signUp = !_signUp;
-                              _credentialError = null;
-                              _passwordFieldError = null;
-                              _networkFailed = false;
-                            }),
+                            _signUp = !_signUp;
+                            _credentialError = null;
+                            _passwordFieldError = null;
+                            _networkFailed = false;
+                          }),
                     child: Text.rich(
                       TextSpan(
-                        style: AppText.bodySmall.copyWith(color: AppColors.grey2),
+                        style: AppText.bodySmall.copyWith(
+                          color: AppColors.grey2,
+                        ),
                         children: [
                           TextSpan(
-                              text: _signUp
-                                  ? 'Already have an account? '
-                                  : 'New to Recall? '),
+                            text: _signUp
+                                ? 'Already have an account? '
+                                : 'New to Recall? ',
+                          ),
                           TextSpan(
                             text: _signUp ? 'Sign in' : 'Create an account',
                             style: AppText.rowTitle.copyWith(
@@ -320,9 +334,12 @@ class _RoleCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(label,
-                  style: AppText.rowTitle.copyWith(
-                      color: selected ? AppColors.accentDeep : AppColors.ink)),
+              Text(
+                label,
+                style: AppText.rowTitle.copyWith(
+                  color: selected ? AppColors.accentDeep : AppColors.ink,
+                ),
+              ),
               const SizedBox(height: 3),
               Text(description, style: AppText.rowSecondary),
             ],

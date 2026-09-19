@@ -70,14 +70,17 @@ class Countdown extends StatelessWidget {
         children: [
           Text(
             'TIME LEFT',
-            style: AppText.sectionLabel
-                .copyWith(color: isNear ? AppColors.red : AppColors.grey3),
+            style: AppText.sectionLabel.copyWith(
+              color: isNear ? AppColors.red : AppColors.grey3,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             format(remaining),
-            style: AppText.countdown(size: 58, color: color)
-                .copyWith(height: 64 / 58, letterSpacing: -1),
+            style: AppText.countdown(
+              size: 58,
+              color: color,
+            ).copyWith(height: 64 / 58, letterSpacing: -1),
           ),
           if (isNear)
             Padding(

@@ -42,8 +42,9 @@ class FilledAction extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(AppColors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.white,
+                      ),
                     ),
                   )
                 : Text(
@@ -177,7 +178,10 @@ class PillAction extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: AppText.rowTitle.copyWith(fontSize: 13.5, color: AppColors.accent),
+            style: AppText.rowTitle.copyWith(
+              fontSize: 13.5,
+              color: AppColors.accent,
+            ),
           ),
         ),
       ),

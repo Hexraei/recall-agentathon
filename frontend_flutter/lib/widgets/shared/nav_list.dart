@@ -91,13 +91,18 @@ class _Row extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(row.title,
-                          style: AppText.rowTitle.copyWith(color: titleColor)),
+                      Text(
+                        row.title,
+                        style: AppText.rowTitle.copyWith(color: titleColor),
+                      ),
                       if (row.secondary != null) ...[
                         const SizedBox(height: 2),
-                        Text(row.secondary!,
-                            style: AppText.rowSecondary
-                                .copyWith(color: secondaryColor)),
+                        Text(
+                          row.secondary!,
+                          style: AppText.rowSecondary.copyWith(
+                            color: secondaryColor,
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -115,8 +120,10 @@ class _Row extends StatelessWidget {
                     ),
                     child: Text(
                       row.badge!,
-                      style: AppText.rowTitle
-                          .copyWith(fontSize: 13, color: AppColors.white),
+                      style: AppText.rowTitle.copyWith(
+                        fontSize: 13,
+                        color: AppColors.white,
+                      ),
                     ),
                   ),
                 ],

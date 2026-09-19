@@ -24,13 +24,31 @@ import '../../widgets/shared/page_scaffold.dart';
 /// question, where Next becomes "Review & submit"; deadline near, where the
 /// header turns red-tinted; auto-submitting, an overlay stating the time is
 /// up and naming how many answers are being submitted.
-class QuestionViewScreen extends StatelessWidget {
+class QuestionViewScreen extends StatefulWidget {
   const QuestionViewScreen({super.key, required this.controller});
 
+  /// Created by the lobby, or by Join on late entry, and handed over here.
+  /// Ownership comes with it: this screen sits under Review & Submit for the
+  /// whole attempt, so it is what outlives the flow and disposes it. Without
+  /// that the one-second ticker would keep running for the life of the app.
   final AttemptController controller;
 
-  void _openReview(BuildContext context) => Navigator.of(context)
-      .pushNamed(Routes.reviewSubmit, arguments: controller);
+  @override
+  State<QuestionViewScreen> createState() => _QuestionViewScreenState();
+}
+
+class _QuestionViewScreenState extends State<QuestionViewScreen> {
+  AttemptController get controller => widget.controller;
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  void _openReview(BuildContext context) => Navigator.of(
+    context,
+  ).pushNamed(Routes.reviewSubmit, arguments: controller);
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +68,8 @@ class QuestionViewScreen extends StatelessWidget {
             overlay: controller.autoSubmitting
                 ? NoticeOverlay(
                     title: 'Time is up',
-                    message: 'Submitting the ${controller.answeredCount} '
+                    message:
+                        'Submitting the ${controller.answeredCount} '
                         'answer${controller.answeredCount == 1 ? '' : 's'} you have.',
                   )
                 : null,
@@ -64,8 +83,9 @@ class QuestionViewScreen extends StatelessWidget {
                         label: 'Previous',
                         // Greys out on question 1 rather than disappearing,
                         // so the pair keeps its shape.
-                        onPressed:
-                            controller.isFirst ? null : controller.previous,
+                        onPressed: controller.isFirst
+                            ? null
+                            : controller.previous,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -94,8 +114,10 @@ class QuestionViewScreen extends StatelessWidget {
                   remaining: controller.remaining,
                   trailing: Text(
                     'Question ${controller.index + 1} of ${controller.total}',
-                    style: AppText.rowTitle
-                        .copyWith(fontSize: 13, color: AppColors.grey1),
+                    style: AppText.rowTitle.copyWith(
+                      fontSize: 13,
+                      color: AppColors.grey1,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 26),
