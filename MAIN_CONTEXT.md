@@ -621,12 +621,17 @@ each other on the identical extraction prompt, morning of 19 September:
 | OpenRouter (paid) | `mistralai/mistral-small-3.2-24b-instruct` | 4.02s | 3/3 | 3/3 |
 | OpenRouter (paid) | `anthropic/claude-haiku-4.5` | 5.92s | 3/3 | 3/3 |
 | OpenRouter (paid) | `qwen/qwen3.8-27b` | 68.6s | 2/3 | ok |
-| OpenRouter (paid) | `inclusionai/ling-3.0-flash` (the kit's own default) | — | **0/3** | — |
+| OpenRouter (paid) | `inclusionai/ling-3.0-flash` (the kit's own default) | 34–83s, wildly variable | 1/3 (2 more hit `ReadTimeout` at 60s) | ok when it returned |
 
 OpenRouter is slower at every point tested, even on the same weights (`qwen3.8-27b`:
 0.89s on Groq, 68.6s through OpenRouter — the gap is OpenRouter's own routing hop, not
-the model or the key tier). The kit's documented default, `ling-3.0-flash`, failed to
-parse at all through this key.
+the model or the key tier). The kit's documented default, `ling-3.0-flash`, was
+re-tested with a longer timeout on 19 Sept: it can return valid JSON (one trial parsed
+cleanly at 33.8s), but two of three calls exceeded 60s and timed out before finishing.
+Correction to an earlier note in this doc: the original "0/3 parsed" verdict was a false
+negative from too short a request timeout, not the model failing to hold the schema.
+Still disqualified either way — 34-83s per call is unusable regardless of whether it
+eventually succeeds.
 
 **`SLICE_FALLBACK_MODEL` is set to an OpenRouter model** (`mistral-small-3.2-24b-instruct`
 or `claude-haiku-4.5` — pick one, see `slice/llm.py`), specifically so a Groq outage
