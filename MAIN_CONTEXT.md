@@ -6,6 +6,74 @@
 This document is the **build reference**: the submitted spec plus decisions taken after
 submission. Where the two differ, this document wins for build purposes.
 
+**Last updated:** Day 1, morning, 19 September. If you are picking this up cold: read
+§0 first, then §14/§15 for what is actually still open. Everything else below is design
+record — accurate, but §0 is where the project actually stands right now.
+
+---
+
+## 0. Where we actually are — read this first
+
+**Phases 1 through 4b are done and pushed to
+[github.com/Hexraei/recall-agentathon](https://github.com/Hexraei/recall-agentathon).**
+The system runs end to end against a real model, not just the stub. If you are joining
+mid-event, `git pull`, then run:
+
+```bash
+cd recall
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env   # paste the team's Groq key + OpenRouter key
+./test.sh                    # 22 tests, should be green
+.venv/bin/python demo.py            # instant, stubbed, no key needed
+.venv/bin/python live.py --full     # real model, ~3-4s per encounter
+```
+
+**What changed since §7's build order was written**, in commit order:
+
+1. **Phase 3 done for real, not just stubbed.** `live.py` makes real calls; both
+   encounters run against a live model end to end — encounter 1 → `not_enough_evidence`,
+   encounter 2 reads encounter 1's records, finds the recurrence, suspends on the
+   professor. Genuinely reads stored history, not hard-coded.
+2. **Provider decided: Groq, not OpenRouter.** §14 below left this open; it is now
+   closed. The event's OpenRouter key is free-tier and shared across every team — 50
+   free-model requests/day, and it throttled hard under load (measured: 15–20s per call,
+   several models returned HTTP 429). Groq is free, unshared per our own key, and
+   measured at 0.89s for the same prompt — about 20× faster. `slice/llm.py` now routes
+   by model id (`_route()`); OpenRouter is still wired as fallback, and the whole thing
+   degrades to OpenRouter-only if `GROQ_API_KEY` is unset. See `.env.example` for the
+   measured numbers per model.
+3. **Retrieval wired in** (`slice/retrieve.py`, the kit's own local embedding search).
+   Extraction no longer sends the whole `corpus/ds-notes.md` on every call — it searches
+   for the 2-3 passages relevant to *this* submission. Cuts tokens ~15-20%, and makes
+   citations point at `ds-notes.md#3` instead of one undifferentiated blob. Falls back to
+   the whole file if the corpus was never ingested or the extension fails to load.
+4. **A real bug found and fixed: the compare prompt was biased toward under-reporting.**
+   `app/prompts/compare.md` told the model "when the evidence supports `similar` and you
+   want to write `recurring`, write `similar`" — written by us, over-correcting against
+   false positives. Measured on fixed input: 9 `similar` out of 10 trials where the
+   correct answer was `recurring`. Rewrote the prompt as an ordered decision procedure
+   (see the prompt file itself) instead of a mood. Re-measured: 8/8 `recurring` on Mira's
+   case, 8/8 `similar` held on Arun's negative control — the fix did not break the
+   false-positive guard, which was the real risk. Two tests
+   (`test_compare_prompt_does_not_bias_toward_hedging`,
+   `test_compare_prompt_states_a_decision_rule`) read the prompt file directly so this
+   can't silently regress.
+5. **Rate limiting handled.** Groq's free tier is 8,000 tokens/minute; one encounter is
+   ~4,500, so two runs back to back used to die on HTTP 429. `llm.py` now reads the
+   provider's own `Retry-After` / reset headers and waits once, up to 20s, before falling
+   back — a queue is not an outage. `MAX_RATE_LIMIT_WAIT` in `slice/llm.py`.
+6. **`PRE-EVENT-ASSETS.md` added** (commit `a95919a`), per the Day 1 rule in
+   `docs/agentic-slice-kit/docs/ON-THE-DAY.md` (pulled from upstream this morning — see
+   §15). Declares the kit spine, the Groq/OpenRouter setup, and the two extra libraries,
+   with an honest note that it isn't literally the repo's first commit and why.
+
+**What has NOT changed, and is still the real gap:** `docs/evidence/` is empty. Zero
+walkthroughs, zero stress test, zero design rationale. Per the rubric pulled this
+morning (§15), evidence is **35 of 100 points — tied with the build itself** — and it is
+explicitly the thing that "cannot be produced on the last afternoon." This is the
+single most important open item on the whole project right now, more urgent than any
+remaining code.
+
 ---
 
 ## 1. What we are building
@@ -304,20 +372,13 @@ lecture notes adds a sourcing dependency and a student-data question for no gain
 
 | phase | what lands | hours |
 |---|---|---|
-| ~~1~~ | ~~Every state wired up with hard-coded fake records; all three encounters run end to end, including one rejection~~ **DONE** — `recall/`, 20 tests passing, commit `a55f614` | 3 |
-| | *cut line reached: the two-encounter story, the negative control, and the backwards arrow all run with no model involved* | |
-| 2 | Typed records stored to a file; second run reads the first run's records | 2 |
-| | *cut line: the second encounter demonstrably depends on stored records* | |
-| 3 | Real model calls for extract, compare and draft | 4 |
-| | *cut line: real submissions produce real findings* | |
-| 4 | Checker: citation check in code, claim-strength check by model, routing back | 3 |
-| | *cut line: an overstated finding is rejected live* | |
-| 4b | **False-positive check: Arun's Assignment 3 is not flagged as recurring** | 1 |
-| | *cut line: the system can decline to find a pattern, on demand, in front of a tester* | |
-| 5 | Professor review waiting state, resume, and timeout | 2 |
-| | *cut line: the professor's answer changes the final status* | |
-| 6 | Professor-facing history view: current evidence, earlier evidence, what changed, what is uncertain, what the professor must decide | 1 |
-| | *cut line: the demo is readable on screen* | |
+| ~~1~~ | **DONE** — every state wired up with hard-coded fake records; all three encounters run end to end, including one rejection. Commit `a55f614`, 20 tests | 3 |
+| ~~2~~ | **DONE**, folded into phase 1 — SQLite from the start (the kit's own store), not a separate file format. Second run reads the first run's records; there is a test that closes and reopens the store to prove it | 2 |
+| ~~3~~ | **DONE** — real model calls for extract, compare and draft, via Groq. `live.py --full` runs both encounters live: `not_enough_evidence` then `recurring`, suspended on the professor. Commits `b719890`, `d103209`, `1a7c365` | 4 |
+| ~~4~~ | **DONE** — citation check in code (`app/provenance.py`, asks no model), claim-strength check by model, routing back by failure reason. A real overstated finding gets rejected and re-drafted with the model, not just the stub | 3 |
+| ~~4b~~ | **DONE, and it needed a real fix** — Arun's case was flagged `recurring` before the compare-prompt bug (§0.4) was found; now 8/8 `similar` on repeated measurement. This was the actual highest-risk item and it is closed | 1 |
+| 5 | Professor review waiting state, resume, and timeout — **mechanism exists and is exercised in tests** (`callback.ask`/`answer`, `NEEDS_REVIEW`↔`RECORD_UPDATED`). **Not yet built:** a real web form: right now the demo answers the professor from the command line (`live.py`'s `answer=` argument), not through `web/expert.py` or equivalent | 2 |
+| 6 | Professor-facing history view: current evidence, earlier evidence, what changed, what is uncertain, what the professor must decide — **not started.** `live.py` prints a readable transcript as it runs, which may be enough for the demo; a dedicated view is still open if there's time | 1 |
 
 **Phase 7 (second course) is cut.** The submitted spec proposed running the same flow on
 Engineering Mechanics. Phases 3 and 4 are where the hours actually go, by our own
@@ -333,20 +394,21 @@ Two of the eighteen on-site hours are reserved for the three tester walkthroughs
 
 ---
 
-## 8. Claims to verify — three before Friday
+## 8. Claims to verify
 
-The submitted spec lists eleven claims, none checked. Three of them are cheap, need no
-build, and change what we do if they fail. Run these before the event.
+The submitted spec lists eleven claims. Status as of Day 1 morning:
 
-| # | claim | how to check | why first |
-|---|---|---|---|
-| 1 | The checker catches unsupported or overly strong claims | Feed it the exact string `"Mira does not understand time complexity"` from our own walkthrough; expect `rejected` with `failed_check: claim_strength` | If the checker cannot catch the one overstated claim we wrote ourselves, Phase 4 is in trouble and we want to know now, not on Saturday afternoon |
-| 2 | The model consistently produces the required structured outputs | Run each of the four prompts 20× on the sample submissions; count validation failures | Decides whether the chosen model can hold the contract at all. A model that parses 2 times in 5 fails silently inside a gate loop |
-| 3 | Comparison distinguishes recurrence from superficial similarity | Run Arun's Assignment 3 against his Assignment 1 record; expect **not** `recurring` | This is the new negative control and the most likely live failure |
+| # | claim | status |
+|---|---|---|
+| 1 | The checker catches unsupported or overly strong claims | **Verified against a real model.** Feeding it the overstated statement gets `rejected` / `claim_strength`, and it happens live inside `live.py --full`'s encounter 2, not just in a stub test |
+| 2 | The model consistently produces the required structured outputs | **Partially verified — small sample.** 3-trial spot checks on Groq (`qwen/qwen3.8-27b`): 3/3 parsed, verbatim citations held, on the extract prompt specifically. **Not yet run at the original target of 20 trials, and not yet run on the compare/finding/check prompts** — only extract has been bakeoff-tested. `bakeoff.py` exists and does this; hasn't been pointed at Groq models yet (it currently tests OpenRouter `:free` models, which is no longer the primary path) |
+| 3 | Comparison distinguishes recurrence from superficial similarity | **Verified, and this is the one that actually broke and got fixed.** See §0.4. Was measured at 1/10 correct before the prompt fix, 8/8 after, on both Mira's positive case and Arun's negative control. `consistency.py` is the tool that measures this — rerun it if the compare prompt changes again |
 
 The remaining eight — resume after review, durability across processes, duplicate
 handling, audit trail preservation, tester comprehension, privacy, and the
-stored-history dependency check — are day-one morning work.
+stored-history dependency check — are covered by the test suite (`tests/test_flow.py`,
+22 tests) for everything except **tester comprehension** and **privacy**, which need a
+real person and are part of the evidence work in §12, not code.
 
 **The stored-history check is the one a judge will ask about:** delete Encounter 1's
 records, rerun Encounter 2, and expect `not_enough_evidence`. It proves the second
@@ -454,32 +516,120 @@ code-level citation check rejects it without ever asking the model.
 
 ---
 
-## 14. Open items
+## 14. Open items — as of Day 1 morning
 
-Before the event:
+**Blocking, do these first, today:**
 
-- Book three walkthrough testers and one hostile tester — names and times. Not "sometime
-  Saturday".
-- ~~Write `corpus/ds-notes.md`~~ **done** — `recall/corpus/ds-notes.md`.
-- ~~Write Arun's two sample submissions into the fixture set~~ **done** —
-  `recall/app/fixtures.py`.
-- Run verification claims 1–3. Claim 1 (the checker rejects an overstated finding) and
-  claim 3 (superficial similarity is not recurrence) now have tests, but against the
-  **stub**, not a model. They prove the routing, not that a model can hold the contract.
-  Re-run both against a real model in phase 3.
-- Run `python scripts/doctor.py` once and fix whatever it complains about. Most of what
-  looks like a broken agent on day one is a broken environment.
+- **`docs/evidence/` is empty.** Book three walkthrough testers and one hostile tester —
+  names and times, not "sometime today." This is 35 of 100 rubric points (§15) and the
+  one thing on this whole list that cannot be compressed into Day 2 morning. Start the
+  first walkthrough on whatever exists right now, however rough — that is the point of
+  doing it early.
+- **Submit the repo URL through the desk's form.** `PRE-EVENT-ASSETS.md` being committed
+  does not register the team; the form is a separate, required action (§15).
+- **Three checkpoint commits today: 11:00, 2:00, 5:00.** Push whatever exists at that
+  moment, broken or not. Missing one isn't penalised; an empty gap in the log is read as
+  nothing happening.
 
-**Decide before phase 3:** the kit's `llm.py` calls OpenRouter, and the event hands out
-an OpenRouter key at the desk. The original Recall planning assumed Gemini Flash + Groq.
-`complete()` is the one place a model is ever called, so swapping the transport is
-contained — but the kit's version already has the 402/429 classification, provider
-fallback and the repair pass written, which is real work to redo. Recommendation: use the
-event's key and keep the kit's path.
+**Real, measured, and still open:**
 
-Still undecided, needed by day-two morning:
+- **Extraction's own run-to-run consistency has not been measured**, only comparison's
+  has (§0.4, `consistency.py`). The three-way chaos that led to finding the compare bug
+  (`recurring`/`similar`/`improving` on identical input) was traced upstream to
+  extraction returning different passages each run. Comparison is now provably stable on
+  *fixed* evidence; whether extraction itself is stable enough to keep feeding it fixed
+  evidence is untested. Worth a `consistency.py`-style measurement on `extract` specifically
+  if there's time before the demo.
+- **Claim 2's real target (20 trials) hasn't been run**, and only the extract prompt has
+  been bakeoff-tested at all — compare, finding and check haven't been. `bakeoff.py`
+  exists but currently targets OpenRouter `:free` models; point it at the Groq models in
+  `.env` before trusting the 3-trial spot checks any further.
+- **The professor review is CLI-only.** `web/expert.py` (or equivalent) from phase 5's
+  original plan doesn't exist yet. Decide whether the demo answers the professor from the
+  terminal (already works, already in `live.py`) or whether a browser form is worth
+  building given the time left — a browser form demos better but the CLI path is real and
+  tested.
+- **A fallback-tier decision, made and left unwired:** the paid OpenRouter key was
+  benchmarked against Groq on 19 Sept morning. Verdict: OpenRouter is slower at every
+  point tested (best case 4.0s vs Groq's 0.89s; the kit's own default model,
+  `inclusionai/ling-3.0-flash`, failed to parse 3/3 times through this key). Groq stays
+  primary. `mistralai/mistral-small-3.2-24b-instruct` or `anthropic/claude-haiku-4.5` via
+  OpenRouter would be a legitimate third-tier fallback if Groq itself has an outage
+  during the event, but this is not wired into `_route()` — only Groq-then-OpenRouter-
+  free-tier currently exists.
+
+**Not urgent, but real:**
 
 - **Who plays the professor during the three walkthroughs** — one of us, or the tester
-  themselves. It does not affect the build. It does change what the walkthrough measures:
-  a tester in the professor's seat tells you whether the review screen is
-  understandable; one of us in that seat tells you only whether it works.
+  themselves. Doesn't affect the build. A tester in the professor's seat tells you
+  whether the review is understandable to a stranger; one of us in that seat only tells
+  you the mechanism works. Decide before walkthrough 1, not after.
+
+---
+
+## 15. The event's own rules, pulled 19 September morning
+
+`docs/agentic-slice-kit/docs/ON-THE-DAY.md` was finished by the organisers between our
+last read of it and this morning; pulled fresh from upstream and now copied into this
+repo. It supersedes anything about logistics said above.
+
+**Judging, out of 100:**
+
+| | weight |
+|---|---|
+| A working agentic slice — runs, and one step judges another's work and sends it back | 35 |
+| Evidence real people used it, and what changed because of what we watched | 35 |
+| Whether it helped — what someone could do afterwards that they couldn't before | 20 |
+| How we worked and how we show it — commit rhythm, the demo, handling questions | 10 |
+
+**The demo must show the back-edge live, or it cannot be scored.** Not a claim in a
+slide — the actual rejection-and-retry has to appear on screen. `live.py --full` already
+does this (encounter 2's overstated finding gets rejected with `claim_strength` and
+redrafted, in front of whoever is watching) — make sure whichever script runs
+tomorrow doesn't scroll past that step too fast to read.
+
+**Expect to be asked to break it live, thirty seconds, no warning.** Know the actual
+failure modes rather than hoping none show up: the rate-limit wait (§0.5), the retrieval
+fallback if the corpus fails to load (§0.3), and the adversarial injection test (§13) are
+the three most likely candidates to be asked about, because they're the three we
+deliberately built a defined behaviour for.
+
+**Three checkpoint commits: 11:00, 2:00, 5:00, Day 1.** Push regardless of state.
+
+**Key economics:** one key per team, $10 start, one top-up to +$5 max, ever. "Finishing
+inside the original $10 without a top-up is a design result, not thrift" — worth saying
+in the demo if true. Since Groq is primary and is a separate, free, unshared key, the
+OpenRouter key's spend should be near zero regardless — worth checking before the demo
+that this is actually the case, since it's evidence the architecture choice paid off.
+
+**402 vs 429, opposite responses:** 402 is our key's own cap — lower `SLICE_MAX_TOKENS`
+first, go to the desk if that doesn't fix it. 429 is the shared pool throttling, not our
+fault, desk can't help, wait or fall back. `python scripts/doctor.py` (from the kit's
+`docs/agentic-slice-kit/`) tells you which one you have.
+
+---
+
+## 16. Provider fallback chain — decided 19 September
+
+**Groq primary, OpenRouter (paid team key) as fallback.** Benchmarked directly against
+each other on the identical extraction prompt, morning of 19 September:
+
+| provider | model | latency | parsed | verbatim |
+|---|---|---|---|---|
+| Groq | `qwen/qwen3.8-27b` | 0.89s | 3/3 | 3/3 |
+| Groq | `openai/gpt-oss-20b` | 1.67s | 3/3 | 3/3 |
+| OpenRouter (paid) | `mistralai/mistral-small-3.2-24b-instruct` | 4.02s | 3/3 | 3/3 |
+| OpenRouter (paid) | `anthropic/claude-haiku-4.5` | 5.92s | 3/3 | 3/3 |
+| OpenRouter (paid) | `qwen/qwen3.8-27b` | 68.6s | 2/3 | ok |
+| OpenRouter (paid) | `inclusionai/ling-3.0-flash` (the kit's own default) | — | **0/3** | — |
+
+OpenRouter is slower at every point tested, even on the same weights (`qwen3.8-27b`:
+0.89s on Groq, 68.6s through OpenRouter — the gap is OpenRouter's own routing hop, not
+the model or the key tier). The kit's documented default, `ling-3.0-flash`, failed to
+parse at all through this key.
+
+**`SLICE_FALLBACK_MODEL` is set to an OpenRouter model** (`mistral-small-3.2-24b-instruct`
+or `claude-haiku-4.5` — pick one, see `slice/llm.py`), specifically so a Groq outage
+during the event degrades to a slower-but-working path instead of stopping the run. This
+is the "different provider family" the kit's own principles ask for — Groq alone,
+primary and fallback both, would mean one outage takes down both.
