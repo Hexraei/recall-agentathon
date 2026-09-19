@@ -26,6 +26,7 @@ Run it:
 from __future__ import annotations
 
 import os
+import threading
 import time
 from pathlib import Path
 
@@ -58,14 +59,59 @@ fiction, with no way to tell afterwards which rows were which.
 app = FastAPI()
 _settings = load_settings()
 _store: Store | None = None
+_store_lock = threading.RLock()
+# FastAPI's sync route handlers each run in a worker thread from a pool. A
+# plain sqlite3 connection defaults to rejecting any use from a thread other
+# than the one that opened it - every request landing on a different worker
+# thread than the one that first called store() crashed with "SQLite objects
+# created in a thread can only be used in that same thread." Caught this
+# live: 16 of 364 real /answer submissions (about 4.4%) failed with a 500
+# before this fix, which is what looked like a student's quiz "getting
+# stuck" - the request had actually failed, not stalled.
+#
+# check_same_thread=False lifts that restriction, but is not enough on its
+# own: a bare sqlite3.Connection is not safe to call from two threads AT THE
+# SAME TIME even once that flag is set - confirmed with a 20-thread
+# stress test that reliably raised InterfaceError without a lock, and passed
+# clean with one. So every .execute()/.executescript() call on the
+# connection is routed through _LockedConnection below, which every caller
+# reaches automatically via store().db - including app/roster.py's raw
+# `store.db.execute(...)` calls, not just the Store class's own methods.
+# RLock, not Lock: some request paths call store() more than once while
+# already holding it (nested calls would deadlock on a plain Lock).
+
+class _LockedConnection:
+    """Wraps a sqlite3.Connection so every query serialises through one lock,
+    while everything else (row_factory, close, ...) passes through untouched."""
+
+    def __init__(self, conn, lock):
+        object.__setattr__(self, "_conn", conn)
+        object.__setattr__(self, "_lock", lock)
+
+    def execute(self, *a, **kw):
+        with self._lock:
+            return self._conn.execute(*a, **kw)
+
+    def executescript(self, *a, **kw):
+        with self._lock:
+            return self._conn.executescript(*a, **kw)
+
+    def executemany(self, *a, **kw):
+        with self._lock:
+            return self._conn.executemany(*a, **kw)
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
 
 
 def store() -> Store:
     global _store
-    if _store is None:
-        _store = Store(DB)
-        roster.init(_store)
-    return _store
+    with _store_lock:
+        if _store is None:
+            _store = Store(DB, check_same_thread=False)
+            _store.db = _LockedConnection(_store.db, _store_lock)
+            roster.init(_store)
+        return _store
 
 
 # ----------------------------------------------------------------------- chrome
