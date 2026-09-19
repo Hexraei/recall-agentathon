@@ -592,3 +592,172 @@ def test_the_facts_handed_to_the_model_come_from_sql_not_the_model(store):
     assert len(loops["wrong_answers"]) == loops["wrong_answer_count"]
     assert len(loops["missed_in_topics"]) >= 3
     assert "topics" not in loops, "two keys for one fact invites a mismatch"
+
+
+# ----------------------------------------- claim_strength, in code (not a model)
+
+# The four rejections below are verbatim from demo.db, written by the checker
+# MODEL against reports that were factually correct. Each one is a sentence the
+# counts support, rejected as false - including "the counts show 8 correct out
+# of 20 asked" used to reject a headline reading "You got 8 of 20 questions
+# right". They are the measurement that moved this check into code, and they
+# are here so a future rewrite has to survive them.
+
+def test_true_sentences_the_checker_model_used_to_reject_are_accepted():
+    cases = [
+        ("a clean sweep that really is clean",
+         {"headline": "A solid run.",
+          "strengths": [{"concept": "singularities", "verdict": "strong",
+                         "evidence": "All the answers here were right."}],
+          "gaps": [], "next_step": "x", "uncertainty": "y"},
+         {"score": {"correct": 15, "asked": 20},
+          "by_concept": [{"concept": "singularities", "asked": 3, "correct": 3,
+                          "wrong_answer_count": 0, "missed_in_topics": []}]}),
+        ("a headline quoting the score exactly",
+         {"headline": "You got 8 of 20 questions right.",
+          "strengths": [], "gaps": [], "next_step": "x", "uncertainty": "y"},
+         {"score": {"correct": 8, "asked": 20}, "by_concept": []}),
+        ("prose restating a fact that supports it",
+         {"headline": "Only one topic came through clean.",
+          "strengths": [], "gaps": [], "next_step": "x", "uncertainty": "y"},
+         {"score": {"correct": 12, "asked": 20}, "by_concept": [],
+          "by_topic": [{"topic": "Memory & State", "asked": 4, "correct": 4}]}),
+    ]
+    for name, body, facts in cases:
+        assert report.check_claim_strength(body, facts) is None, name
+
+
+def test_a_genuinely_false_claim_is_still_rejected():
+    facts = {"score": {"correct": 8, "asked": 20},
+             "by_concept": [{"concept": "loops", "asked": 3, "correct": 2,
+                             "wrong_answer_count": 1,
+                             "missed_in_topics": ["Lists and Loops"]}]}
+    base = {"headline": "Good work.", "strengths": [], "gaps": [],
+            "next_step": "x", "uncertainty": "y"}
+
+    sweep = dict(base, strengths=[{"concept": "loops", "verdict": "strong",
+                                   "evidence": "You got all of these right."}])
+    assert report.check_claim_strength(sweep, facts).failed_check == "claim_strength"
+
+    wrong_score = dict(base, headline="You got 18 of 20 questions right.")
+    assert report.check_claim_strength(wrong_score, facts) is not None
+
+    ranked = dict(base, headline="You scored below average for the class.")
+    assert report.check_claim_strength(ranked, facts) is not None
+
+    personal = dict(base, next_step="You are careless; slow down.")
+    assert report.check_claim_strength(personal, facts) is not None
+
+
+def test_an_over_long_field_is_trimmed_rather_than_losing_the_report():
+    """Measured: one report's entire SchemaFailure was a single `evidence`
+    field 192 characters long against a 160 bound. The reply was complete and
+    well formed - finish_reason "stop", not "length" - so this is not the
+    truncation bug. Discarding a student's only feedback over 32 characters is
+    the wrong trade; trimming to a word boundary is not."""
+    import json as _json
+    from slice.llm import _parse, _parse_or_trim
+
+    long_evidence = ("The misses treated the Jacobian as failing to exist, "
+                     "inverted it anyway, and assumed a unique solution existed "
+                     "near the singular configuration where the arm loses a "
+                     "degree of freedom entirely.")
+    assert len(long_evidence) > 160
+    body = {"headline": "You got 13 of 20 right.",
+            "strengths": [],
+            "gaps": [{"concept": "c", "verdict": "weak", "evidence": long_evidence}],
+            "next_step": "x.", "uncertainty": "y."}
+    text = _json.dumps(body)
+
+    assert _parse(text, report.StudentReport) is None, "should fail without salvage"
+    out = _parse_or_trim(text, report.StudentReport)
+    assert out is not None, "an over-long field must not cost the whole report"
+    assert len(out.gaps[0].evidence) <= 160
+    assert out.gaps[0].evidence.endswith("."), "must read as a finished sentence"
+    assert not out.gaps[0].evidence.endswith(" .")
+    assert out.headline == body["headline"], "nothing else may be touched"
+
+
+def test_trimming_does_not_rescue_a_structurally_wrong_reply():
+    """Only length is salvaged. A missing field, a bad enum or a wrong type is
+    a real disagreement about the contract and must still fail - those change
+    what the report SAYS, where a trimmed sentence only says it shorter."""
+    import json as _json
+    from slice.llm import _parse_or_trim
+
+    for broken in ({"headline": "x"},
+                   {"headline": "x", "strengths": ["a bare string"], "gaps": [],
+                    "next_step": "n", "uncertainty": "u"},
+                   {"headline": "x", "strengths": [], "next_step": "n",
+                    "uncertainty": "u",
+                    "gaps": [{"concept": "c", "verdict": "excellent",
+                              "evidence": "e"}]}):
+        assert _parse_or_trim(_json.dumps(broken), report.StudentReport) is None
+
+
+def test_a_sentence_that_admits_its_miss_is_not_a_clean_sweep_claim():
+    """Verbatim from a measured run, and a false positive this check itself
+    caused before the rule was tightened: on a 4-of-5 concept it rejected a
+    sentence that explicitly ADMITS the miss, because the phrase "every time"
+    appeared in a clause describing the misconception rather than the student.
+
+    That is the same false rejection the checker model was making, reproduced
+    in code - which is the failure mode this whole check exists to end, so it
+    is pinned here."""
+    facts = {"score": {"correct": 17, "asked": 20},
+             "by_concept": [{"concept": "counting work inside loops", "asked": 5,
+                             "correct": 4, "wrong_answer_count": 1,
+                             "missed_in_topics": ["Lists and Loops"]}]}
+    body = {"headline": "A strong run with one thing to tidy up.",
+            "strengths": [{"concept": "counting work inside loops",
+                           "verdict": "strong",
+                           "evidence": "The one miss assumed every append "
+                                       "reallocates; amortised growth means "
+                                       "copies happen rarely, not every time."}],
+            "gaps": [], "next_step": "x", "uncertainty": "y"}
+    assert report.check_claim_strength(body, facts) is None
+
+    # But the same concept with a real sweep claim is still caught.
+    overclaim = dict(body, strengths=[
+        {"concept": "counting work inside loops", "verdict": "strong",
+         "evidence": "You got all of these right."}])
+    assert report.check_claim_strength(overclaim, facts) is not None
+
+
+def test_domain_vocabulary_is_not_mistaken_for_a_ranking_or_an_insult():
+    """Both verbatim false positives this check caused before the phrase lists
+    were tightened. A bare "rank" matched "rank-deficient" in a robotics report
+    about Jacobian singularities; "smart" sits inside "smart pointer". Short
+    substrings that fit inside a technical term reproduce, in code, exactly the
+    false rejections the checker model was making."""
+    class_facts = {"by_concept": [
+        {"concept": "singularities", "asked": 12, "correct": 6,
+         "wrong_answer_count": 6, "missed_in_topics": ["Kinematics", "Control"]}]}
+    jacobian = {"headline": "One concept needs re-teaching.",
+                "teach_again": [{"concept": "singularities", "verdict": "weak",
+                                 "evidence": "Students treated the Jacobian as "
+                                             "failing to exist, missing that it "
+                                             "is simply rank-deficient."}],
+                "solid": [], "next_step": "x", "uncertainty": "y"}
+    assert report.check_claim_strength(jacobian, class_facts, "class") is None
+
+    stu_facts = {"score": {"correct": 8, "asked": 20}, "by_concept": []}
+    pointer = {"headline": "Good work.", "strengths": [], "gaps": [],
+               "next_step": "Review how a smart pointer releases its memory.",
+               "uncertainty": "y"}
+    assert report.check_claim_strength(pointer, stu_facts, "student") is None
+
+
+def test_cohort_language_is_descriptive_on_a_class_report_only():
+    """A class report is ABOUT the cohort, so "most students" describes it. The
+    same phrase on a student report ranks them against classmates, which is
+    data that report is deliberately never given."""
+    class_facts = {"by_concept": []}
+    cohort = {"headline": "Most students missed this concept.",
+              "teach_again": [], "solid": [], "next_step": "x", "uncertainty": "y"}
+    assert report.check_claim_strength(cohort, class_facts, "class") is None
+
+    stu_facts = {"score": {"correct": 8, "asked": 20}, "by_concept": []}
+    ranked = {"headline": "You did better than most students.",
+              "strengths": [], "gaps": [], "next_step": "x", "uncertainty": "y"}
+    assert report.check_claim_strength(ranked, stu_facts, "student") is not None

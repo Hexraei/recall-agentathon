@@ -488,28 +488,78 @@ def check_citations(report: dict, facts: dict) -> ReportCheck | None:
 # All three are exact, mechanical checks - the same kind of fact `verdict_for`
 # already turns into a number instead of an opinion.
 
-_UNIVERSAL_WORDS = (
-    "all of these", "all of them", "every one", "every answer", "each of these",
-    "each one", "always got", "consistently got", "got them all", "got it all",
-    "right every time", "every time", "clean sweep", "all correct", "all right",
-    "were right", "was right", "got all",
+# A clean-sweep claim is a phrase asserting that EVERY answer on a concept was
+# correct. The bar for adding one here is that it cannot appear in ordinary
+# explanatory prose, because `evidence` describes the misconception as well as
+# the score.
+#
+# Measured, and the reason this list is not merely "words like every and all":
+# a first cut matched the bare substrings "every time" and "was right", and
+# rejected
+#
+#   "The one miss assumed every append reallocates; amortised growth means
+#    copies happen rarely, not every time."
+#
+# on a 4-of-5 concept - a sentence that explicitly ADMITS the miss, failed on a
+# phrase describing the misconception rather than the student. That is the same
+# false rejection the checker model was making, reproduced in code, which is
+# worth more than the rule it was enforcing.
+_SWEEP_PHRASES = (
+    "all of these right", "all of them right", "all of these correct",
+    "every answer here was right", "every answer here was correct",
+    "every one of these", "each of these was right", "got them all right",
+    "got it all right", "clean sweep", "nothing wrong here",
+    "no mistakes here", "all correct", "every single one",
 )
 
+# "right every time", "right answer every time", "correct each time" - one
+# family, too many wordings to list, so it gets a pattern instead.
+_SWEEP_RE = re.compile(r"\b(right|correct)\b[^.]{0,20}\b(every|each)\s+time\b")
+
+# A sentence that names a miss is not claiming a sweep, whatever else it says.
+# This is what lets `evidence` describe the mistake in the same breath as the
+# strength - "mostly solid; the one miss chose a sorted structure" - which the
+# writer prompt explicitly asks for.
+_ADMITS_A_MISS = (
+    "one miss", "the miss", "the misses", "missed", "one wrong", "got wrong",
+    "except", "apart from", "other than", "slipped", "one slip", "mostly",
+)
+
+# Ranking a STUDENT against the cohort. Multi-word phrases only - a bare
+# "rank" matched "rank-deficient" in a robotics report about Jacobian
+# singularities and rejected a correct sentence, which is the same class of
+# false positive this check was built to remove. Anything short enough to sit
+# inside a technical term does not belong in this list.
 _COMPARISON_PHRASES = (
     "compared to", "compared with", "below average", "above average",
-    "the class average", "most students", "other students", "than your peers",
-    "than the rest", "rank", "ranked", "percentile", "better than", "worse than",
+    "the class average", "than your peers", "than the rest", "than average",
+    "in the top", "in the bottom", "percentile", "ranked against",
+    "better than most", "worse than most",
 )
 
+# Only meaningful on a STUDENT report. A class report is about the cohort by
+# definition, so "most students" is a description there, not a comparison.
+_COHORT_PHRASES = ("most students", "other students", "the other students")
+
+# "smart" is deliberately absent: it sits inside "smart pointer".
 _CHARACTER_WORDS = (
-    "lazy", "careless", "weak student", "strong student", "smart", "stupid",
-    "not trying", "gave up", "doesn't care", "don't care", "not paying attention",
+    "lazy", "careless", "weak student", "strong student", "stupid",
+    "not trying", "gave up", "does not care", "doesn't care",
+    "not paying attention", "sloppy", "unmotivated",
 )
 
 
-def _mentions_universal_claim(text: str) -> bool:
+def _claims_a_clean_sweep(text: str) -> bool:
+    """Does this sentence assert that every answer on a concept was right?
+
+    A sentence that names a miss does not, however it is otherwise phrased -
+    see _ADMITS_A_MISS.
+    """
     low = text.lower()
-    return any(phrase in low for phrase in _UNIVERSAL_WORDS)
+    if any(phrase in low for phrase in _ADMITS_A_MISS):
+        return False
+    return (any(phrase in low for phrase in _SWEEP_PHRASES)
+            or _SWEEP_RE.search(low) is not None)
 
 
 def _prose_fields(report: dict) -> list[tuple[str, str]]:
@@ -539,13 +589,19 @@ def _headline_score_claim(headline: str) -> tuple[int, int] | None:
     return int(m.group(1)), int(m.group(2))
 
 
-def check_claim_strength(report: dict, facts: dict) -> ReportCheck | None:
+def check_claim_strength(report: dict, facts: dict,
+                        kind: str = "student") -> ReportCheck | None:
     """Code-side replacement for the model 'find a false sentence' check.
 
     Returns a rejection, or None to continue. See the note above this function
     for why this is code and not a model call.
     """
     overall = facts.get("score")  # student reports only
+    # A class report is ABOUT the cohort, so cohort language is descriptive
+    # there and only a ranking claim on a student report is a problem.
+    comparisons = _COMPARISON_PHRASES
+    if kind == "student":
+        comparisons = comparisons + _COHORT_PHRASES
     concepts = {r["concept"]: r for r in facts.get("by_concept", [])}
 
     headline = report.get("headline") or ""
@@ -561,7 +617,7 @@ def check_claim_strength(report: dict, facts: dict) -> ReportCheck | None:
     for label, text in _prose_fields(report):
         if not text:
             continue
-        if _mentions_universal_claim(text):
+        if _claims_a_clean_sweep(text):
             # Which concept is this claim about, if any - a strengths/gaps/
             # teach_again/solid entry names one in its label.
             concept = label.split(":", 1)[1] if ":" in label else None
@@ -577,7 +633,7 @@ def check_claim_strength(report: dict, facts: dict) -> ReportCheck | None:
                                 "at least one wrong answer."))
 
         low = text.lower()
-        hit = next((p for p in _COMPARISON_PHRASES if p in low), None)
+        hit = next((p for p in comparisons if p in low), None)
         if hit:
             return ReportCheck(
                 verdict="rejected", failed_check="claim_strength",
@@ -656,7 +712,8 @@ def _generate(store, kind: str, key: str, facts: dict, schema, build, call,
         # turn, measured to fail at it - see check_claim_strength()'s note for
         # the numbers. Nothing here asks a model to compare a sentence to a
         # count anymore.
-        check = check_citations(body, facts) or check_claim_strength(body, facts)
+        check = (check_citations(body, facts)
+                 or check_claim_strength(body, facts, kind))
         if check is None:
             check = ReportCheck(verdict="accepted")
         trail.append({"step": "check", "revision": attempt,

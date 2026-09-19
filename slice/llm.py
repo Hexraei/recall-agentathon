@@ -318,7 +318,9 @@ def complete(
             if schema is None:
                 return last_text
 
-            parsed = _parse(last_text, schema)
+            # Trims an over-long string back to its bound rather than
+            # discarding an otherwise-valid report over a few characters.
+            parsed = _parse_or_trim(last_text, schema)
             if parsed is not None:
                 return parsed
 
@@ -364,6 +366,73 @@ def _parse(text: str, schema: Type[BaseModel]):
         return None
 
 
+def _trim_to_bounds(data: Any, schema: Type[BaseModel]) -> bool:
+    """Cut over-long strings back to the bound the schema declares, in place.
+
+    Returns True if anything was trimmed.
+
+    Why this exists, rather than another round trip: measured on the demo
+    cohort, the whole of one report's SchemaFailure was a single `evidence`
+    field 192 characters long against a 160-character bound. Every other field
+    was valid, the JSON was complete and well formed, and the reply had
+    finished cleanly - `finish_reason` was "stop", not "length", so this is not
+    bug 01 recurring. Throwing that report away, and with it the student's only
+    feedback, over 32 characters of one sentence is the wrong trade.
+
+    Only length bounds are salvaged, and only downward. A missing field, a
+    wrong type or a bad enum is a real disagreement about the contract and
+    still fails - those change what the report SAYS, where a trimmed sentence
+    only says it shorter.
+    """
+    trimmed = False
+    for name, field in schema.model_fields.items():
+        cap = next((m.max_length for m in field.metadata
+                    if hasattr(m, "max_length")), None)
+        value = data.get(name) if isinstance(data, dict) else None
+
+        if isinstance(value, str) and cap and len(value) > cap:
+            # At a word boundary, and ending in a full stop. This lands in a
+            # paragraph on a student's results page, so "...where the arm los"
+            # is not an acceptable repair - better a slightly shorter sentence
+            # that reads as one.
+            cut = value[:cap]
+            if " " in cut[cap // 2:]:
+                cut = cut[:cut.rstrip().rfind(" ")]
+            cut = cut.rstrip(" ,;:-")
+            data[name] = cut if cut.endswith(".") else cut + "."
+            trimmed = True
+
+        # One level of nesting covers every schema here: the ConceptCall lists.
+        elif isinstance(value, list):
+            inner = next((a for a in getattr(field.annotation, "__args__", ())
+                          if isinstance(a, type) and issubclass(a, BaseModel)), None)
+            if cap and len(value) > cap:
+                del value[cap:]
+                trimmed = True
+            if inner is not None:
+                for item in value:
+                    if isinstance(item, dict) and _trim_to_bounds(item, inner):
+                        trimmed = True
+    return trimmed
+
+
+def _parse_or_trim(text: str, schema: Type[BaseModel]):
+    """Parse, and if the only thing wrong is length, trim and parse again."""
+    parsed = _parse(text, schema)
+    if parsed is not None:
+        return parsed
+    try:
+        data = json.loads(_strip_fence(text))
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(data, dict) or not _trim_to_bounds(data, schema):
+        return None
+    try:
+        return schema.model_validate(data)
+    except (ValidationError, ValueError):
+        return None
+
+
 def _repair(settings, budget, messages, bad_text, schema, mid, timeout):
     budget.check_tokens()
     try:
@@ -381,12 +450,29 @@ def _repair(settings, budget, messages, bad_text, schema, mid, timeout):
             "Reply with the corrected JSON object and nothing else."},
     ]
     base, key, _ = _route(mid, settings)
+
+    # The strict schema, not a bare json_object, wherever the provider takes
+    # one. A repair pass is exactly when the model most needs to be TOLD the
+    # constraint it broke - handed only "reply with JSON", it reproduces the
+    # same over-long field and the pass buys nothing.
+    fmt: dict = {"type": "json_object"}
+    if mid in GROQ_MODELS and settings.groq_key:
+        fmt = {"type": "json_schema",
+               "json_schema": {"name": schema.__name__,
+                               "schema": schema.model_json_schema()}}
+
+    # Off zero, deliberately. At temperature 0 a retry of the same prompt to
+    # the same model returns the SAME bytes - measured: mistral returned a
+    # byte-identical 1843-character reply to the repair request, failed the
+    # same 160-character bound, and the "repair" was a no-op that cost a round
+    # trip and then raised. A repair pass has to be able to differ from the
+    # answer it is repairing.
     try:
         r = httpx.post(f"{base}/chat/completions", timeout=timeout,
                        headers={"Authorization": f"Bearer {key}"},
                        json={"model": mid, "max_tokens": settings.max_tokens,
-                             "temperature": 0, "messages": fix,
-                             "response_format": {"type": "json_object"}})
+                             "temperature": 0.3, "messages": fix,
+                             "response_format": fmt})
     except httpx.RequestError:
         return None
     if r.status_code == 402:
@@ -395,4 +481,4 @@ def _repair(settings, budget, messages, bad_text, schema, mid, timeout):
         return None
     data = r.json()
     budget.record_tokens((data.get("usage") or {}).get("total_tokens", 0))
-    return _parse(data["choices"][0]["message"]["content"] or "", schema)
+    return _parse_or_trim(data["choices"][0]["message"]["content"] or "", schema)

@@ -1,4 +1,4 @@
-# Bug 04 — the AI skips the structured fields more often than it fills them
+# Bug 05 — the AI skips the structured fields more often than it fills them
 
 **Found:** 19 September 2026, Day 1 evening, reviewing real students' reports for the first
 time — not test data, not the simulated cohort in `demo.db`.
