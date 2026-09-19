@@ -20,6 +20,7 @@ it. None of them were planted for the writeup.
 | [03](bug-03-biased-compare-prompt.md) | The comparison step was wrong 9 times in 10 | Measuring a fixed input 10× instead of assuming model flakiness | The bias was in a prompt **we wrote**. An instruction that states a preference rather than a procedure gets followed to its limit |
 | [04](bug-04-checker-hallucinated-contradictions.md) | The checker rejected true sentences, citing the numbers that proved them | Measuring the whole cohort and reading every rejection reason | A model handed the right numbers still failed to compare them — and explained the error using the correct figures |
 | [05](bug-05-empty-structured-fields.md) | 59% of real reports leave a real strength or gap out of the structured fields entirely | Reviewing 22 real students' reports against the counts, not spot-checking a few | A new *kind* of bug for this system: not a false claim, an omission. Every check built so far catches "is this true," none catch "is something missing" |
+| [08](bug-08-mislabelled-negative-control.md) | The demo's "no pattern here" control had a real pattern in it — twice | Running the real pipeline against it and reading the citation instead of trusting the label | Not a defect in the code but in how we judged it. The comfortable conclusion was "the model over-claimed"; the evidence said the model was right and our test was wrong |
 
 ## The through-line
 

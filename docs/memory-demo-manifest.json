@@ -1,0 +1,241 @@
+[
+  {
+    "id": "mem_robotics_a",
+    "display": "Priya R.",
+    "department": "robotics",
+    "category": "A",
+    "expect": "recurring",
+    "concept": "backing a claim with a measurement",
+    "why": "All four sittings get a 'backing a claim with a measurement' question wrong, and three of them pick the same option - 'offered a single impression where a tuning claim needs numbers'. That is one misconception recurring, not four unrelated slips.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "run_id": "run_b72078d6e041",
+        "date": "2026-06-08",
+        "assignment_id": "diagnostic_sitting_1",
+        "real_student_id": "stu_f1228d0d00",
+        "real_student_name": "Sailakshmi  ThirumalaiVenkatesan",
+        "score": 18,
+        "wrong_concepts": {
+          "backing a claim with a measurement": 2
+        }
+      },
+      {
+        "sitting": 2,
+        "run_id": "run_53be517ef8d2",
+        "date": "2026-06-29",
+        "assignment_id": "diagnostic_sitting_2",
+        "real_student_id": "stu_d5a01e41f9",
+        "real_student_name": "Logeswari",
+        "score": 19,
+        "wrong_concepts": {
+          "backing a claim with a measurement": 1
+        }
+      },
+      {
+        "sitting": 3,
+        "run_id": "run_00a07297baf8",
+        "date": "2026-07-20",
+        "assignment_id": "diagnostic_sitting_3",
+        "real_student_id": "stu_93dfa11827",
+        "real_student_name": "N.karthikeyn",
+        "score": 17,
+        "wrong_concepts": {
+          "working out where the robot ends up": 1,
+          "matching a fix to what went wrong": 1,
+          "backing a claim with a measurement": 1
+        }
+      },
+      {
+        "sitting": 4,
+        "run_id": "run_1c84ac83a961",
+        "date": "2026-08-10",
+        "assignment_id": "diagnostic_sitting_4",
+        "real_student_id": "stu_c70717f485",
+        "real_student_name": "Krish",
+        "score": 17,
+        "wrong_concepts": {
+          "working out where the robot ends up": 1,
+          "backing a claim with a measurement": 1,
+          "choosing a method for the job": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "mem_cs_a",
+    "display": "Arjun M.",
+    "department": "computer_science",
+    "category": "A",
+    "expect": "recurring",
+    "concept": "understanding what a variable holds",
+    "why": "Every sitting misses 'understanding what a variable holds', and three of the four pick the identical wrong option on cs_t4_q1 - treating `b = a` as making a copy. The strongest clean signal in the whole dataset.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "run_id": "run_84eb80422b2e",
+        "date": "2026-06-08",
+        "assignment_id": "diagnostic_sitting_1",
+        "real_student_id": "stu_2bf3073f73",
+        "real_student_name": "MONISH",
+        "score": 19,
+        "wrong_concepts": {
+          "understanding what a variable holds": 1
+        }
+      },
+      {
+        "sitting": 2,
+        "run_id": "run_f8a1e6d2820f",
+        "date": "2026-06-29",
+        "assignment_id": "diagnostic_sitting_2",
+        "real_student_id": "stu_fb9298c06a",
+        "real_student_name": "Manoj P",
+        "score": 19,
+        "wrong_concepts": {
+          "understanding what a variable holds": 1
+        }
+      },
+      {
+        "sitting": 3,
+        "run_id": "run_ca78c8245522",
+        "date": "2026-07-20",
+        "assignment_id": "diagnostic_sitting_3",
+        "real_student_id": "stu_0cf341b68e",
+        "real_student_name": "Harshadraam D",
+        "score": 17,
+        "wrong_concepts": {
+          "backing up a claim with evidence": 1,
+          "picking the right data structure": 1,
+          "understanding what a variable holds": 1
+        }
+      },
+      {
+        "sitting": 4,
+        "run_id": "run_7ccabe522b4c",
+        "date": "2026-08-10",
+        "assignment_id": "diagnostic_sitting_4",
+        "real_student_id": "stu_c744ac76e6",
+        "real_student_name": "Harshavardhan K",
+        "score": 15,
+        "wrong_concepts": {
+          "picking the right data structure": 1,
+          "understanding what a variable holds": 3,
+          "backing up a claim with evidence": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "mem_robotics_b",
+    "display": "Karthik S.",
+    "department": "robotics",
+    "category": "B",
+    "expect": "not_enough_evidence | similar | low confidence",
+    "concept": null,
+    "clean_control": true,
+    "why": "A true negative control: the three sittings share no wrong question AND no wrong concept, so there is provably nothing to find. Three sittings, not four - in 18 real robotics students no group of four with zero concept overlap exists, and padding it with a fourth would have smuggled a real pattern into the control.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "run_id": "run_26bf683e7302",
+        "date": "2026-06-08",
+        "assignment_id": "diagnostic_sitting_1",
+        "real_student_id": "stu_010df982b7",
+        "real_student_name": "Sathiyapriyan",
+        "score": 15,
+        "wrong_concepts": {
+          "combining movements in the right order": 2,
+          "working out where the robot ends up": 1,
+          "choosing a method for the job": 2
+        }
+      },
+      {
+        "sitting": 2,
+        "run_id": "run_8eea52098ddb",
+        "date": "2026-06-29",
+        "assignment_id": "diagnostic_sitting_2",
+        "real_student_id": "stu_833fb269ea",
+        "real_student_name": "Mugilan K",
+        "score": 17,
+        "wrong_concepts": {
+          "accounting for weight and force": 2,
+          "matching a fix to what went wrong": 1
+        }
+      },
+      {
+        "sitting": 3,
+        "run_id": "run_534caf3f8ccc",
+        "date": "2026-07-20",
+        "assignment_id": "diagnostic_sitting_3",
+        "real_student_id": "stu_f1228d0d00",
+        "real_student_name": "Sailakshmi  ThirumalaiVenkatesan",
+        "score": 18,
+        "wrong_concepts": {
+          "backing a claim with a measurement": 2
+        }
+      }
+    ]
+  },
+  {
+    "id": "mem_cs_b",
+    "display": "Nithya V.",
+    "department": "computer_science",
+    "category": "B",
+    "expect": "not_enough_evidence | similar | low confidence",
+    "concept": null,
+    "clean_control": false,
+    "why": "The weakest signal available in computer science, and NOT a clean control - we say so rather than pretend otherwise. No question is missed twice, but with only five CS concepts and 13 students, no group of four exists with zero concept overlap: two sittings here both touch 'understanding what a variable holds' and two both touch 'backing up a claim with evidence'. If the system reports a recurrence it must cite one of those, and a professor can then judge whether two different questions on one concept is a pattern or a coincidence. That judgement is the professor's, which is the point.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "run_id": "run_6154f06fc139",
+        "date": "2026-06-08",
+        "assignment_id": "diagnostic_sitting_1",
+        "real_student_id": "stu_2bf3073f73",
+        "real_student_name": "MONISH",
+        "score": 19,
+        "wrong_concepts": {
+          "understanding what a variable holds": 1
+        }
+      },
+      {
+        "sitting": 2,
+        "run_id": "run_44f44bc7080b",
+        "date": "2026-06-29",
+        "assignment_id": "diagnostic_sitting_2",
+        "real_student_id": "stu_b5cb2df8b5",
+        "real_student_name": "Barathkumar MP",
+        "score": 18,
+        "wrong_concepts": {
+          "picking the right data structure": 1,
+          "backing up a claim with evidence": 1
+        }
+      },
+      {
+        "sitting": 3,
+        "run_id": "run_c3f136d4e52a",
+        "date": "2026-07-20",
+        "assignment_id": "diagnostic_sitting_3",
+        "real_student_id": "stu_f834cd4135",
+        "real_student_name": "Anbuselvan",
+        "score": 18,
+        "wrong_concepts": {
+          "working out how long code takes": 1,
+          "backing up a claim with evidence": 1
+        }
+      },
+      {
+        "sitting": 4,
+        "run_id": "run_03237410dbb0",
+        "date": "2026-08-10",
+        "assignment_id": "diagnostic_sitting_4",
+        "real_student_id": "stu_fb9298c06a",
+        "real_student_name": "Manoj P",
+        "score": 19,
+        "wrong_concepts": {
+          "understanding what a variable holds": 1
+        }
+      }
+    ]
+  }
+]
