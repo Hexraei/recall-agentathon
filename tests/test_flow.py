@@ -337,6 +337,86 @@ def test_compare_prompt_states_a_decision_rule():
         assert label in COMPARE_PROMPT
 
 
+# --------------------------------------------------------------- MCQ / quiz
+# The web app's answers carry their evidence pre-computed rather than
+# extracted by a model - see app/quiz.py for why. These prove that path
+# actually skips extraction and still drives the real comparison/check steps.
+
+def test_mcq_evidence_skips_the_model_entirely(store, settings):
+    """Extraction must never call the model for a quiz answer - only
+    comparison/finding/check do, using the pre-computed evidence as input."""
+    from app import quiz
+
+    def _blow_up_if_called(**kw):
+        raise AssertionError("extraction called the model for an MCQ answer; "
+                             "it must use precomputed_evidence instead")
+
+    q = quiz.by_id("q_insertion_sort")
+    attempt = quiz.to_attempt("mcq_student", q, "A")  # wrong: outer-loop-only
+    attempt["date"] = "2026-09-19"
+
+    run_id = store.create_run("recall", meta={"student_id": "mcq_student"})
+    store.set_state(run_id, RunState.NEW_ATTEMPT)
+    store.append(run_id, "attempt", attempt, produced_by="quiz")
+    flow = build_flow(call=_blow_up_if_called, notes=NOTES)
+
+    from slice.runner import advance as _advance_one_step
+    # Advance exactly one step (extraction) rather than the whole run, so a
+    # legitimate later model call (comparison) can't be mistaken for this one.
+    ctx_state = store.get_state(run_id)
+    handler = flow.handlers[RunState.NEW_ATTEMPT]
+    from slice.runner import Context
+    ctx = Context(store, run_id, settings)
+    nxt = handler(ctx)
+    store.set_state(run_id, nxt)
+    assert nxt is RunState.EXTRACTING
+    nxt2 = flow.handlers[RunState.EXTRACTING](ctx)
+    assert nxt2 is RunState.COMPARING, "extraction did not raise, so it did not call the model"
+
+    evidence = store.latest(run_id, "evidence")
+    assert evidence["items"][0]["concept"] == "counting work inside loops"
+    assert evidence["items"][0]["kind"] == "difficulty"
+
+
+def test_mcq_recurrence_across_two_different_questions(store, settings):
+    """The same underlying mistake - counting only the outer loop - shown on
+    two different questions (insertion sort, then dedup). This is the exact
+    story the web app demo depends on."""
+    from app import quiz
+
+    q1 = quiz.by_id("q_insertion_sort")
+    a1 = quiz.to_attempt("web_tester", q1, "A")
+    a1["date"] = "2026-09-19"
+    run_id = store.create_run("recall", meta={"student_id": "web_tester"})
+    store.set_state(run_id, RunState.NEW_ATTEMPT)
+    store.append(run_id, "attempt", a1, produced_by="quiz")
+    flow = build_flow(call=make_stub(store, [run_id]), notes=NOTES)
+    advance(store, run_id, flow, settings)
+    assert store.latest(run_id, "comparison")["label"] == "not_enough_evidence"
+
+    q2 = quiz.by_id("q_dedup")
+    a2 = quiz.to_attempt("web_tester", q2, "A")
+    a2["date"] = "2026-09-19"
+    run_id2 = store.create_run("recall", meta={"student_id": "web_tester"})
+    store.set_state(run_id2, RunState.NEW_ATTEMPT)
+    store.append(run_id2, "attempt", a2, produced_by="quiz")
+    flow2 = build_flow(call=make_stub(store, [run_id2]), notes=NOTES)
+    advance(store, run_id2, flow2, settings)
+
+    from app import history as _history
+    prior = _history.prior_records(store, "web_tester", run_id2)
+    assert any(row["items"][0]["concept"] == "counting work inside loops"
+              for row in prior["evidence"])
+
+
+def test_correct_mcq_answer_is_a_strength_not_a_difficulty():
+    from app import quiz
+    q = quiz.by_id("q_binary_search")
+    attempt = quiz.to_attempt("s", q, "B")  # B is the correct option
+    item = attempt["precomputed_evidence"]["items"][0]
+    assert item["kind"] == "strength"
+
+
 # ------------------------------------------------------------- append-only
 
 def test_the_history_cannot_be_rewritten(store, settings):

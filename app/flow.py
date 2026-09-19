@@ -203,6 +203,17 @@ def build_flow(call=complete, notes: str = "", trace=None):
         """Pull evidence passages, then verify every citation in plain code."""
         attempt = ctx.latest("attempt")
 
+        # MCQ submissions carry their evidence already, computed at
+        # question-writing time (app/quiz.py) rather than inferred by a model
+        # from a bare option letter. No model call, no citation check needed -
+        # there is no passage to fabricate when nothing was extracted from
+        # prose. See handle_new_attempt / app/quiz.py for why this is the
+        # deliberate choice, not a shortcut.
+        precomputed = attempt.get("precomputed_evidence")
+        if precomputed is not None:
+            ctx.append("evidence", precomputed, produced_by="quiz:lookup")
+            return RunState.COMPARING
+
         # Retrieve the notes that bear on THIS submission, rather than sending
         # all of them. Falls back to the whole string if no corpus is ingested,
         # so the flow still runs with retrieval switched off.
