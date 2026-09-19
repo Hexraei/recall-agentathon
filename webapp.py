@@ -275,7 +275,15 @@ def quiz(sid: str):
 </div>
 <script>
 function submitting() {{
-  document.querySelectorAll('#qform button').forEach(b => b.disabled = true);
+  // Disabling the clicked button here, inside onsubmit, is what broke this:
+  // a disabled control's name=value pair is dropped from form submission by
+  // spec, so disabling ALL the option buttons - including the one just
+  // clicked - stripped `chosen` out of the POST entirely, and every answer
+  // failed with "Field required". Deferring the disable to the next tick lets
+  // the browser finish reading the form first.
+  setTimeout(() => {{
+    document.querySelectorAll('#qform button').forEach(b => b.disabled = true);
+  }}, 0);
   {waiting_js}
 }}
 </script>
