@@ -49,10 +49,25 @@ telling a teacher to group them on that basis is wrong.
 
 ## Evidence
 
-Every entry's `evidence` field cites the counts: how many of how many answered
-it, and which wrong option they converged on if `most_common_wrong_answers`
-shows one. "22 of 31 chose option A, which counts only the outer loop" is
-evidence. "Poor understanding here" is not.
+Every entry's `evidence` field says WHAT the class got wrong together — the
+shared mistake behind the wrong option they converged on, in one sentence.
+
+**Do not put scores or tallies in it.** No "22 of 31", no percentages, no
+counts of any kind. Those are displayed beside every entry already, computed
+from the database. Repeating them is how a number gets copied wrong, and a
+report whose prose contradicts its own figures is worse than one that never
+quoted them.
+
+Good: "Most of the room chose the option that counts only the visible loop,
+missing the scan hidden inside the membership test."
+Bad: "22 of 31 answered incorrectly."
+
+Naming the option they converged on is good — "most chose option A" — as long
+as it carries no tally.
+
+**Never say more than the counts allow.** If `correct` is less than `answered`,
+part of the class got it wrong; do not write anything implying they all got it
+right, and vice versa. Not quoting numbers does not mean ignoring them.
 
 ## How to write
 

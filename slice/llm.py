@@ -276,7 +276,19 @@ def complete(
                     i -= 1                              # try this model again
                     continue
 
-            if r.status_code in (429, 500, 502, 503) and role == "primary":
+            # A 400 with this specific code is Groq's own schema-enforced
+            # generation running out of room before it could produce valid
+            # JSON - functionally the same failure as finish_reason == "length"
+            # below, just reported before a 200 rather than inside one. Found
+            # live: a genuinely all-strengths report (nothing to trim) hit this
+            # intermittently. Retrying the SAME model changes nothing since it
+            # hits the same ceiling; the fallback is a different model and may
+            # simply be terser, so it gets the same treatment as a real 4xx/5xx.
+            transient_400 = (r.status_code == 400
+                             and "json_validate_failed" in r.text)
+            if (r.status_code in (429, 500, 502, 503) or transient_400) \
+                    and role == "primary":
+                span.record(output={"model": mid, "transient_400": transient_400})
                 continue                                # transient: fall back
             if r.status_code != 200:
                 raise ModelError(f"{mid} returned HTTP {r.status_code}: {r.text[:300]}")
