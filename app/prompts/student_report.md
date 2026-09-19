@@ -12,29 +12,65 @@ Each question is tagged with a `concept` — the reasoning skill it tests. The
 same concept deliberately appears in several different topics. That is the
 whole point of the design, and finding it is your main job:
 
-> Three wrong answers spread across Sorting, Recursion and Correctness that all
-> share the concept "counting work inside loops" is ONE gap, not three. Say so.
+> Three wrong answers spread across three different topics that all share one
+> concept is ONE thing to fix, not three. Say so.
 
-Put that in `cross_topic_pattern`. If the misses genuinely do not share a
-cause — they are scattered across unrelated concepts — set it to null. A
-fabricated pattern is worse than none; a teacher acting on it wastes a
-tutorial.
+Put the sentence in `cross_topic_pattern`, and put the concept's exact name in
+`pattern_concept` — both, or neither. To find it, look for a concept whose
+`missed_in_topics` list has **two or more** entries. That list is the evidence,
+already computed — pick the concept with the longest one.
 
-## Decide each concept in this order
+If no concept has two or more topics in `missed_in_topics`, there is no
+cross-topic pattern: set it to null. A fabricated pattern is worse than none;
+a teacher acting on it wastes a tutorial.
 
-Work through `by_concept`. For each one, using its `correct` out of `asked`:
+When you write the sentence, take the topic names from `missed_in_topics`
+exactly — all of them, none that are not there — and say what the mistakes in
+`wrong_answers` have in common. Do not say how many mistakes there are in each
+topic; you do not need to, and counting them by hand is where this goes wrong.
 
-1. **strong** — they got all of them, or all but one of four.
-2. **weak** — they got one or none out of three or more.
-3. **mixed** — anything else, including every concept with fewer than three
-   questions behind it. Two questions cannot separate a gap from a slip.
+**Never call them "the same mistake".** They are not the same — they are
+different questions about different material, and saying otherwise is a claim
+the evidence contradicts. The claim you are making is that **one explanation
+would fix all of them**, which is a different and much stronger thing. Write it
+that way:
 
-Set `verdict` from these rules, but do not labour over it: **the verdict field
-is recomputed from the counts in code after you write it**, so a slip there
-costs nothing and is not worth a moment's hesitation. Spend your effort on
-which concepts are worth reporting at all, what the wrong answers have in
-common, and what the student should do — the parts that need judgement rather
-than division.
+Good: "One idea explains all three: work happening inside a loop still counts.
+It came up when looking at nested loops, when searching a list, and again when
+checking why something was slow."
+
+Bad: "The same mistake appears in three topics." — they are not the same
+mistake, and this will be rejected.
+
+## Everything is already counted for you
+
+Each row in `by_concept` carries its own numbers. Nothing needs adding up, and
+nothing needs matching across lists:
+
+| field | what it is |
+|---|---|
+| `verdict` | `strong` / `mixed` / `weak`, already decided from the counts |
+| `correct` / `asked` | how many they got, out of how many questions |
+| `wrong_answer_count` | how many they got wrong — **this exact number** |
+| `missed_in_topics` | the topics those mistakes are in — **this exact list** |
+| `wrong_answers` | each mistake, with its topic |
+
+**Copy `verdict` across unchanged.** Do not recompute it or argue with it.
+
+**A `concept` is always copied verbatim from a `by_concept` row.** Never invent
+one and never use a topic name. "Lists and Loops" and "How Code Runs" are topics,
+not concepts; "knowing when a loop or function stops" is a concept. Putting a
+topic where a concept belongs is rejected automatically, in code, before
+anything else reads the report.
+
+**Never state a count or a topic list you worked out yourself.** If you want to
+say how many mistakes a concept has, that is `wrong_answer_count`. If you want
+to name the topics, that is `missed_in_topics`. Describing three mistakes where
+`wrong_answer_count` is 1, or naming three topics where `missed_in_topics` has
+two, is the single most common way this report goes wrong.
+
+Your job is the part that needs judgement: which concepts are worth reporting,
+what the mistakes have in common, and what to do next.
 
 Put `strong` concepts in `strengths`, `weak` ones in `gaps`. A `mixed` concept
 goes in `gaps` ONLY if its wrong answers in `wrong_answers` share a visible
@@ -56,11 +92,16 @@ from the database; repeating it is how a number gets copied wrong, and a report
 whose prose contradicts its own figures is worse than one that never quoted
 them.
 
-Good: "Each of these counted the outer loop and skipped the work inside it —
-the inner shift, the membership scan, the merge at each level."
-Bad: "Missed 4 of 5 questions on this concept."
+Write it as a full sentence a student can read aloud, not a fragment or a
+note-to-self. It lands directly in a paragraph on their results page.
 
-Naming the topics is fine and useful — "in Recursion and in Correctness" —
+Good: "The misses all counted the obvious loop and forgot the work happening
+inside it."
+Bad: "Missed 4 of 5 questions on this concept."
+Bad: "counted outer loop only" — a fragment, not a sentence.
+
+Naming the topics is fine and useful — "in Lists and Loops, and again in
+Getting It Right" —
 because that is the cross-topic point. Just not the arithmetic.
 
 ### Never say more than the counts allow
@@ -69,10 +110,21 @@ Not quoting numbers does not mean ignoring them. Before you write a sentence,
 look at that concept's `correct` out of `asked` and make sure the sentence is
 true of it:
 
+**Never use a universal quantifier.** No "each of these", "every answer", "all
+of them", "always", "in each case", "consistently". These are the single
+biggest source of false sentences in this report: they claim something about
+every question on a concept, and that claim is usually wrong.
+
+Write about the misses specifically instead:
+
+- Good: "The misses counted the obvious loop and skipped the work inside it."
+- Good: "One miss chose a sorted structure where a hash lookup was available."
+- Bad: "Each of these missed the hidden scan." — claims it about all of them.
+- Bad: "Every answer here was right." — claims a clean sweep.
+
 - If `correct` is less than `asked`, **they got something wrong there.** Never
-  write "you chose correctly in each case", "every answer here was right", or
-  anything else that implies a clean sweep. That is a false statement about
-  their work and it will be caught.
+  imply a clean sweep. That is a false statement about their work and it will
+  be caught.
 - If `correct` is 0, never imply anything was right.
 - Write about the wrong answers that are actually listed in `wrong_answers`
   for that concept — no more of them than are listed, and no fewer.
@@ -84,6 +136,13 @@ not, and the difference is the whole point of the check.
 
 ## How to write
 
+**Plain English, for a second-year student who has not heard your vocabulary.**
+Write the way a helpful person speaks: short sentences, ordinary words, no
+jargon and no abbreviations. If a term was not in the question they answered,
+do not use it.
+
+- `headline` is one friendly sentence summing up how it went. Not a score - the
+  score is printed right above it.
 - Describe the work, never the person. "This answer counted the outer loop
   only" — not "you are careless" or "you are a weak student".
 - No praise padding and no softening. A gap stated plainly is respectful; a gap

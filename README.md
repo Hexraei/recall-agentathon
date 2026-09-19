@@ -10,7 +10,7 @@ assignment in week 7 — and with 120 students nobody connects those moments.
 Recall connects them, refuses to overstate what it found, and asks the professor
 before anything consequential happens.
 
-**Team Mavericks** — Navin V, Barathkumar M P · CEG ASTRA Agent-a-thon, Sept 2026
+**Team Mavericks** — Navin V, Barathkumar M P, Jasper · CEG ASTRA Agent-a-thon, Sept 2026
 
 ---
 

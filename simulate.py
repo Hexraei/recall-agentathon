@@ -10,6 +10,7 @@ so we can tell whether it found it or just wrote something plausible.
 """
 from __future__ import annotations
 
+import os
 import random
 import sys
 from pathlib import Path
@@ -18,7 +19,14 @@ from slice.store import Store
 
 from app import bank, roster
 
-DB = Path(__file__).parent / "webapp.db"
+DB = Path(__file__).parent / os.environ.get("RECALL_DB", "demo.db")
+"""Defaults to demo.db, NOT webapp.db.
+
+Simulated students belong in their own file. This script's --reset wipes
+whatever it points at, and pointing it at the database holding real testers'
+answers would destroy the evidence with one command and no warning. The default
+is the safe one; overriding it is a deliberate act.
+"""
 
 
 PERSONAS = [

@@ -41,6 +41,34 @@ def test_every_question_has_one_correct_option_and_four_choices():
         assert sum(o.correct for o in q.options) == 1, q.id
 
 
+def test_the_answer_key_is_spread_across_all_four_letters():
+    """Every question is authored with the correct option second, which made B
+    correct on all 40. The first end-to-end run scored 20/20 by answering B on
+    everything - a tester who notices that has a perfect score and the data is
+    worthless."""
+    from collections import Counter
+    for dept in bank.DEPARTMENTS:
+        keys = Counter(q.answer_key for q in bank.for_department(dept))
+        assert set(keys) == {"A", "B", "C", "D"}, (dept, keys)
+        # No letter may carry more than half the questions.
+        assert max(keys.values()) <= 10, (dept, keys)
+
+
+def test_options_are_labelled_a_to_d_in_order():
+    for q in bank.ALL:
+        assert [o.key for o in q.options] == ["A", "B", "C", "D"], q.id
+
+
+def test_the_answer_key_is_stable_for_a_given_question():
+    """Rotation is by question id, not random: the same student sees the same
+    layout on a reload, and two students' answers stay comparable."""
+    assert bank.by_id("rb_t1_q1").answer_key == bank.by_id("rb_t1_q1").answer_key
+    first = {q.id: q.answer_key for q in bank.ALL}
+    import importlib
+    importlib.reload(bank)
+    assert {q.id: q.answer_key for q in bank.ALL} == first
+
+
 def test_every_wrong_option_names_a_misconception_and_no_right_one_does():
     """The misconception mapping IS the diagnosis - a wrong option without one
     is a question that teaches the report nothing."""
@@ -49,19 +77,50 @@ def test_every_wrong_option_names_a_misconception_and_no_right_one_does():
             assert (o.misconception is None) == o.correct, (q.id, o.key)
 
 
-def test_concepts_span_more_than_one_topic():
-    """The whole cross-topic story depends on this. If every concept sat in a
-    single topic, 'one cause behind three topics' could never be true and the
-    report would have nothing to find."""
+def test_every_concept_spans_at_least_two_topics():
+    """The whole cross-topic story depends on this. A concept confined to one
+    topic can never show that one cause is behind trouble in several places,
+    which is the only thing this report does that a scoreboard does not."""
     for dept in bank.DEPARTMENTS:
         spanning = {}
         for q in bank.for_department(dept):
             spanning.setdefault(q.concept, set()).add(q.topic)
-        multi = [c for c, t in spanning.items() if len(t) > 1]
-        assert len(multi) >= 3, (dept, spanning)
+        for concept, topics in spanning.items():
+            assert len(topics) >= 2, (dept, concept, topics)
+
+
+def test_every_concept_has_at_least_three_questions():
+    """Two questions cannot separate a gap from a slip, so verdict_for() calls
+    any such concept `mixed` whatever the answers. The first robotics bank had
+    several, and the report it produced said `mixed` seven times in a row and
+    found no pattern at all - a page that told the student nothing."""
+    for dept in bank.DEPARTMENTS:
+        counts = {}
+        for q in bank.for_department(dept):
+            counts[q.concept] = counts.get(q.concept, 0) + 1
+        for concept, n in counts.items():
+            assert n >= 3, (dept, concept, n)
 
 
 # --------------------------------------------------------------- the roster
+
+def _widest(dept: str) -> str:
+    """The concept covering the most topics in a department.
+
+    Derived from the bank rather than named as a literal. These tests are about
+    the MACHINERY - grouping, counting, cross-topic detection - not about any
+    particular concept, and hard-coded names broke every one of them the first
+    time the bank was rewritten for readability.
+    """
+    spanning: dict[str, set] = {}
+    for q in bank.for_department(dept):
+        spanning.setdefault(q.concept, set()).add(q.topic)
+    return max(spanning, key=lambda c: (len(spanning[c]), c))
+
+
+def _count_for(dept: str, concept: str) -> int:
+    return sum(1 for q in bank.for_department(dept) if q.concept == concept)
+
 
 def _answer_all(store, sid, dept, wrong_concepts=frozenset()):
     for q in bank.for_department(dept):
@@ -92,12 +151,13 @@ def test_answering_the_same_question_twice_keeps_the_first(store):
 def test_by_concept_groups_across_topics(store):
     sid = roster.create_student(store, "A", "1", "R", "computer_science")
     _answer_all(store, sid, "computer_science",
-                wrong_concepts={"counting work inside loops"})
+                wrong_concepts={_widest("computer_science")})
 
     rows = {r["concept"]: r for r in roster.by_concept(store, sid)}
-    loops = rows["counting work inside loops"]
+    loops = rows[_widest("computer_science")]
     assert loops["correct"] == 0
-    assert loops["asked"] == 5
+    assert loops["asked"] == _count_for("computer_science",
+                                        _widest("computer_science"))
     # The point of the whole design: one concept, several topics.
     assert len(loops["topics"]) >= 3, loops["topics"]
 
@@ -105,10 +165,10 @@ def test_by_concept_groups_across_topics(store):
 def test_score_and_topic_counts_agree(store):
     sid = roster.create_student(store, "A", "1", "R", "robotics")
     _answer_all(store, sid, "robotics",
-                wrong_concepts={"reasoning about singularities and degeneracy"})
+                wrong_concepts={_widest("robotics")})
     got, asked = roster.score(store, sid)
     assert asked == 20
-    assert got == 17          # 3 questions carry that concept
+    assert got == 20 - _count_for("robotics", _widest("robotics"))
     assert sum(t["asked"] for t in roster.by_topic(store, sid)) == 20
     assert sum(t["correct"] for t in roster.by_topic(store, sid)) == got
 
@@ -119,7 +179,7 @@ def test_class_common_wrong_counts_students_converging_on_one_option(store):
     for i in range(3):
         sid = roster.create_student(store, f"S{i}", "1", f"R{i}", "computer_science")
         _answer_all(store, sid, "computer_science",
-                    wrong_concepts={"counting work inside loops"})
+                    wrong_concepts={_widest("computer_science")})
 
     common = roster.class_common_wrong(store, "computer_science")
     assert common, "no shared wrong answers found"
@@ -257,13 +317,13 @@ def test_verdict_correction_reads_class_counts_too(store):
     for i in range(3):
         sid = roster.create_student(store, f"S{i}", "1", f"R{i}", "computer_science")
         _answer_all(store, sid, "computer_science",
-                    wrong_concepts={"counting work inside loops"})
+                    wrong_concepts={_widest("computer_science")})
     rows = roster.class_by_concept(store, "computer_science")
     assert all("asked" in r for r in rows)
     assert all(r["asked"] == r["answered"] for r in rows)
 
     facts = {"by_concept": rows}
-    body = {"teach_again": [{"concept": "counting work inside loops",
+    body = {"teach_again": [{"concept": _widest("computer_science"),
                              "verdict": "strong", "evidence": "x"}]}
     report.enforce_verdicts(body, facts)
     assert body["teach_again"][0]["verdict"] == "weak"   # 0 of 15
@@ -326,18 +386,20 @@ class _Scripted:
         return schema.model_validate(self.replies.pop(0))
 
 
+_CS_CONCEPT = _widest("computer_science")
+
 _FACTS_STUDENT = {
     "department": "computer_science",
     "score": {"correct": 15, "asked": 20},
     "by_topic": [], "wrong_answers": [],
-    "by_concept": [{"concept": "counting work inside loops", "asked": 5,
+    "by_concept": [{"concept": _CS_CONCEPT, "asked": 5,
                     "correct": 0, "topics": ["Recursion", "Time Complexity"]}],
     "class_average_by_concept": [], "class_size": 1,
 }
 
 _OK_REPORT = {
     "headline": "One gap, several topics.",
-    "strengths": [], "gaps": [{"concept": "counting work inside loops",
+    "strengths": [], "gaps": [{"concept": _CS_CONCEPT,
                                "verdict": "weak", "evidence": "0 of 5"}],
     "cross_topic_pattern": "Same cause in Recursion and Time Complexity.",
     "next_step": "Trace nested loops by hand.",
@@ -348,33 +410,41 @@ _OK_REPORT = {
 def test_an_accepted_draft_stops_the_loop(store):
     sid = roster.create_student(store, "A", "1", "R", "computer_science")
     _answer_all(store, sid, "computer_science",
-                wrong_concepts={"counting work inside loops"})
-    call = _Scripted(_OK_REPORT, {"verdict": "accepted"})
+                wrong_concepts={_widest("computer_science")})
+    call = _Scripted(_OK_REPORT)
 
     body = report.for_student(store, sid, settings=None, call=call, force=True)
     assert body["_revisions"] == 1
-    assert call.calls == ["student_report", "report_check"]
+    # The check is code now (see check_claim_strength) - a clean draft costs
+    # exactly one model call, not two.
+    assert call.calls == ["student_report"]
     assert "_unverified" not in body
 
 
 def test_a_rejection_sends_the_draft_back_with_the_reason(store):
     """The back-edge. The second request must carry the objection - a blind
-    retry of an identical prompt usually fails identically."""
+    retry of an identical prompt usually fails identically.
+
+    The rejection itself comes from check_claim_strength (code), triggered by
+    a real overclaim in the draft body, not a scripted checker reply - the
+    checker is no longer a model call.
+    """
     sid = roster.create_student(store, "A", "1", "R", "computer_science")
     _answer_all(store, sid, "computer_science",
-                wrong_concepts={"counting work inside loops"})
+                wrong_concepts={_widest("computer_science")})
 
-    overclaim = dict(_OK_REPORT, cross_topic_pattern="Everything is connected.")
-    call = _Scripted(overclaim,
-                     {"verdict": "rejected", "failed_check": "claim_strength",
-                      "detail": "The pattern is not traceable to specific rows."},
-                     _OK_REPORT, {"verdict": "accepted"})
+    overclaim = dict(_OK_REPORT, headline="You got 20 of 20 questions right.")
+    call = _Scripted(overclaim, _OK_REPORT)
 
     body = report.for_student(store, sid, settings=None, call=call, force=True)
     assert body["_revisions"] == 2
-    assert body["_trail"][0]["step"] == "draft"
-    assert body["_trail"][1]["body"]["verdict"] == "rejected"
-    assert body["_trail"][2]["step"] == "draft"
+    # Found by step name, not position: a `correct` row appears between a draft
+    # and its check whenever code fixed a verdict or dropped a pattern.
+    steps = [r["step"] for r in body["_trail"]]
+    assert steps.count("draft") == 2
+    checks = [r["body"] for r in body["_trail"] if r["step"] == "check"]
+    assert checks[0]["verdict"] == "rejected"
+    assert steps.index("draft") < steps.index("check")
 
 
 def test_the_rejection_detail_reaches_the_next_prompt(store):
@@ -388,18 +458,23 @@ def test_the_rejection_detail_reaches_the_next_prompt(store):
 
 
 def test_a_report_that_never_passes_ships_flagged_not_silently(store):
-    """Three rejections spends the budget. The last draft still goes out -
-    a teacher is better served by a flagged report than by nothing - but it
-    must not look like it passed."""
+    """Spending the whole redraft budget still ships the last draft - a teacher
+    is better served by a flagged report than by nothing - but it must not look
+    like it passed.
+
+    Every scripted draft repeats the same real overclaim, so check_claim_strength
+    (code) rejects it every time - scripted from MAX_DRAFTS rather than a
+    hard-coded 3, so tuning the budget does not silently turn this into a test
+    of nothing."""
     sid = roster.create_student(store, "A", "1", "R", "computer_science")
-    _answer_all(store, sid, "computer_science")
-    reject = {"verdict": "rejected", "failed_check": "claim_strength",
-              "detail": "still overclaims"}
-    call = _Scripted(_OK_REPORT, reject, _OK_REPORT, reject, _OK_REPORT, reject)
+    _answer_all(store, sid, "computer_science",
+                wrong_concepts={_widest("computer_science")})
+    overclaim = dict(_OK_REPORT, headline="You got 20 of 20 questions right.")
+    call = _Scripted(*([overclaim] * report.MAX_DRAFTS))
 
     body = report.for_student(store, sid, settings=None, call=call, force=True)
     assert body["_revisions"] == report.MAX_DRAFTS
-    assert body["_unverified"] == "still overclaims"
+    assert "20 of 20" in body["_unverified"]
     assert not call.replies, "the loop stopped early"
 
 
@@ -409,11 +484,14 @@ def test_a_slow_report_stops_at_the_deadline_and_ships_what_it_has(store, monkey
     simply composed. MAX_DRAFTS cannot catch that because the time goes INSIDE
     one draft's call chain, so the deadline is a third, separate counter."""
     sid = roster.create_student(store, "A", "1", "R", "computer_science")
-    _answer_all(store, sid, "computer_science")
+    _answer_all(store, sid, "computer_science",
+                wrong_concepts={_widest("computer_science")})
 
-    reject = {"verdict": "rejected", "failed_check": "claim_strength",
-              "detail": "overclaims"}
-    call = _Scripted(_OK_REPORT, reject, _OK_REPORT, reject, _OK_REPORT, reject)
+    # A real overclaim, so check_claim_strength (code) rejects every draft -
+    # the check itself is no longer a model call, so only draft replies are
+    # scripted here.
+    overclaim = dict(_OK_REPORT, headline="You got 20 of 20 questions right.")
+    call = _Scripted(overclaim, overclaim, overclaim)
 
     # A clock that jumps past the deadline once the first draft has been
     # written. Driven by the scripted call rather than by a call count, because
@@ -436,8 +514,8 @@ def test_a_slow_report_stops_at_the_deadline_and_ships_what_it_has(store, monkey
     assert body["_revisions"] == 1, "kept drafting past the deadline"
     assert "deadline" in body["_unverified"]
     # It still shipped a usable report rather than raising.
-    assert body["headline"] == _OK_REPORT["headline"]
-    assert len(call.replies) == 4, "should have stopped after the first pair"
+    assert body["headline"] == overclaim["headline"]
+    assert len(call.replies) == 2, "should have stopped after the first draft"
 
 
 def test_a_cached_report_does_not_call_the_model_again(store):
@@ -459,7 +537,7 @@ def test_a_student_report_never_sees_another_student(store):
     a = roster.create_student(store, "A", "1", "R1", "computer_science")
     b = roster.create_student(store, "B", "1", "R2", "computer_science")
     _answer_all(store, a, "computer_science",
-                wrong_concepts={"counting work inside loops"})
+                wrong_concepts={_widest("computer_science")})
     _answer_all(store, b, "computer_science")     # a perfect scorer alongside
 
     facts = report.student_facts(store, a)
@@ -469,8 +547,7 @@ def test_a_student_report_never_sees_another_student(store):
     assert b not in blob, "another student's id reached a student report"
     # Only this student's own counts are present.
     assert facts["score"]["asked"] == 20
-    assert set(facts) == {"department", "score", "by_topic", "by_concept",
-                          "wrong_answers"}
+    assert set(facts) == {"department", "score", "by_topic", "by_concept"}
 
 
 def test_the_two_departments_never_mix(store):
@@ -480,14 +557,14 @@ def test_the_two_departments_never_mix(store):
     rb = roster.create_student(store, "R", "1", "R2", "robotics")
     _answer_all(store, cs, "computer_science")
     _answer_all(store, rb, "robotics", wrong_concepts={
-        "reasoning about singularities and degeneracy"})
+        _widest("robotics")})
 
     cs_facts = report.class_facts(store, "computer_science")
     rb_facts = report.class_facts(store, "robotics")
     assert cs_facts["students"] == 1 and rb_facts["students"] == 1
 
     cs_concepts = {r["concept"] for r in cs_facts["by_concept"]}
-    assert "reasoning about singularities and degeneracy" not in cs_concepts
+    assert _widest("robotics") not in cs_concepts
     cs_topics = {r["topic"] for r in cs_facts["by_topic"]}
     assert cs_topics.isdisjoint({r["topic"] for r in rb_facts["by_topic"]})
 
@@ -501,10 +578,186 @@ def test_the_facts_handed_to_the_model_come_from_sql_not_the_model(store):
     """
     sid = roster.create_student(store, "A", "1", "R", "computer_science")
     _answer_all(store, sid, "computer_science",
-                wrong_concepts={"counting work inside loops"})
+                wrong_concepts={_widest("computer_science")})
     facts = report.student_facts(store, sid)
-    assert facts["score"] == {"correct": 15, "asked": 20}
+    n = _count_for("computer_science", _widest("computer_science"))
+    assert facts["score"] == {"correct": 20 - n, "asked": 20}
     loops = next(r for r in facts["by_concept"]
-                 if r["concept"] == "counting work inside loops")
-    assert loops == {"concept": "counting work inside loops", "asked": 5,
-                     "correct": 0, "topics": loops["topics"]}
+                 if r["concept"] == _widest("computer_science"))
+    # Every number the writer needs sits in the row it belongs to, so it never
+    # has to match a flat list against a count and never has to add anything up.
+    assert loops["asked"] == n and loops["correct"] == 0
+    assert loops["verdict"] == "weak"
+    assert loops["wrong_answer_count"] == n
+    assert len(loops["wrong_answers"]) == loops["wrong_answer_count"]
+    assert len(loops["missed_in_topics"]) >= 3
+    assert "topics" not in loops, "two keys for one fact invites a mismatch"
+
+
+# ----------------------------------------- claim_strength, in code (not a model)
+
+# The four rejections below are verbatim from demo.db, written by the checker
+# MODEL against reports that were factually correct. Each one is a sentence the
+# counts support, rejected as false - including "the counts show 8 correct out
+# of 20 asked" used to reject a headline reading "You got 8 of 20 questions
+# right". They are the measurement that moved this check into code, and they
+# are here so a future rewrite has to survive them.
+
+def test_true_sentences_the_checker_model_used_to_reject_are_accepted():
+    cases = [
+        ("a clean sweep that really is clean",
+         {"headline": "A solid run.",
+          "strengths": [{"concept": "singularities", "verdict": "strong",
+                         "evidence": "All the answers here were right."}],
+          "gaps": [], "next_step": "x", "uncertainty": "y"},
+         {"score": {"correct": 15, "asked": 20},
+          "by_concept": [{"concept": "singularities", "asked": 3, "correct": 3,
+                          "wrong_answer_count": 0, "missed_in_topics": []}]}),
+        ("a headline quoting the score exactly",
+         {"headline": "You got 8 of 20 questions right.",
+          "strengths": [], "gaps": [], "next_step": "x", "uncertainty": "y"},
+         {"score": {"correct": 8, "asked": 20}, "by_concept": []}),
+        ("prose restating a fact that supports it",
+         {"headline": "Only one topic came through clean.",
+          "strengths": [], "gaps": [], "next_step": "x", "uncertainty": "y"},
+         {"score": {"correct": 12, "asked": 20}, "by_concept": [],
+          "by_topic": [{"topic": "Memory & State", "asked": 4, "correct": 4}]}),
+    ]
+    for name, body, facts in cases:
+        assert report.check_claim_strength(body, facts) is None, name
+
+
+def test_a_genuinely_false_claim_is_still_rejected():
+    facts = {"score": {"correct": 8, "asked": 20},
+             "by_concept": [{"concept": "loops", "asked": 3, "correct": 2,
+                             "wrong_answer_count": 1,
+                             "missed_in_topics": ["Lists and Loops"]}]}
+    base = {"headline": "Good work.", "strengths": [], "gaps": [],
+            "next_step": "x", "uncertainty": "y"}
+
+    sweep = dict(base, strengths=[{"concept": "loops", "verdict": "strong",
+                                   "evidence": "You got all of these right."}])
+    assert report.check_claim_strength(sweep, facts).failed_check == "claim_strength"
+
+    wrong_score = dict(base, headline="You got 18 of 20 questions right.")
+    assert report.check_claim_strength(wrong_score, facts) is not None
+
+    ranked = dict(base, headline="You scored below average for the class.")
+    assert report.check_claim_strength(ranked, facts) is not None
+
+    personal = dict(base, next_step="You are careless; slow down.")
+    assert report.check_claim_strength(personal, facts) is not None
+
+
+def test_an_over_long_field_is_trimmed_rather_than_losing_the_report():
+    """Measured: one report's entire SchemaFailure was a single `evidence`
+    field 192 characters long against a 160 bound. The reply was complete and
+    well formed - finish_reason "stop", not "length" - so this is not the
+    truncation bug. Discarding a student's only feedback over 32 characters is
+    the wrong trade; trimming to a word boundary is not."""
+    import json as _json
+    from slice.llm import _parse, _parse_or_trim
+
+    long_evidence = ("The misses treated the Jacobian as failing to exist, "
+                     "inverted it anyway, and assumed a unique solution existed "
+                     "near the singular configuration where the arm loses a "
+                     "degree of freedom entirely.")
+    assert len(long_evidence) > 160
+    body = {"headline": "You got 13 of 20 right.",
+            "strengths": [],
+            "gaps": [{"concept": "c", "verdict": "weak", "evidence": long_evidence}],
+            "next_step": "x.", "uncertainty": "y."}
+    text = _json.dumps(body)
+
+    assert _parse(text, report.StudentReport) is None, "should fail without salvage"
+    out = _parse_or_trim(text, report.StudentReport)
+    assert out is not None, "an over-long field must not cost the whole report"
+    assert len(out.gaps[0].evidence) <= 160
+    assert out.gaps[0].evidence.endswith("."), "must read as a finished sentence"
+    assert not out.gaps[0].evidence.endswith(" .")
+    assert out.headline == body["headline"], "nothing else may be touched"
+
+
+def test_trimming_does_not_rescue_a_structurally_wrong_reply():
+    """Only length is salvaged. A missing field, a bad enum or a wrong type is
+    a real disagreement about the contract and must still fail - those change
+    what the report SAYS, where a trimmed sentence only says it shorter."""
+    import json as _json
+    from slice.llm import _parse_or_trim
+
+    for broken in ({"headline": "x"},
+                   {"headline": "x", "strengths": ["a bare string"], "gaps": [],
+                    "next_step": "n", "uncertainty": "u"},
+                   {"headline": "x", "strengths": [], "next_step": "n",
+                    "uncertainty": "u",
+                    "gaps": [{"concept": "c", "verdict": "excellent",
+                              "evidence": "e"}]}):
+        assert _parse_or_trim(_json.dumps(broken), report.StudentReport) is None
+
+
+def test_a_sentence_that_admits_its_miss_is_not_a_clean_sweep_claim():
+    """Verbatim from a measured run, and a false positive this check itself
+    caused before the rule was tightened: on a 4-of-5 concept it rejected a
+    sentence that explicitly ADMITS the miss, because the phrase "every time"
+    appeared in a clause describing the misconception rather than the student.
+
+    That is the same false rejection the checker model was making, reproduced
+    in code - which is the failure mode this whole check exists to end, so it
+    is pinned here."""
+    facts = {"score": {"correct": 17, "asked": 20},
+             "by_concept": [{"concept": "counting work inside loops", "asked": 5,
+                             "correct": 4, "wrong_answer_count": 1,
+                             "missed_in_topics": ["Lists and Loops"]}]}
+    body = {"headline": "A strong run with one thing to tidy up.",
+            "strengths": [{"concept": "counting work inside loops",
+                           "verdict": "strong",
+                           "evidence": "The one miss assumed every append "
+                                       "reallocates; amortised growth means "
+                                       "copies happen rarely, not every time."}],
+            "gaps": [], "next_step": "x", "uncertainty": "y"}
+    assert report.check_claim_strength(body, facts) is None
+
+    # But the same concept with a real sweep claim is still caught.
+    overclaim = dict(body, strengths=[
+        {"concept": "counting work inside loops", "verdict": "strong",
+         "evidence": "You got all of these right."}])
+    assert report.check_claim_strength(overclaim, facts) is not None
+
+
+def test_domain_vocabulary_is_not_mistaken_for_a_ranking_or_an_insult():
+    """Both verbatim false positives this check caused before the phrase lists
+    were tightened. A bare "rank" matched "rank-deficient" in a robotics report
+    about Jacobian singularities; "smart" sits inside "smart pointer". Short
+    substrings that fit inside a technical term reproduce, in code, exactly the
+    false rejections the checker model was making."""
+    class_facts = {"by_concept": [
+        {"concept": "singularities", "asked": 12, "correct": 6,
+         "wrong_answer_count": 6, "missed_in_topics": ["Kinematics", "Control"]}]}
+    jacobian = {"headline": "One concept needs re-teaching.",
+                "teach_again": [{"concept": "singularities", "verdict": "weak",
+                                 "evidence": "Students treated the Jacobian as "
+                                             "failing to exist, missing that it "
+                                             "is simply rank-deficient."}],
+                "solid": [], "next_step": "x", "uncertainty": "y"}
+    assert report.check_claim_strength(jacobian, class_facts, "class") is None
+
+    stu_facts = {"score": {"correct": 8, "asked": 20}, "by_concept": []}
+    pointer = {"headline": "Good work.", "strengths": [], "gaps": [],
+               "next_step": "Review how a smart pointer releases its memory.",
+               "uncertainty": "y"}
+    assert report.check_claim_strength(pointer, stu_facts, "student") is None
+
+
+def test_cohort_language_is_descriptive_on_a_class_report_only():
+    """A class report is ABOUT the cohort, so "most students" describes it. The
+    same phrase on a student report ranks them against classmates, which is
+    data that report is deliberately never given."""
+    class_facts = {"by_concept": []}
+    cohort = {"headline": "Most students missed this concept.",
+              "teach_again": [], "solid": [], "next_step": "x", "uncertainty": "y"}
+    assert report.check_claim_strength(cohort, class_facts, "class") is None
+
+    stu_facts = {"score": {"correct": 8, "asked": 20}, "by_concept": []}
+    ranked = {"headline": "You did better than most students.",
+              "strengths": [], "gaps": [], "next_step": "x", "uncertainty": "y"}
+    assert report.check_claim_strength(ranked, stu_facts, "student") is not None

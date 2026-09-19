@@ -31,6 +31,7 @@ The model's job is to say what they MEAN, never to work out what they are.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -44,10 +45,18 @@ from . import roster
 
 _PROMPTS = Path(__file__).parent / "prompts"
 
-MAX_DRAFTS = 3
+MAX_DRAFTS = 2
 """Redraft budget for a report. Counted from drafts written, never shared with
 the token/attempt fence in slice/budget.py - two malformed JSON replies must not
-silently spend the revisions this counter exists to protect."""
+silently spend the revisions this counter exists to protect.
+
+Lowered from 3 on measurement. A third draft almost never changed the outcome:
+across repeated cohort runs the checker that rejected draft 2 rejected draft 3
+as well, usually on a different marginal objection, so the extra round trip
+bought a third of the wall-clock time and nothing else. Two drafts still show
+the back-edge doing real work - a rejection with a reason, and a rewrite that
+answers it - which is the behaviour worth watching.
+"""
 
 DEADLINE_SECONDS = 90.0
 """Wall-clock fence on a whole report, checked between drafts.
@@ -71,8 +80,16 @@ class ConceptCall(BaseModel):
     concept: str
     """Must match a concept the student actually answered on. Checked in code."""
     verdict: Literal["strong", "mixed", "weak"]
-    evidence: str = Field(max_length=300)
-    """What in the counts supports this - the model's reading, in one sentence."""
+    evidence: str = Field(max_length=160)
+    """What in the counts supports this - the model's reading, in one sentence.
+
+    Lowered from 300 after a genuinely all-strong report (5 concepts, all
+    `strong`, nothing to trim) intermittently overran settings.max_tokens and
+    was truncated mid-JSON - the same failure as bug 01, recurring because 5
+    entries at 300 characters each, plus a headline and next_step, sometimes
+    does not fit. A hard character cap holds regardless of how many concepts a
+    student happens to have; prompt wording asking for brevity does not.
+    """
 
 
 # The length bounds below are not stylistic. A request is capped at
@@ -88,6 +105,15 @@ class StudentReport(BaseModel):
     """One sentence a student can read without a teacher present."""
     strengths: list[ConceptCall] = Field(default_factory=list, max_length=4)
     gaps: list[ConceptCall] = Field(default_factory=list, max_length=4)
+    pattern_concept: str | None = None
+    """Which concept `cross_topic_pattern` is about, copied from by_concept.
+
+    Exists so the pattern's support is checkable in code: a concept spans two
+    or more topics or it does not, and that is a fact already computed in
+    `missed_in_topics`. Asked to judge it instead, the checker rejected the
+    pattern on nearly every phrasing - including the planted 4-topic case that
+    the whole system exists to find."""
+
     cross_topic_pattern: str | None = Field(default=None, max_length=600)
     """The point of the whole exercise: one cause showing up in several topics,
     or None when the misses genuinely do not share one."""
@@ -137,15 +163,28 @@ def _fenced(facts: dict, who: str) -> str:
             + "\n</counts>")
 
 
-_STUDENT_FIELDS = ("headline, strengths, gaps, cross_topic_pattern, "
-                   "next_step, uncertainty")
-_CLASS_FIELDS = "headline, teach_again, solid, split, next_step, uncertainty"
+# Naming the keys is not enough - asked for "strengths, gaps", the model
+# returned strengths as a list of plain strings and failed validation. The
+# shape of the list items has to be spelled out too.
+_ENTRY = '{"concept": str, "verdict": str, "evidence": str}'
+
+_STUDENT_SHAPE = (
+    '{"headline": str, '
+    f'"strengths": [{_ENTRY}], "gaps": [{_ENTRY}], '
+    '"pattern_concept": str|null, "cross_topic_pattern": str|null, '
+    '"next_step": str, "uncertainty": str}')
+
+_CLASS_SHAPE = (
+    '{"headline": str, '
+    f'"teach_again": [{_ENTRY}], "solid": [{_ENTRY}], '
+    '"split": str|null, "next_step": str, "uncertainty": str}')
 
 
 def build_student_messages(facts: dict, rejected: dict | None) -> list[dict]:
     user = [_fenced(facts, "student"),
-            f"Your reply is a JSON object with exactly these keys: "
-            f"{_STUDENT_FIELDS}. No others."]
+            "Your reply is a JSON object of exactly this shape, with no extra "
+            f"keys:\n{_STUDENT_SHAPE}\n\nEvery item in `strengths` and `gaps` "
+            "is an object with all three fields - never a bare string."]
     if rejected:
         user.append(
             "Your previous report was REJECTED.\n"
@@ -160,8 +199,9 @@ def build_student_messages(facts: dict, rejected: dict | None) -> list[dict]:
 
 def build_class_messages(facts: dict, rejected: dict | None) -> list[dict]:
     user = [_fenced(facts, "class"),
-            f"Your reply is a JSON object with exactly these keys: "
-            f"{_CLASS_FIELDS}. No others."]
+            "Your reply is a JSON object of exactly this shape, with no extra "
+            f"keys:\n{_CLASS_SHAPE}\n\nEvery item in `teach_again` and `solid` "
+            "is an object with all three fields - never a bare string."]
     if rejected:
         user.append(
             "Your previous report was REJECTED.\n"
@@ -171,15 +211,6 @@ def build_class_messages(facts: dict, rejected: dict | None) -> list[dict]:
         )
     return [{"role": "system", "content": _prompt("class_report")},
             {"role": "user", "content": "\n\n---\n\n".join(user)}]
-
-
-def build_check_messages(report: dict, facts: dict, kind: str) -> list[dict]:
-    return [{"role": "system", "content": _prompt("report_check")},
-            {"role": "user", "content": (
-                f"Report kind: {kind}\n\nReport under review:\n"
-                + json.dumps(report, indent=2)
-                + "\n\nThe measured counts it must rest on:\n"
-                + json.dumps(facts, indent=2))}]
 
 
 # ----------------------------------------------------------------- the facts
@@ -204,17 +235,60 @@ def student_facts(store, student_id: str) -> dict[str, Any]:
         "department": stu.get("department", ""),
         "score": {"correct": got, "asked": asked},
         "by_topic": roster.by_topic(store, student_id),
-        "by_concept": roster.by_concept(store, student_id),
-        "wrong_answers": roster.misconceptions(store, student_id),
+        "by_concept": _with_wrong_answers(
+            roster.by_concept(store, student_id),
+            roster.misconceptions(store, student_id)),
     }
 
 
+def _with_wrong_answers(concepts: list[dict], wrong: list[dict]) -> list[dict]:
+    """Fold each concept's wrong answers into its own row, and stamp on the
+    verdict the counts earn.
+
+    The flat `wrong_answers` list is deliberately NOT passed through beside
+    this. Handed both, the writer had to match them up itself - which concept
+    owns which mistake, how many mistakes that is, how many topics they span -
+    and it got that matching wrong in 13 of 15 rejections measured across a
+    cohort: "claims two mistakes, the counts show one", "claims three topics,
+    the wrong answers show two".
+
+    That is bookkeeping, not judgement, and the same lesson as verdict_for():
+    a model asked to do clerical work alongside reasoning will do the clerical
+    work badly and then reason confidently from it. So every count it needs is
+    computed here and sits in the row it belongs to. Nothing is left to match.
+    """
+    by_concept: dict[str, list[dict]] = {}
+    for w in wrong:
+        by_concept.setdefault(w["concept"], []).append(w)
+
+    out = []
+    for row in concepts:
+        mine = by_concept.get(row["concept"], [])
+        asked = row.get("asked", row.get("answered", 0))
+        # `topics` is dropped because `missed_in_topics` below is the same list
+        # under a second name. Two keys holding one fact is an invitation to
+        # cite the one the prompt does not mention, and then to disagree with it.
+        row = {k: v for k, v in row.items() if k != "topics"}
+        out.append({
+            **row,
+            "verdict": verdict_for(row["correct"], asked),
+            "wrong_answer_count": len(mine),
+            "missed_in_topics": sorted({w["topic"] for w in mine}),
+            "wrong_answers": [{"topic": w["topic"], "mistake": w["misconception"]}
+                              for w in mine],
+        })
+    return out
+
+
 def class_facts(store, department: str) -> dict[str, Any]:
+    concepts = roster.class_by_concept(store, department)
+    for row in concepts:
+        row["verdict"] = verdict_for(row["correct"], row["asked"])
     return {
         "department": department,
         "students": roster.class_size(store, department),
         "by_topic": roster.class_by_topic(store, department),
-        "by_concept": roster.class_by_concept(store, department),
+        "by_concept": concepts,
         "hardest_questions": roster.class_by_question(store, department)[:8],
         "most_common_wrong_answers": roster.class_common_wrong(store, department),
     }
@@ -323,6 +397,49 @@ def _cited(report: dict) -> list[str]:
     return out
 
 
+def enforce_pattern(report: dict, facts: dict) -> str | None:
+    """Drop a cross-topic pattern the counts do not support. In code.
+
+    Support is a fact, not a judgement: the named concept's wrong answers span
+    two or more topics, or they do not, and `missed_in_topics` already says
+    which. Left to the checker, this was rejected on nearly every phrasing -
+    including the planted case spanning four topics - which pinned reports at
+    the redraft ceiling over the one field the report exists for.
+
+    An unsupported pattern is REMOVED rather than sent back. There is nothing
+    for a rewrite to fix: if no concept spans two topics, no wording makes one
+    appear, and three more drafts will not change that.
+
+    Returns a note for the trail, or None when nothing was dropped.
+    """
+    claim = report.get("cross_topic_pattern")
+    if not claim:
+        return None
+
+    spans = {r["concept"]: r.get("missed_in_topics", [])
+             for r in facts.get("by_concept", [])}
+    named = report.get("pattern_concept")
+
+    # Fall back to whichever named concept actually appears in the prose, so a
+    # writer that skipped the field is not punished for a real pattern.
+    if named not in spans:
+        named = next((c for c in spans if c.lower() in claim.lower()), None)
+
+    if named is None:
+        report["cross_topic_pattern"] = None
+        report["pattern_concept"] = None
+        return "dropped pattern: names no concept from the counts"
+
+    if len(spans[named]) < 2:
+        report["cross_topic_pattern"] = None
+        report["pattern_concept"] = None
+        return (f"dropped pattern: '{named}' has wrong answers in "
+                f"{len(spans[named])} topic(s), not two or more")
+
+    report["pattern_concept"] = named
+    return None
+
+
 def check_citations(report: dict, facts: dict) -> ReportCheck | None:
     """Code-side citation gate. Returns a rejection, or None to continue.
 
@@ -337,6 +454,198 @@ def check_citations(report: dict, facts: dict) -> ReportCheck | None:
             verdict="rejected", failed_check="citation",
             detail="Names concepts with no answered questions behind them: "
                    + ", ".join(invented))
+    return None
+
+
+# ---------------------------------------------------------- claim_strength, in code
+
+# A checker model was asked to find a sentence the counts contradict. Measured
+# across a real cohort (10 students, both departments), every rejection pulled
+# from demo.db was the checker inventing a contradiction that was not there:
+#
+#   "the counts show 3 correct out of 3 asked" used to reject a sentence
+#   saying all three were right - the TRUE case, rejected as false, twice.
+#
+#   "8 of 20" rejected against a headline that also says "8 of 20", verbatim,
+#   twice.
+#
+#   "one topic was clean" rejected by restating the fact that supports it.
+#
+# This is not a wording problem in report_check.md - three rounds of tightening
+# that prompt changed which false rejections happened, not whether they did.
+# It is the same capability gap `verdict_for()`, `enforce_pattern()` and
+# `check_citations()` were all created to route around: a model asked to do
+# arithmetic or exact structural comparison does it unreliably, even when the
+# numbers are handed to it directly. Every one of those moves held up under
+# measurement; every model-judged version of this exact task kept failing. So
+# `claim_strength` moves the same way - the checker call is gone, not just its
+# prompt.
+#
+# What is actually being verified is narrow: a report may not claim a clean
+# sweep ("all", "every", "each", "always") on a concept that has any wrong
+# answers, may not misquote the topic's or the student's own score, and may
+# not compare the student/class to anyone else or describe their character.
+# All three are exact, mechanical checks - the same kind of fact `verdict_for`
+# already turns into a number instead of an opinion.
+
+# A clean-sweep claim is a phrase asserting that EVERY answer on a concept was
+# correct. The bar for adding one here is that it cannot appear in ordinary
+# explanatory prose, because `evidence` describes the misconception as well as
+# the score.
+#
+# Measured, and the reason this list is not merely "words like every and all":
+# a first cut matched the bare substrings "every time" and "was right", and
+# rejected
+#
+#   "The one miss assumed every append reallocates; amortised growth means
+#    copies happen rarely, not every time."
+#
+# on a 4-of-5 concept - a sentence that explicitly ADMITS the miss, failed on a
+# phrase describing the misconception rather than the student. That is the same
+# false rejection the checker model was making, reproduced in code, which is
+# worth more than the rule it was enforcing.
+_SWEEP_PHRASES = (
+    "all of these right", "all of them right", "all of these correct",
+    "every answer here was right", "every answer here was correct",
+    "every one of these", "each of these was right", "got them all right",
+    "got it all right", "clean sweep", "nothing wrong here",
+    "no mistakes here", "all correct", "every single one",
+)
+
+# "right every time", "right answer every time", "correct each time" - one
+# family, too many wordings to list, so it gets a pattern instead.
+_SWEEP_RE = re.compile(r"\b(right|correct)\b[^.]{0,20}\b(every|each)\s+time\b")
+
+# A sentence that names a miss is not claiming a sweep, whatever else it says.
+# This is what lets `evidence` describe the mistake in the same breath as the
+# strength - "mostly solid; the one miss chose a sorted structure" - which the
+# writer prompt explicitly asks for.
+_ADMITS_A_MISS = (
+    "one miss", "the miss", "the misses", "missed", "one wrong", "got wrong",
+    "except", "apart from", "other than", "slipped", "one slip", "mostly",
+)
+
+# Ranking a STUDENT against the cohort. Multi-word phrases only - a bare
+# "rank" matched "rank-deficient" in a robotics report about Jacobian
+# singularities and rejected a correct sentence, which is the same class of
+# false positive this check was built to remove. Anything short enough to sit
+# inside a technical term does not belong in this list.
+_COMPARISON_PHRASES = (
+    "compared to", "compared with", "below average", "above average",
+    "the class average", "than your peers", "than the rest", "than average",
+    "in the top", "in the bottom", "percentile", "ranked against",
+    "better than most", "worse than most",
+)
+
+# Only meaningful on a STUDENT report. A class report is about the cohort by
+# definition, so "most students" is a description there, not a comparison.
+_COHORT_PHRASES = ("most students", "other students", "the other students")
+
+# "smart" is deliberately absent: it sits inside "smart pointer".
+_CHARACTER_WORDS = (
+    "lazy", "careless", "weak student", "strong student", "stupid",
+    "not trying", "gave up", "does not care", "doesn't care",
+    "not paying attention", "sloppy", "unmotivated",
+)
+
+
+def _claims_a_clean_sweep(text: str) -> bool:
+    """Does this sentence assert that every answer on a concept was right?
+
+    A sentence that names a miss does not, however it is otherwise phrased -
+    see _ADMITS_A_MISS.
+    """
+    low = text.lower()
+    if any(phrase in low for phrase in _ADMITS_A_MISS):
+        return False
+    return (any(phrase in low for phrase in _SWEEP_PHRASES)
+            or _SWEEP_RE.search(low) is not None)
+
+
+def _prose_fields(report: dict) -> list[tuple[str, str]]:
+    """Every free-text field a report can make a claim in, labelled."""
+    out = [("headline", report.get("headline") or "")]
+    for field in ("strengths", "gaps", "teach_again", "solid"):
+        for row in report.get(field) or []:
+            out.append((f"{field}:{row.get('concept')}", row.get("evidence") or ""))
+    if report.get("cross_topic_pattern"):
+        out.append(("cross_topic_pattern", report["cross_topic_pattern"]))
+    for field in ("next_step", "uncertainty", "split"):
+        if report.get(field):
+            out.append((field, report[field]))
+    return out
+
+
+def _headline_score_claim(headline: str) -> tuple[int, int] | None:
+    """Pull an "X of Y" / "X out of Y" claim out of a headline, if it makes one.
+
+    Only a small, deliberate grammar - the point is to catch a wrong number,
+    not to parse arbitrary prose. A headline that does not use this shape makes
+    no numeric claim this check can verify, and is left alone.
+    """
+    m = re.search(r"(\d+)\s*(?:of|out of)\s*(\d+)", headline)
+    if not m:
+        return None
+    return int(m.group(1)), int(m.group(2))
+
+
+def check_claim_strength(report: dict, facts: dict,
+                        kind: str = "student") -> ReportCheck | None:
+    """Code-side replacement for the model 'find a false sentence' check.
+
+    Returns a rejection, or None to continue. See the note above this function
+    for why this is code and not a model call.
+    """
+    overall = facts.get("score")  # student reports only
+    # A class report is ABOUT the cohort, so cohort language is descriptive
+    # there and only a ranking claim on a student report is a problem.
+    comparisons = _COMPARISON_PHRASES
+    if kind == "student":
+        comparisons = comparisons + _COHORT_PHRASES
+    concepts = {r["concept"]: r for r in facts.get("by_concept", [])}
+
+    headline = report.get("headline") or ""
+    claimed = _headline_score_claim(headline)
+    if claimed and overall:
+        got, asked = claimed
+        if (got, asked) != (overall["correct"], overall["asked"]):
+            return ReportCheck(
+                verdict="rejected", failed_check="claim_strength",
+                detail=(f"The headline says '{headline}' but the measured score "
+                        f"is {overall['correct']} of {overall['asked']}."))
+
+    for label, text in _prose_fields(report):
+        if not text:
+            continue
+        if _claims_a_clean_sweep(text):
+            # Which concept is this claim about, if any - a strengths/gaps/
+            # teach_again/solid entry names one in its label.
+            concept = label.split(":", 1)[1] if ":" in label else None
+            row = concepts.get(concept) if concept else None
+            if row is not None:
+                asked = row.get("asked", row.get("answered", 0))
+                if row["correct"] < asked:
+                    return ReportCheck(
+                        verdict="rejected", failed_check="claim_strength",
+                        detail=(f"The sentence '{text}' claims a clean sweep for "
+                                f"'{concept}', but the counts show "
+                                f"{row['correct']} correct out of {asked} - "
+                                "at least one wrong answer."))
+
+        low = text.lower()
+        hit = next((p for p in comparisons if p in low), None)
+        if hit:
+            return ReportCheck(
+                verdict="rejected", failed_check="claim_strength",
+                detail=f"The sentence '{text}' compares against other students "
+                       f"('{hit}'), which this report is not given data for.")
+        hit = next((p for p in _CHARACTER_WORDS if p in low), None)
+        if hit:
+            return ReportCheck(
+                verdict="rejected", failed_check="claim_strength",
+                detail=f"The sentence '{text}' describes the person rather than "
+                       f"the work ('{hit}').")
+
     return None
 
 
@@ -389,17 +698,24 @@ def _generate(store, kind: str, key: str, facts: dict, schema, build, call,
         # else looks at the report, so the checker never spends a round trip
         # arguing about division. See verdict_for().
         corrected = enforce_verdicts(body, facts)
+        dropped = enforce_pattern(body, facts)
+        if dropped:
+            corrected.append(dropped)
         if corrected:
             trail.append({"step": "correct", "revision": attempt,
                           "body": {"corrections": corrected}})
             if trace:
                 trace("correct", attempt, "; ".join(corrected))
 
-        check = check_citations(body, facts)
+        # Both checks are code, not a model call. citation and claim_strength
+        # were both, in turn, judgement calls handed to a model and both, in
+        # turn, measured to fail at it - see check_claim_strength()'s note for
+        # the numbers. Nothing here asks a model to compare a sentence to a
+        # count anymore.
+        check = (check_citations(body, facts)
+                 or check_claim_strength(body, facts, kind))
         if check is None:
-            check = call(settings=settings, budget=budget,
-                         messages=build_check_messages(body, facts, kind),
-                         schema=ReportCheck, step="report_check")
+            check = ReportCheck(verdict="accepted")
         trail.append({"step": "check", "revision": attempt,
                       "body": check.model_dump()})
         if trace:
