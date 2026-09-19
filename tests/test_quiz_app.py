@@ -41,6 +41,34 @@ def test_every_question_has_one_correct_option_and_four_choices():
         assert sum(o.correct for o in q.options) == 1, q.id
 
 
+def test_the_answer_key_is_spread_across_all_four_letters():
+    """Every question is authored with the correct option second, which made B
+    correct on all 40. The first end-to-end run scored 20/20 by answering B on
+    everything - a tester who notices that has a perfect score and the data is
+    worthless."""
+    from collections import Counter
+    for dept in bank.DEPARTMENTS:
+        keys = Counter(q.answer_key for q in bank.for_department(dept))
+        assert set(keys) == {"A", "B", "C", "D"}, (dept, keys)
+        # No letter may carry more than half the questions.
+        assert max(keys.values()) <= 10, (dept, keys)
+
+
+def test_options_are_labelled_a_to_d_in_order():
+    for q in bank.ALL:
+        assert [o.key for o in q.options] == ["A", "B", "C", "D"], q.id
+
+
+def test_the_answer_key_is_stable_for_a_given_question():
+    """Rotation is by question id, not random: the same student sees the same
+    layout on a reload, and two students' answers stay comparable."""
+    assert bank.by_id("rb_t1_q1").answer_key == bank.by_id("rb_t1_q1").answer_key
+    first = {q.id: q.answer_key for q in bank.ALL}
+    import importlib
+    importlib.reload(bank)
+    assert {q.id: q.answer_key for q in bank.ALL} == first
+
+
 def test_every_wrong_option_names_a_misconception_and_no_right_one_does():
     """The misconception mapping IS the diagnosis - a wrong option without one
     is a question that teaches the report nothing."""
@@ -372,9 +400,13 @@ def test_a_rejection_sends_the_draft_back_with_the_reason(store):
 
     body = report.for_student(store, sid, settings=None, call=call, force=True)
     assert body["_revisions"] == 2
-    assert body["_trail"][0]["step"] == "draft"
-    assert body["_trail"][1]["body"]["verdict"] == "rejected"
-    assert body["_trail"][2]["step"] == "draft"
+    # Found by step name, not position: a `correct` row appears between a draft
+    # and its check whenever code fixed a verdict or dropped a pattern.
+    steps = [r["step"] for r in body["_trail"]]
+    assert steps.count("draft") == 2
+    checks = [r["body"] for r in body["_trail"] if r["step"] == "check"]
+    assert checks[0]["verdict"] == "rejected"
+    assert steps.index("draft") < steps.index("check")
 
 
 def test_the_rejection_detail_reaches_the_next_prompt(store):
@@ -388,14 +420,17 @@ def test_the_rejection_detail_reaches_the_next_prompt(store):
 
 
 def test_a_report_that_never_passes_ships_flagged_not_silently(store):
-    """Three rejections spends the budget. The last draft still goes out -
-    a teacher is better served by a flagged report than by nothing - but it
-    must not look like it passed."""
+    """Spending the whole redraft budget still ships the last draft - a teacher
+    is better served by a flagged report than by nothing - but it must not look
+    like it passed.
+
+    Scripted from MAX_DRAFTS rather than a hard-coded 3, so tuning the budget
+    does not silently turn this into a test of nothing."""
     sid = roster.create_student(store, "A", "1", "R", "computer_science")
     _answer_all(store, sid, "computer_science")
     reject = {"verdict": "rejected", "failed_check": "claim_strength",
               "detail": "still overclaims"}
-    call = _Scripted(_OK_REPORT, reject, _OK_REPORT, reject, _OK_REPORT, reject)
+    call = _Scripted(*([_OK_REPORT, reject] * report.MAX_DRAFTS))
 
     body = report.for_student(store, sid, settings=None, call=call, force=True)
     assert body["_revisions"] == report.MAX_DRAFTS
@@ -469,8 +504,7 @@ def test_a_student_report_never_sees_another_student(store):
     assert b not in blob, "another student's id reached a student report"
     # Only this student's own counts are present.
     assert facts["score"]["asked"] == 20
-    assert set(facts) == {"department", "score", "by_topic", "by_concept",
-                          "wrong_answers"}
+    assert set(facts) == {"department", "score", "by_topic", "by_concept"}
 
 
 def test_the_two_departments_never_mix(store):
@@ -506,5 +540,11 @@ def test_the_facts_handed_to_the_model_come_from_sql_not_the_model(store):
     assert facts["score"] == {"correct": 15, "asked": 20}
     loops = next(r for r in facts["by_concept"]
                  if r["concept"] == "counting work inside loops")
-    assert loops == {"concept": "counting work inside loops", "asked": 5,
-                     "correct": 0, "topics": loops["topics"]}
+    # Every number the writer needs sits in the row it belongs to, so it never
+    # has to match a flat list against a count and never has to add anything up.
+    assert loops["asked"] == 5 and loops["correct"] == 0
+    assert loops["verdict"] == "weak"
+    assert loops["wrong_answer_count"] == 5
+    assert len(loops["wrong_answers"]) == loops["wrong_answer_count"]
+    assert len(loops["missed_in_topics"]) >= 3
+    assert "topics" not in loops, "two keys for one fact invites a mismatch"

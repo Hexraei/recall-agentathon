@@ -65,10 +65,28 @@ class Question(BaseModel):
 
 
 def _q(qid, dept, topic, concept, prompt, options) -> Question:
+    """Build a question, rotating the options so the answer key is not always B.
+
+    Every question below is written with the correct option second, because
+    that keeps the source readable - the right answer sits next to the
+    misconception it corrects. Shipped as written, that made B correct on all
+    40 questions, which the first end-to-end run found by scoring 20/20 with B
+    on everything. A tester who spots that has a perfect score and the data is
+    worthless.
+
+    So the options are rotated here by a hash of the question id: fixed per
+    question (the same student always sees the same layout, and a rerun of the
+    same quiz is comparable), spread across A-D, and requiring no edit to the
+    bank itself.
+    """
+    built = [Option(key=k, text=t, correct=c, misconception=m)
+             for k, t, c, m in options]
+    shift = sum(ord(ch) for ch in qid) % len(built)
+    rotated = built[shift:] + built[:shift]
+    for key, opt in zip("ABCD", rotated):
+        opt.key = key
     return Question(id=qid, department=dept, topic=topic, concept=concept,
-                    prompt=prompt,
-                    options=[Option(key=k, text=t, correct=c, misconception=m)
-                             for k, t, c, m in options])
+                    prompt=prompt, options=rotated)
 
 
 # ============================================================ COMPUTER SCIENCE

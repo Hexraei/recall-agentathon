@@ -44,10 +44,18 @@ from . import roster
 
 _PROMPTS = Path(__file__).parent / "prompts"
 
-MAX_DRAFTS = 3
+MAX_DRAFTS = 2
 """Redraft budget for a report. Counted from drafts written, never shared with
 the token/attempt fence in slice/budget.py - two malformed JSON replies must not
-silently spend the revisions this counter exists to protect."""
+silently spend the revisions this counter exists to protect.
+
+Lowered from 3 on measurement. A third draft almost never changed the outcome:
+across repeated cohort runs the checker that rejected draft 2 rejected draft 3
+as well, usually on a different marginal objection, so the extra round trip
+bought a third of the wall-clock time and nothing else. Two drafts still show
+the back-edge doing real work - a rejection with a reason, and a rewrite that
+answers it - which is the behaviour worth watching.
+"""
 
 DEADLINE_SECONDS = 90.0
 """Wall-clock fence on a whole report, checked between drafts.
@@ -88,6 +96,15 @@ class StudentReport(BaseModel):
     """One sentence a student can read without a teacher present."""
     strengths: list[ConceptCall] = Field(default_factory=list, max_length=4)
     gaps: list[ConceptCall] = Field(default_factory=list, max_length=4)
+    pattern_concept: str | None = None
+    """Which concept `cross_topic_pattern` is about, copied from by_concept.
+
+    Exists so the pattern's support is checkable in code: a concept spans two
+    or more topics or it does not, and that is a fact already computed in
+    `missed_in_topics`. Asked to judge it instead, the checker rejected the
+    pattern on nearly every phrasing - including the planted 4-topic case that
+    the whole system exists to find."""
+
     cross_topic_pattern: str | None = Field(default=None, max_length=600)
     """The point of the whole exercise: one cause showing up in several topics,
     or None when the misses genuinely do not share one."""
@@ -137,15 +154,28 @@ def _fenced(facts: dict, who: str) -> str:
             + "\n</counts>")
 
 
-_STUDENT_FIELDS = ("headline, strengths, gaps, cross_topic_pattern, "
-                   "next_step, uncertainty")
-_CLASS_FIELDS = "headline, teach_again, solid, split, next_step, uncertainty"
+# Naming the keys is not enough - asked for "strengths, gaps", the model
+# returned strengths as a list of plain strings and failed validation. The
+# shape of the list items has to be spelled out too.
+_ENTRY = '{"concept": str, "verdict": str, "evidence": str}'
+
+_STUDENT_SHAPE = (
+    '{"headline": str, '
+    f'"strengths": [{_ENTRY}], "gaps": [{_ENTRY}], '
+    '"pattern_concept": str|null, "cross_topic_pattern": str|null, '
+    '"next_step": str, "uncertainty": str}')
+
+_CLASS_SHAPE = (
+    '{"headline": str, '
+    f'"teach_again": [{_ENTRY}], "solid": [{_ENTRY}], '
+    '"split": str|null, "next_step": str, "uncertainty": str}')
 
 
 def build_student_messages(facts: dict, rejected: dict | None) -> list[dict]:
     user = [_fenced(facts, "student"),
-            f"Your reply is a JSON object with exactly these keys: "
-            f"{_STUDENT_FIELDS}. No others."]
+            "Your reply is a JSON object of exactly this shape, with no extra "
+            f"keys:\n{_STUDENT_SHAPE}\n\nEvery item in `strengths` and `gaps` "
+            "is an object with all three fields - never a bare string."]
     if rejected:
         user.append(
             "Your previous report was REJECTED.\n"
@@ -160,8 +190,9 @@ def build_student_messages(facts: dict, rejected: dict | None) -> list[dict]:
 
 def build_class_messages(facts: dict, rejected: dict | None) -> list[dict]:
     user = [_fenced(facts, "class"),
-            f"Your reply is a JSON object with exactly these keys: "
-            f"{_CLASS_FIELDS}. No others."]
+            "Your reply is a JSON object of exactly this shape, with no extra "
+            f"keys:\n{_CLASS_SHAPE}\n\nEvery item in `teach_again` and `solid` "
+            "is an object with all three fields - never a bare string."]
     if rejected:
         user.append(
             "Your previous report was REJECTED.\n"
@@ -204,17 +235,60 @@ def student_facts(store, student_id: str) -> dict[str, Any]:
         "department": stu.get("department", ""),
         "score": {"correct": got, "asked": asked},
         "by_topic": roster.by_topic(store, student_id),
-        "by_concept": roster.by_concept(store, student_id),
-        "wrong_answers": roster.misconceptions(store, student_id),
+        "by_concept": _with_wrong_answers(
+            roster.by_concept(store, student_id),
+            roster.misconceptions(store, student_id)),
     }
 
 
+def _with_wrong_answers(concepts: list[dict], wrong: list[dict]) -> list[dict]:
+    """Fold each concept's wrong answers into its own row, and stamp on the
+    verdict the counts earn.
+
+    The flat `wrong_answers` list is deliberately NOT passed through beside
+    this. Handed both, the writer had to match them up itself - which concept
+    owns which mistake, how many mistakes that is, how many topics they span -
+    and it got that matching wrong in 13 of 15 rejections measured across a
+    cohort: "claims two mistakes, the counts show one", "claims three topics,
+    the wrong answers show two".
+
+    That is bookkeeping, not judgement, and the same lesson as verdict_for():
+    a model asked to do clerical work alongside reasoning will do the clerical
+    work badly and then reason confidently from it. So every count it needs is
+    computed here and sits in the row it belongs to. Nothing is left to match.
+    """
+    by_concept: dict[str, list[dict]] = {}
+    for w in wrong:
+        by_concept.setdefault(w["concept"], []).append(w)
+
+    out = []
+    for row in concepts:
+        mine = by_concept.get(row["concept"], [])
+        asked = row.get("asked", row.get("answered", 0))
+        # `topics` is dropped because `missed_in_topics` below is the same list
+        # under a second name. Two keys holding one fact is an invitation to
+        # cite the one the prompt does not mention, and then to disagree with it.
+        row = {k: v for k, v in row.items() if k != "topics"}
+        out.append({
+            **row,
+            "verdict": verdict_for(row["correct"], asked),
+            "wrong_answer_count": len(mine),
+            "missed_in_topics": sorted({w["topic"] for w in mine}),
+            "wrong_answers": [{"topic": w["topic"], "mistake": w["misconception"]}
+                              for w in mine],
+        })
+    return out
+
+
 def class_facts(store, department: str) -> dict[str, Any]:
+    concepts = roster.class_by_concept(store, department)
+    for row in concepts:
+        row["verdict"] = verdict_for(row["correct"], row["asked"])
     return {
         "department": department,
         "students": roster.class_size(store, department),
         "by_topic": roster.class_by_topic(store, department),
-        "by_concept": roster.class_by_concept(store, department),
+        "by_concept": concepts,
         "hardest_questions": roster.class_by_question(store, department)[:8],
         "most_common_wrong_answers": roster.class_common_wrong(store, department),
     }
@@ -323,6 +397,49 @@ def _cited(report: dict) -> list[str]:
     return out
 
 
+def enforce_pattern(report: dict, facts: dict) -> str | None:
+    """Drop a cross-topic pattern the counts do not support. In code.
+
+    Support is a fact, not a judgement: the named concept's wrong answers span
+    two or more topics, or they do not, and `missed_in_topics` already says
+    which. Left to the checker, this was rejected on nearly every phrasing -
+    including the planted case spanning four topics - which pinned reports at
+    the redraft ceiling over the one field the report exists for.
+
+    An unsupported pattern is REMOVED rather than sent back. There is nothing
+    for a rewrite to fix: if no concept spans two topics, no wording makes one
+    appear, and three more drafts will not change that.
+
+    Returns a note for the trail, or None when nothing was dropped.
+    """
+    claim = report.get("cross_topic_pattern")
+    if not claim:
+        return None
+
+    spans = {r["concept"]: r.get("missed_in_topics", [])
+             for r in facts.get("by_concept", [])}
+    named = report.get("pattern_concept")
+
+    # Fall back to whichever named concept actually appears in the prose, so a
+    # writer that skipped the field is not punished for a real pattern.
+    if named not in spans:
+        named = next((c for c in spans if c.lower() in claim.lower()), None)
+
+    if named is None:
+        report["cross_topic_pattern"] = None
+        report["pattern_concept"] = None
+        return "dropped pattern: names no concept from the counts"
+
+    if len(spans[named]) < 2:
+        report["cross_topic_pattern"] = None
+        report["pattern_concept"] = None
+        return (f"dropped pattern: '{named}' has wrong answers in "
+                f"{len(spans[named])} topic(s), not two or more")
+
+    report["pattern_concept"] = named
+    return None
+
+
 def check_citations(report: dict, facts: dict) -> ReportCheck | None:
     """Code-side citation gate. Returns a rejection, or None to continue.
 
@@ -389,6 +506,9 @@ def _generate(store, kind: str, key: str, facts: dict, schema, build, call,
         # else looks at the report, so the checker never spends a round trip
         # arguing about division. See verdict_for().
         corrected = enforce_verdicts(body, facts)
+        dropped = enforce_pattern(body, facts)
+        if dropped:
+            corrected.append(dropped)
         if corrected:
             trail.append({"step": "correct", "revision": attempt,
                           "body": {"corrections": corrected}})

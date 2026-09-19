@@ -292,9 +292,17 @@ def student_report(sid: str, force: int = 0):
 
     warn = ""
     if body.get("_unverified"):
-        warn = (f'<div class="card bad"><b>Unverified</b><p class="muted" '
-                f'style="margin:.4rem 0 0">The checker never passed this draft: '
-                f'{esc(body["_unverified"])}</p></div>')
+        # Precise about what is and is not verified. The scores, verdicts and
+        # the cross-topic pattern are computed and checked in code, so they are
+        # sound whatever the checker said; it is the WORDING that went out
+        # without a second opinion. A banner implying the numbers are suspect
+        # would be its own false claim.
+        warn = ('<div class="card bad"><b>Wording not signed off</b>'
+                '<p class="muted" style="margin:.4rem 0 0">The scores, the '
+                'strong/weak calls and the cross-topic pattern below are '
+                'computed and verified in code. The reviewer did not sign off '
+                'on how this was phrased, so read the wording with that in '
+                'mind.</p></div>')
 
     return page(f"""
 <a class="brand" href="/">Recall</a>
@@ -381,8 +389,10 @@ agent has something to read.</div>
 
     warn = ""
     if body.get("_unverified"):
-        warn = (f'<div class="card bad"><b>Unverified</b><p class="muted" '
-                f'style="margin:.4rem 0 0">{esc(body["_unverified"])}</p></div>')
+        warn = ('<div class="card bad"><b>Wording not signed off</b>'
+                '<p class="muted" style="margin:.4rem 0 0">The counts and the '
+                'strong/weak calls below are computed in code. The reviewer '
+                'did not sign off on the phrasing.</p></div>')
 
     return page(f"""
 <a class="brand" href="/">Recall</a>
