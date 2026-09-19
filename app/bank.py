@@ -1,29 +1,41 @@
 """The question bank: two departments, five topics each, four questions a topic.
 
-Why the bank is fixed rather than generated live
-------------------------------------------------
-The report at the end is the agentic artifact - it reads a student's whole
-answer history, compares it against the class, and writes a judgement. For that
-judgement to be worth anything, the thing being judged has to be solid. A model
-inventing both the question AND the diagnosis means a wrong report can always be
-blamed on a bad question, and nobody can tell the two failures apart.
+Pitched at a second-year student
+--------------------------------
+An earlier version of this bank was written at final-year level - Kalman filter
+update steps, Jacobian rank deficiency, RRT probabilistic completeness. The
+first real tester scored 14/20 on his own department and every miss landed in
+the hardest material, which tells you about the questions rather than about him.
+A diagnostic that ambushes people measures their nerve, not their understanding.
 
-So every wrong option is pre-mapped, here, at authoring time, to the specific
-misconception picking it reveals. Deterministic, instant, free. The model's work
-stays where it earns its keep: reading twenty of these mappings together and
-saying what they add up to.
+These are written for someone midway through second year: one idea per question,
+no trick options, and plain wording. A student who has been to the lectures
+should get most of them. The target is roughly 70-80% for a typical student -
+high enough that nobody feels caught out, low enough that the misses are real
+and the report has something true to say.
 
-Departments
------------
-robotics          - theoretical, slightly harder. Kinematics, control, state
-                    estimation, planning, dynamics.
-computer_science  - conceptual, kept simple. Complexity, data structures,
-                    recursion, memory, correctness.
+Concepts, and why they repeat
+-----------------------------
+Each `concept` is the unit the report reasons over, and every concept here has
+THREE OR FOUR questions behind it, deliberately spread across different topics.
 
-Each `concept` string is the unit the report reasons over, and the same concept
-deliberately appears across MORE THAN ONE topic where the underlying idea is
-shared - that is what lets the agent say "this is not a gap in sorting, it is a
-gap in counting nested work" rather than just listing topics with low scores.
+Both halves of that matter. Two questions cannot separate a gap from a slip, so
+a concept with only two behind it can never be called strong or weak - the first
+bank had several, and the resulting report said "mixed" seven times in a row and
+found no pattern at all. And a concept confined to one topic can never show that
+one cause is behind trouble in several places, which is the whole point:
+
+    "This is not a gap in sorting, it is a gap in counting nested work."
+
+Concept names are written the way a student would say them, because they appear
+in the report that student reads.
+
+Why the bank is fixed rather than generated
+-------------------------------------------
+Every wrong option is pre-mapped, here, to the misconception picking it reveals.
+If a model invented both the question AND the diagnosis, a wrong report could
+always be blamed on a bad question and the two failures would be indistinguish-
+able. Fixing the diagnosis makes the report falsifiable.
 """
 from __future__ import annotations
 
@@ -49,7 +61,7 @@ class Question(BaseModel):
     department: str
     topic: str
     concept: str
-    """The reasoning skill under test. Shared across topics on purpose."""
+    """The idea under test. Shared across topics on purpose."""
     prompt: str
     options: list[Option]
 
@@ -90,548 +102,527 @@ def _q(qid, dept, topic, concept, prompt, options) -> Question:
 
 
 # ============================================================ COMPUTER SCIENCE
-# Conceptual and simple. Four concepts recur across the five topics so the
-# report can cut across topic boundaries.
+# Five topics, four concepts, each concept spread over three or four questions
+# in different topics:
+#
+#   working out how long code takes   4 questions, 3 topics
+#   picking the right data structure  4 questions, 3 topics
+#   knowing when a loop or function stops   4 questions, 3 topics
+#   understanding what a variable holds     4 questions, 3 topics
+#   backing up a claim with evidence        4 questions, 3 topics
 
 CS: list[Question] = [
-    # ---------------------------------------------------- Topic 1: Complexity
-    _q("cs_t1_q1", "computer_science", "Time Complexity",
-       "counting work inside loops",
-       "What is the worst-case time complexity of insertion sort?",
-       [("A", "O(n) — the outer loop runs n times", False,
-         "counted only the outer loop and did not account for the shifting "
-         "work the inner loop does on each pass"),
-        ("B", "O(n²) — each of the n passes may shift up to n elements", True, None),
-        ("C", "O(log n) — the array is searched, not scanned", False,
-         "applied logarithmic growth to a linear scan; nothing in insertion "
-         "sort halves the remaining work"),
-        ("D", "O(1) — sorting does not depend on input size", False,
-         "treated cost as constant with no relationship stated between input "
-         "size and work done")]),
+    # -------------------------------------------------- Topic 1: How Code Runs
+    _q("cs_t1_q1", "computer_science", "How Code Runs",
+       "working out how long code takes",
+       "A loop runs through a list of n items once. How does the time it takes "
+       "grow as the list gets bigger?",
+       [("A", "It stays the same no matter how big the list is", False,
+         "treated the work as fixed; a loop that visits every item must do more "
+         "work when there are more items"),
+        ("B", "It grows in step with n — twice the items, twice the time", True, None),
+        ("C", "It grows much faster than n, like n × n", False,
+         "expected the cost of nested loops from a single loop"),
+        ("D", "It gets smaller as the list grows", False,
+         "reversed the relationship; more items cannot mean less work")]),
 
-    _q("cs_t1_q2", "computer_science", "Time Complexity",
-       "counting work inside loops",
-       "Removing duplicates with `if x not in result` for each of n elements "
-       "costs:",
-       [("A", "O(n) — the loop goes through the list once", False,
-         "counted only the visible loop and missed the work hidden inside the "
-         "membership test, which itself scans the result list"),
-        ("B", "O(n²) — each element may trigger a scan of the growing result", True, None),
-        ("C", "O(n log n) — membership checking is like a sorted search", False,
-         "assumed the membership check is a sorted search; `not in` on a list "
-         "scans linearly"),
-        ("D", "O(1) — membership checking is instant", False,
-         "assumed constant-time membership with no basis; a list is not a hash "
-         "table")]),
+    _q("cs_t1_q2", "computer_science", "How Code Runs",
+       "working out how long code takes",
+       "A loop inside another loop, each running n times. Roughly how many "
+       "steps in total?",
+       [("A", "About n steps", False,
+         "counted only the outer loop and missed that the inner loop restarts "
+         "on every single pass"),
+        ("B", "About n × n steps", True, None),
+        ("C", "About n + n steps", False,
+         "added the two loops instead of multiplying; the inner one runs once "
+         "per outer pass, not once overall"),
+        ("D", "Exactly 2 steps", False,
+         "counted the loops themselves rather than the work they do")]),
 
-    _q("cs_t1_q3", "computer_science", "Time Complexity",
-       "relating loop structure to growth rate",
-       "Binary search on a sorted array of n elements costs:",
-       [("A", "O(n) — there is still a loop running until it finds the answer", False,
-         "treated the presence of a loop as evidence of linear growth, without "
-         "asking how much of the problem each pass eliminates"),
-        ("B", "O(log n) — each comparison halves the remaining search space", True, None),
-        ("C", "O(n²) — comparing the middle element takes n steps", False,
-         "claimed a single index-and-compare costs n steps, with no argument"),
-        ("D", "O(1) — sorted arrays are searched instantly", False,
-         "asserted constant time with no argument for why sorting would remove "
-         "the search entirely")]),
+    _q("cs_t1_q3", "computer_science", "How Code Runs",
+       "backing up a claim with evidence",
+       "Your program ran fast on a list of 10 items. What does that tell you "
+       "about a list of 10,000?",
+       [("A", "It will definitely still be fast", False,
+         "generalised from a tiny input; slow growth and fast growth look the "
+         "same at small sizes"),
+        ("B", "Not much — you would need to test a bigger list", True, None),
+        ("C", "It will definitely be slow", False,
+         "drew the opposite conclusion, equally unsupported by one small test"),
+        ("D", "Nothing at all can ever be learned from timing", False,
+         "dismissed measurement entirely rather than noting its limits")]),
 
-    _q("cs_t1_q4", "computer_science", "Time Complexity",
-       "relating loop structure to growth rate",
-       "A loop that halves `n` each pass, with O(n) work inside each pass, is:",
-       [("A", "O(log n) — the halving dominates", False,
-         "tracked how many passes happen but not how much each pass costs"),
-        ("B", "O(n) — the linear work dominates the halving", True, None),
-        ("C", "O(n²) — a loop inside a loop is always quadratic", False,
-         "applied 'nested loops means quadratic' as a rule without checking how "
-         "the inner bound shrinks"),
-        ("D", "O(n log n) — multiply the two together", False,
-         "multiplied the passes by the largest inner cost, ignoring that the "
-         "inner cost halves alongside them")]),
+    _q("cs_t1_q4", "computer_science", "How Code Runs",
+       "understanding what a variable holds",
+       "`x = 5` then `y = x` then `x = 10`. What is `y`?",
+       [("A", "10, because y follows x", False,
+         "treated `y = x` as a permanent link; it copies the value at that "
+         "moment and nothing after"),
+        ("B", "5 — y kept the value x had at the time", True, None),
+        ("C", "15, both values added", False,
+         "read assignment as accumulating rather than replacing"),
+        ("D", "Nothing — y is undefined", False,
+         "assumed the assignment did not happen")]),
 
-    # ------------------------------------------------ Topic 2: Data Structures
-    _q("cs_t2_q1", "computer_science", "Data Structures",
-       "choosing a structure from its access pattern",
-       "You need to repeatedly get the smallest item from a changing set. Best "
-       "structure?",
-       [("A", "A sorted list, re-sorted after each insert", False,
-         "chose a structure whose ordering must be rebuilt on every change, "
-         "paying O(n log n) repeatedly for a property only needed at one end"),
-        ("B", "A min-heap", True, None),
-        ("C", "A hash table", False,
-         "chose a structure with no ordering at all for a task defined entirely "
-         "by order"),
-        ("D", "A plain array, scanned each time", False,
-         "accepted a full O(n) scan per query where a structure maintaining the "
-         "minimum would answer in O(log n)")]),
+    # ------------------------------------------------ Topic 2: Lists and Loops
+    _q("cs_t2_q1", "computer_science", "Lists and Loops",
+       "working out how long code takes",
+       "To check if a name is in an unsorted list of n names, how many do you "
+       "have to look at in the worst case?",
+       [("A", "Just one", False,
+         "assumed the answer is found immediately; with no ordering there is "
+         "no way to jump to it"),
+        ("B", "All n of them", True, None),
+        ("C", "About half of n, always", False,
+         "gave the average rather than the worst case, which the question asked "
+         "for"),
+        ("D", "None — the computer just knows", False,
+         "treated lookup as free rather than as work that has to happen")]),
 
-    _q("cs_t2_q2", "computer_science", "Data Structures",
-       "choosing a structure from its access pattern",
-       "Checking 'have I seen this value before?' a million times is fastest with:",
-       [("A", "A list, using `in`", False,
-         "chose linear scanning for a membership question, the exact pattern a "
-         "hash structure exists to eliminate"),
-        ("B", "A set", True, None),
-        ("C", "A sorted list with binary search", False,
-         "chose O(log n) lookups where O(1) is available, and pays to keep the "
-         "list sorted on every insert"),
-        ("D", "A stack", False,
-         "chose a structure that only exposes its most recent item for a "
-         "question about all items seen")]),
+    _q("cs_t2_q2", "computer_science", "Lists and Loops",
+       "picking the right data structure",
+       "You need to check 'have I seen this before?' thousands of times. What "
+       "should you store the seen items in?",
+       [("A", "A list, checking each item every time", False,
+         "chose a structure that must be scanned end to end for a question "
+         "asked thousands of times"),
+        ("B", "A set — it can answer that almost instantly", True, None),
+        ("C", "A single variable holding the last item", False,
+         "kept only the most recent item for a question about everything seen "
+         "so far"),
+        ("D", "A text file, read from disk each time", False,
+         "chose the slowest possible option for the most repeated operation")]),
 
-    _q("cs_t2_q3", "computer_science", "Data Structures",
-       "counting work inside loops",
-       "Appending n items to a Python list, one at a time, costs in total:",
-       [("A", "O(n²) — the list is copied on every append", False,
-         "assumed every append reallocates; amortised growth means copies "
-         "happen rarely, not every time"),
-        ("B", "O(n) amortised — growth doubles, so copies are rare", True, None),
-        ("C", "O(n log n) — the list is re-sorted as it grows", False,
-         "assumed appending maintains sort order; a list preserves insertion "
-         "order and sorts nothing"),
-        ("D", "O(1) — appending is constant", False,
-         "gave the cost of ONE append where the question asked for n of them")]),
+    _q("cs_t2_q3", "computer_science", "Lists and Loops",
+       "picking the right data structure",
+       "You need to keep items in the order they arrived and take them out "
+       "oldest first. Which fits?",
+       [("A", "A stack — it takes the newest out first", False,
+         "chose last-in-first-out where the question asked for oldest first"),
+        ("B", "A queue", True, None),
+        ("C", "A set — it keeps things tidy", False,
+         "chose a structure that keeps no order at all"),
+        ("D", "A single variable", False,
+         "chose something that holds one item where a collection is needed")]),
 
-    _q("cs_t2_q4", "computer_science", "Data Structures",
-       "reasoning about references and copies",
-       "`b = a` where `a` is a list, then `b.append(1)`. What is `a`?",
-       [("A", "Unchanged — `b` is a copy", False,
-         "treated assignment as copying; it binds a second name to the same "
-         "object"),
-        ("B", "Also has the new element — both names refer to one list", True, None),
-        ("C", "Raises an error — lists cannot be shared", False,
-         "assumed a restriction that does not exist; shared references are the "
-         "default"),
-        ("D", "Becomes a nested list", False,
-         "confused appending to a shared list with nesting one list inside "
-         "another")]),
+    _q("cs_t2_q4", "computer_science", "Lists and Loops",
+       "knowing when a loop or function stops",
+       "`while count < 10:` — and nothing inside ever changes `count`. What "
+       "happens?",
+       [("A", "It runs 10 times and stops", False,
+         "assumed the loop counts by itself; nothing increases `count` here"),
+        ("B", "It never stops", True, None),
+        ("C", "It runs once", False,
+         "expected the condition to be checked only at the start"),
+        ("D", "It refuses to run", False,
+         "expected an error where the condition is true and stays true")]),
 
-    # ------------------------------------------------------ Topic 3: Recursion
-    _q("cs_t3_q1", "computer_science", "Recursion",
-       "identifying a terminating base case",
-       "`def f(n): return f(n-1) + 1` called with n=5 will:",
-       [("A", "Return 5", False,
-         "traced the intended arithmetic but not the termination; nothing in "
-         "this function ever stops the descent"),
-        ("B", "Recurse forever until the stack overflows — there is no base case", True, None),
-        ("C", "Return 0", False,
-         "assumed the recursion bottoms out at zero on its own; no condition "
-         "in the code checks for it"),
-        ("D", "Raise a TypeError", False,
-         "expected a type failure where the actual failure is unbounded depth")]),
+    # -------------------------------------------- Topic 3: Functions & Repeats
+    _q("cs_t3_q1", "computer_science", "Functions and Repeats",
+       "knowing when a loop or function stops",
+       "A function calls itself every time, with no condition to stop. What "
+       "happens?",
+       [("A", "It returns 0", False,
+         "assumed it stops on its own; nothing in it checks whether to stop"),
+        ("B", "It keeps calling itself until the program crashes", True, None),
+        ("C", "It runs exactly once", False,
+         "missed that the call inside triggers another call, and another"),
+        ("D", "The computer skips the call", False,
+         "assumed the call is ignored rather than carried out")]),
 
-    _q("cs_t3_q2", "computer_science", "Recursion",
-       "identifying a terminating base case",
-       "A base case must guarantee that:",
-       [("A", "The function returns the right answer", False,
-         "described correctness, which is a separate property from termination"),
-        ("B", "Some call eventually returns without recursing further", True, None),
-        ("C", "The function is called at least once", False,
-         "described entry into the recursion rather than its exit"),
-        ("D", "The input is a number", False,
-         "named a type constraint, which has no bearing on whether recursion "
-         "stops")]),
+    _q("cs_t3_q2", "computer_science", "Functions and Repeats",
+       "knowing when a loop or function stops",
+       "What does a function that calls itself need, to be sure it finishes?",
+       [("A", "A comment explaining what it does", False,
+         "named documentation, which does not affect what the code does"),
+        ("B", "A case where it returns an answer without calling itself again", True, None),
+        ("C", "At least two inputs", False,
+         "named a detail of the signature, unrelated to stopping"),
+        ("D", "To be short", False,
+         "named length, which has no bearing on whether it terminates")]),
 
-    _q("cs_t3_q3", "computer_science", "Recursion",
-       "relating loop structure to growth rate",
-       "Naive recursive Fibonacci, `fib(n-1) + fib(n-2)`, costs roughly:",
-       [("A", "O(n) — it counts down from n", False,
-         "counted the depth of the recursion but not its branching; each call "
-         "spawns two more"),
-        ("B", "Exponential — each call branches into two more", True, None),
-        ("C", "O(log n) — the problem shrinks each call", False,
-         "treated a shrinking argument as halving; subtracting one is not "
-         "dividing by two"),
-        ("D", "O(n²) — two recursive calls means squared", False,
-         "read 'two calls' as a squaring factor rather than a branching factor "
-         "compounding at every level")]),
+    _q("cs_t3_q3", "computer_science", "Functions and Repeats",
+       "understanding what a variable holds",
+       "A function changes a variable that was created inside it. After the "
+       "function ends, the outside variable of the same name is:",
+       [("A", "Changed to match", False,
+         "assumed a name inside a function refers to the one outside; it is a "
+         "separate variable"),
+        ("B", "Unchanged", True, None),
+        ("C", "Deleted", False,
+         "expected the outer variable to be destroyed by an unrelated one"),
+        ("D", "Doubled", False,
+         "expected an arithmetic effect where there is no connection at all")]),
 
-    _q("cs_t3_q4", "computer_science", "Recursion",
-       "counting work inside loops",
-       "Merge sort's recursion splits in half; each level does O(n) merging. "
-       "Total:",
-       [("A", "O(n) — one pass of merging", False,
-         "counted the merging at a single level and not the log n levels that "
-         "each pay it"),
-        ("B", "O(n log n) — log n levels, O(n) work per level", True, None),
-        ("C", "O(log n) — halving dominates", False,
-         "counted the levels but dropped the per-level merging cost entirely"),
-        ("D", "O(n²) — recursion plus a loop", False,
-         "applied a nested-structure rule without checking how much each level "
-         "actually costs")]),
+    _q("cs_t3_q4", "computer_science", "Functions and Repeats",
+       "backing up a claim with evidence",
+       "Your function works on the three examples you tried. Is it correct?",
+       [("A", "Yes, definitely", False,
+         "treated three passing examples as proof; they show those three work "
+         "and nothing more"),
+        ("B", "Those three work — others might not", True, None),
+        ("C", "No, three examples prove it is broken", False,
+         "read passing tests as evidence of failure"),
+        ("D", "Examples tell you nothing whatsoever", False,
+         "discarded real if limited evidence entirely")]),
 
-    # --------------------------------------------------------- Topic 4: Memory
-    _q("cs_t4_q1", "computer_science", "Memory & State",
-       "reasoning about references and copies",
-       "A mutable default argument `def f(x, acc=[])` across two calls:",
-       [("A", "Starts fresh each call", False,
-         "assumed the default is re-evaluated per call; it is created once when "
-         "the function is defined"),
-        ("B", "Keeps whatever the first call left in it", True, None),
-        ("C", "Raises an error on the second call", False,
-         "expected a failure where the actual behaviour is silent sharing"),
-        ("D", "Copies itself automatically", False,
-         "assumed an implicit copy that the language does not perform")]),
+    # ------------------------------------------ Topic 4: Storing Things (state)
+    _q("cs_t4_q1", "computer_science", "Storing Things",
+       "understanding what a variable holds",
+       "`a = [1, 2]` then `b = a` then `b.append(3)`. What is `a` now?",
+       [("A", "Still [1, 2] — b was a copy", False,
+         "treated `b = a` as making a copy; both names point at the same list"),
+        ("B", "[1, 2, 3] — both names point at the same list", True, None),
+        ("C", "An error, lists cannot be shared", False,
+         "assumed a restriction that does not exist"),
+        ("D", "[1, 2, [3]]", False,
+         "confused adding an item with nesting a list inside another")]),
 
-    _q("cs_t4_q2", "computer_science", "Memory & State",
-       "reasoning about references and copies",
-       "A shallow copy of a list of lists means:",
-       [("A", "Everything is fully independent", False,
-         "treated shallow as deep; only the outer list is new"),
-        ("B", "The outer list is new, but the inner lists are shared", True, None),
-        ("C", "Nothing is copied at all", False,
-         "treated shallow copy as plain assignment; the outer container really "
-         "is duplicated"),
-        ("D", "Only the first element is copied", False,
-         "described a partial copy of elements, which is not what either copy "
-         "depth means")]),
+    _q("cs_t4_q2", "computer_science", "Storing Things",
+       "understanding what a variable holds",
+       "To make a list you can change without affecting the original, you "
+       "should:",
+       [("A", "Just assign it to a new name", False,
+         "assumed a new name means new data; it does not"),
+        ("B", "Make an actual copy of it", True, None),
+        ("C", "Rename the original", False,
+         "changed what the data is called rather than making a second one"),
+        ("D", "Delete the original first", False,
+         "removed the data instead of duplicating it")]),
 
-    _q("cs_t4_q3", "computer_science", "Memory & State",
-       "choosing a structure from its access pattern",
-       "Why is a dictionary lookup usually O(1)?",
-       [("A", "Dictionaries are stored sorted", False,
-         "attributed the speed to ordering; a hash table maintains no order at "
-         "all"),
-        ("B", "The key is hashed straight to a slot, skipping the search", True, None),
-        ("C", "Dictionaries are small", False,
-         "explained the cost by size rather than by the mechanism, which holds "
-         "regardless of size"),
-        ("D", "Python caches the last lookup", False,
-         "attributed general behaviour to a caching special case")]),
+    _q("cs_t4_q3", "computer_science", "Storing Things",
+       "picking the right data structure",
+       "You want to look something up by name — like a phone book. Best fit?",
+       [("A", "A list of names only", False,
+         "stored the keys with nowhere to put the values they map to"),
+        ("B", "A dictionary, mapping each name to its number", True, None),
+        ("C", "Two separate lists you keep in the same order", False,
+         "chose a structure that works until one list is edited and the two "
+         "silently fall out of step"),
+        ("D", "One long piece of text", False,
+         "chose a format with no lookup structure at all")]),
 
-    _q("cs_t4_q4", "computer_science", "Memory & State",
-       "justifying claims with a concrete argument",
-       "'This code is fast' is a weak claim mainly because:",
-       [("A", "It does not say which language", False,
-         "named a detail that would not settle the question either way"),
-        ("B", "It states no input size and no measurement", True, None),
-        ("C", "Fast is a subjective word", False,
-         "objected to the wording rather than to the missing evidence"),
-        ("D", "Code speed cannot be measured", False,
-         "denied that measurement is possible, which abandons the standard "
-         "rather than meeting it")]),
+    _q("cs_t4_q4", "computer_science", "Storing Things",
+       "picking the right data structure",
+       "Why is looking something up in a dictionary usually faster than "
+       "searching a list?",
+       [("A", "Dictionaries are always smaller", False,
+         "explained the speed by size; it holds whatever the size"),
+        ("B", "It can jump straight to the right place instead of checking "
+              "each item", True, None),
+        ("C", "Dictionaries are sorted alphabetically", False,
+         "attributed the speed to ordering, which a dictionary does not "
+         "maintain"),
+        ("D", "Lists are broken", False,
+         "treated a list as faulty rather than as suited to a different job")]),
 
-    # ---------------------------------------------------- Topic 5: Correctness
-    _q("cs_t5_q1", "computer_science", "Correctness",
-       "justifying claims with a concrete argument",
-       "Your function passed all 12 tests. This shows:",
-       [("A", "The function is correct", False,
-         "treated passing tests as proof of correctness; tests show absence of "
-         "the failures you thought to check for"),
-        ("B", "It handles those 12 cases — nothing beyond them", True, None),
-        ("C", "Nothing at all", False,
-         "discarded real evidence entirely; passing tests is weak evidence, not "
-         "zero evidence"),
-        ("D", "The tests are too easy", False,
-         "drew a conclusion about the tests that the result does not support")]),
+    # --------------------------------------------- Topic 5: Getting It Right
+    _q("cs_t5_q1", "computer_science", "Getting It Right",
+       "backing up a claim with evidence",
+       "Someone says 'my code is fast'. What would actually back that up?",
+       [("A", "It felt quick when they ran it", False,
+         "offered an impression where a timing claim needs a measurement"),
+        ("B", "A measured time, on a stated input size", True, None),
+        ("C", "It is short code", False,
+         "used length as a proxy for speed; they are unrelated"),
+        ("D", "It has no comments", False,
+         "named a style detail with no bearing on speed")]),
 
-    _q("cs_t5_q2", "computer_science", "Correctness",
-       "identifying a terminating base case",
-       "A `while` loop whose condition never becomes false is missing:",
-       [("A", "A return statement", False,
-         "named how a function exits rather than how a loop does"),
-        ("B", "Something inside it that moves toward the condition failing", True, None),
-        ("C", "An else branch", False,
-         "named an optional construct with no bearing on termination"),
-        ("D", "A counter variable", False,
-         "named one common mechanism as if it were the requirement; the "
-         "requirement is progress, however achieved")]),
+    _q("cs_t5_q2", "computer_science", "Getting It Right",
+       "backing up a claim with evidence",
+       "Your code crashes only sometimes. The most useful next step is:",
+       [("A", "Run it again and hope", False,
+         "repeated the action without gathering anything new"),
+        ("B", "Find out exactly what input makes it crash", True, None),
+        ("C", "Rewrite the whole thing", False,
+         "discarded working code before knowing what was wrong with it"),
+        ("D", "Add more comments", False,
+         "changed documentation, which cannot affect behaviour")]),
 
-    _q("cs_t5_q3", "computer_science", "Correctness",
-       "justifying claims with a concrete argument",
-       "The strongest evidence that a sort is stable is:",
-       [("A", "It sorted the example correctly", False,
-         "used an output that a stable and unstable sort would both produce"),
-        ("B", "Equal keys came out in their original relative order", True, None),
-        ("C", "The documentation says so", False,
-         "cited an authority rather than an observation, when the property is "
-         "directly testable"),
-        ("D", "It ran quickly", False,
-         "offered a performance observation as evidence about ordering")]),
+    _q("cs_t5_q3", "computer_science", "Getting It Right",
+       "working out how long code takes",
+       "Your program is too slow. Where should you look first?",
+       [("A", "The shortest function, it is easiest to read", False,
+         "chose by convenience rather than by where the time is going"),
+        ("B", "The part that runs the most times", True, None),
+        ("C", "The first line of the file", False,
+         "chose by position in the file, which says nothing about cost"),
+        ("D", "The comments", False,
+         "looked at text the computer never runs")]),
 
-    _q("cs_t5_q4", "computer_science", "Correctness",
-       "counting work inside loops",
-       "Checking if any pair in a list sums to k, with two nested loops, is:",
-       [("A", "O(n) — each element is visited once", False,
-         "counted the outer loop's visits only, missing that each one runs the "
-         "inner loop again"),
-        ("B", "O(n²) — every element is paired against every other", True, None),
-        ("C", "O(log n) — pairs can be found by halving", False,
-         "assumed a halving structure that nested scanning does not have"),
-        ("D", "O(1) — it stops as soon as it finds a pair", False,
-         "gave the best case where the question asks for the cost in general")]),
+    _q("cs_t5_q4", "computer_science", "Getting It Right",
+       "knowing when a loop or function stops",
+       "A loop is meant to stop when it finds an item, but never does. Most "
+       "likely:",
+       [("A", "The list is too long", False,
+         "blamed the data size; a loop that finds its item stops whatever the "
+         "length"),
+        ("B", "The stopping condition is never actually true", True, None),
+        ("C", "The computer is slow", False,
+         "attributed a logic problem to hardware"),
+        ("D", "Loops cannot stop early", False,
+         "assumed a limitation that does not exist")]),
 ]
 
 
 # ==================================================================== ROBOTICS
-# Theoretical and a step harder. Same design: concepts shared across topics.
+# Same design. Five topics, five concepts, each spread across three or four
+# questions in different topics. Theory a second-year has met, no postgraduate
+# material.
 
 ROBO: list[Question] = [
-    # --------------------------------------------------- Topic 1: Kinematics
-    _q("rb_t1_q1", "robotics", "Kinematics",
-       "distinguishing forward from inverse problems",
-       "Inverse kinematics for a 6-DOF arm generally has:",
-       [("A", "Exactly one solution", False,
-         "assumed uniqueness; multiple joint configurations commonly reach the "
-         "same pose"),
-        ("B", "Possibly many solutions, possibly none", True, None),
-        ("C", "Always infinitely many", False,
-         "generalised the redundant case to all cases; a 6-DOF arm is not "
-         "redundant for a 6-DOF pose"),
-        ("D", "No solution unless the arm is redundant", False,
-         "treated redundancy as a precondition for solvability rather than as "
-         "a cause of extra solutions")]),
+    # --------------------------------------------------- Topic 1: How It Moves
+    _q("rb_t1_q1", "robotics", "How It Moves",
+       "working out where the robot ends up",
+       "You know every joint angle of a robot arm. Can you work out where the "
+       "hand ends up?",
+       [("A", "No, that is impossible to calculate", False,
+         "treated a direct calculation as impossible; the angles and link "
+         "lengths fully determine the position"),
+        ("B", "Yes — the angles and link lengths give exactly one answer", True, None),
+        ("C", "Only if the arm has two joints", False,
+         "imposed a limit on joint count that does not exist"),
+        ("D", "Only by measuring it with a camera", False,
+         "required a sensor for something the geometry already answers")]),
 
-    _q("rb_t1_q2", "robotics", "Kinematics",
-       "reasoning about singularities and degeneracy",
-       "At a kinematic singularity, the Jacobian:",
-       [("A", "Becomes the identity matrix", False,
-         "described a well-conditioned mapping where the defining feature is "
-         "loss of rank"),
-        ("B", "Loses rank — some end-effector direction becomes unreachable", True, None),
-        ("C", "Becomes undefined", False,
-         "treated the Jacobian as failing to exist; it exists, it is simply "
-         "rank-deficient"),
-        ("D", "Grows without bound", False,
-         "confused the Jacobian with its inverse, which is what blows up")]),
+    _q("rb_t1_q2", "robotics", "How It Moves",
+       "working out where the robot ends up",
+       "You know where you WANT the hand to be, and need the joint angles. "
+       "This is usually:",
+       [("A", "Easier than the other direction", False,
+         "reversed the difficulty; going backwards from a position is the "
+         "harder problem"),
+        ("B", "Harder — there can be several ways to reach the same spot", True, None),
+        ("C", "Impossible", False,
+         "treated a solvable problem as having no answer"),
+        ("D", "The same calculation, run backwards", False,
+         "assumed the forward calculation simply reverses; it does not")]),
 
-    _q("rb_t1_q3", "robotics", "Kinematics",
-       "distinguishing forward from inverse problems",
-       "Forward kinematics, compared to inverse kinematics, is:",
-       [("A", "Harder, because it composes many transforms", False,
-         "equated the number of transforms with difficulty; composition is "
-         "mechanical, inversion is not"),
-        ("B", "A direct computation with a unique answer", True, None),
-        ("C", "Also multi-solution", False,
-         "carried the ambiguity of the inverse problem over to the forward one, "
-         "where joint angles determine the pose exactly"),
-        ("D", "Only defined for planar arms", False,
-         "imposed a dimensional restriction that does not exist")]),
+    _q("rb_t1_q3", "robotics", "How It Moves",
+       "combining movements in the right order",
+       "Turn 90° then walk forward 1m, versus walk forward 1m then turn 90°. "
+       "Same end position?",
+       [("A", "Yes, always the same", False,
+         "assumed order does not matter; turning first points the walk in a "
+         "different direction"),
+        ("B", "No — the order changes where you end up", True, None),
+        ("C", "Only if the robot is small", False,
+         "made the outcome depend on size, which is irrelevant"),
+        ("D", "Only for wheeled robots", False,
+         "restricted to one robot type a rule that applies generally")]),
 
-    _q("rb_t1_q4", "robotics", "Kinematics",
-       "composing rigid-body transforms in order",
-       "Rotating then translating is not the same as translating then rotating "
+    _q("rb_t1_q4", "robotics", "How It Moves",
+       "combining movements in the right order",
+       "A robot's position is given in the map's frame. To use it in the "
+       "robot's own frame you need:",
+       [("A", "Nothing, they are the same thing", False,
+         "treated two different frames as interchangeable"),
+        ("B", "To convert between the two frames", True, None),
+        ("C", "To restart the robot", False,
+         "proposed an action unrelated to the coordinate question"),
+        ("D", "A bigger map", False,
+         "changed the map size rather than converting between frames")]),
+
+    # ------------------------------------------------- Topic 2: Keeping Steady
+    _q("rb_t2_q1", "robotics", "Keeping Steady",
+       "matching a fix to what went wrong",
+       "A robot arm keeps stopping just short of where you told it to go. "
+       "This means:",
+       [("A", "It is moving too fast", False,
+         "named speed, which does not explain a consistent shortfall at rest"),
+        ("B", "There is a small leftover error the controller is not "
+              "correcting", True, None),
+        ("C", "The target is wrong", False,
+         "blamed the goal rather than the response falling short of it"),
+        ("D", "The battery is flat", False,
+         "named a power fault where the arm is moving, just not far enough")]),
+
+    _q("rb_t2_q2", "robotics", "Keeping Steady",
+       "matching a fix to what went wrong",
+       "A robot overshoots its target, comes back, overshoots again, and wobbles. "
+       "Most likely:",
+       [("A", "It is not trying hard enough", False,
+         "read overshoot as too little effort; it is a sign of too much"),
+        ("B", "It is correcting too strongly", True, None),
+        ("C", "The target moved", False,
+         "blamed the goal for a pattern caused by the response"),
+        ("D", "The sensors are too accurate", False,
+         "treated good measurement as a cause of wobble")]),
+
+    _q("rb_t2_q3", "robotics", "Keeping Steady",
+       "backing a claim with a measurement",
+       "A robot reacts slowly because its sensor readings arrive late. This "
+       "delay makes control:",
+       [("A", "Easier — it has more time to think", False,
+         "treated delay as helpful; corrections based on old information arrive "
+         "too late to fit the situation"),
+        ("B", "Harder — it is correcting based on out-of-date information", True, None),
+        ("C", "Unaffected", False,
+         "assumed timing does not matter to a feedback loop"),
+        ("D", "Perfect", False,
+         "treated a known problem as an improvement")]),
+
+    _q("rb_t2_q4", "robotics", "Keeping Steady",
+       "backing a claim with a measurement",
+       "'The robot is well tuned.' What would actually show that?",
+       [("A", "It looked smooth once", False,
+         "offered a single impression where a tuning claim needs numbers"),
+        ("B", "Measured overshoot and settling time against a target", True, None),
+        ("C", "The settings match a textbook", False,
+         "cited values chosen for a different machine instead of this one's "
+         "measured behaviour"),
+        ("D", "It has not broken yet", False,
+         "offered absence of failure as evidence of good performance")]),
+
+    # ------------------------------------------------- Topic 3: Knowing Where
+    _q("rb_t3_q1", "robotics", "Knowing Where It Is",
+       "choosing a method for the job",
+       "Wheel counters say the robot travelled 10m; GPS says 9m. The best "
+       "approach is:",
+       [("A", "Always believe the wheels", False,
+         "trusted one source completely; wheels slip and the error builds up"),
+        ("B", "Combine both, leaning on whichever is more reliable here", True, None),
+        ("C", "Always believe GPS", False,
+         "trusted one source completely in the other direction"),
+        ("D", "Ignore both and guess", False,
+         "discarded two imperfect but real measurements")]),
+
+    _q("rb_t3_q2", "robotics", "Knowing Where It Is",
+       "backing a claim with a measurement",
+       "Counting wheel turns to track position goes wrong over time mainly "
        "because:",
-       [("A", "Rotation matrices are not invertible", False,
-         "denied a property rotations do have; they are orthogonal and always "
-         "invertible"),
-        ("B", "Transform composition does not commute", True, None),
-        ("C", "Translation changes the object's scale", False,
-         "attributed a scaling effect to a rigid motion, which preserves size"),
-        ("D", "Only one of the two is a valid transform", False,
-         "treated one ordering as illegal; both are valid, they simply differ")]),
+       [("A", "The wheels get tired", False,
+         "gave a non-physical reason"),
+        ("B", "Small errors from slipping add up and never get corrected", True, None),
+        ("C", "The robot forgets", False,
+         "described memory loss rather than accumulating measurement error"),
+        ("D", "It only works indoors", False,
+         "named a location limit rather than the drift mechanism")]),
 
-    # ------------------------------------------------------- Topic 2: Control
-    _q("rb_t2_q1", "robotics", "Control",
-       "relating controller terms to observed error behaviour",
-       "A system settles near but never reaches its setpoint. The term to add:",
-       [("A", "Proportional", False,
-         "added gain to a term already producing too little force at small "
-         "error, which is exactly where the steady-state offset lives"),
-        ("B", "Integral — it accumulates the standing error", True, None),
-        ("C", "Derivative", False,
-         "added damping, which responds to rate of change; a constant offset "
-         "has no rate of change"),
-        ("D", "A deadband", False,
-         "proposed ignoring small errors, which entrenches the offset rather "
-         "than removing it")]),
+    _q("rb_t3_q3", "robotics", "Knowing Where It Is",
+       "working out where the robot ends up",
+       "A robot knows it is exactly 5m from one landmark. Does it know where "
+       "it is?",
+       [("A", "Yes, precisely", False,
+         "treated one distance as fixing a position; it leaves a whole circle "
+         "of possibilities"),
+        ("B", "No — it could be anywhere on a circle around that landmark", True, None),
+        ("C", "It knows nothing at all", False,
+         "discarded a real constraint as worthless"),
+        ("D", "Only if the landmark is moving", False,
+         "made the answer depend on something that would make it harder")]),
 
-    _q("rb_t2_q2", "robotics", "Control",
-       "relating controller terms to observed error behaviour",
-       "A system oscillates around its setpoint with growing amplitude. Most "
-       "likely:",
-       [("A", "Integral gain is too low", False,
-         "identified a term that affects standing offset, not oscillation "
-         "amplitude"),
-        ("B", "Proportional gain is too high for the damping present", True, None),
-        ("C", "The setpoint is wrong", False,
-         "located the fault in the target rather than in the response, though "
-         "the response is what is unstable"),
-        ("D", "The sensor is too accurate", False,
-         "treated measurement quality as a cause of instability")]),
-
-    _q("rb_t2_q3", "robotics", "Control",
-       "reasoning about feedback delay and stability",
-       "Adding delay into a feedback loop tends to:",
-       [("A", "Improve stability by smoothing the response", False,
-         "treated delay as filtering; it shifts phase, which erodes the margin "
-         "that keeps the loop stable"),
-        ("B", "Reduce the stability margin — corrections arrive late", True, None),
-        ("C", "Have no effect if the gain is unchanged", False,
-         "treated stability as a function of gain alone, independent of timing"),
-        ("D", "Eliminate steady-state error", False,
-         "attributed to delay an effect that belongs to integral action")]),
-
-    _q("rb_t2_q4", "robotics", "Control",
-       "justifying claims with a concrete argument",
-       "'The controller is tuned' is best supported by:",
-       [("A", "It looked smooth on the demo run", False,
-         "offered a single unmeasured observation where a tuning claim needs "
-         "quantities"),
-        ("B", "Measured overshoot and settling time against a stated target", True, None),
-        ("C", "The gains match a textbook table", False,
-         "cited values chosen for a different plant rather than behaviour "
-         "measured on this one"),
-        ("D", "It has not failed yet", False,
-         "offered absence of observed failure as evidence of a performance "
-         "property")]),
-
-    # ---------------------------------------------- Topic 3: State Estimation
-    _q("rb_t3_q1", "robotics", "State Estimation",
-       "separating process noise from measurement noise",
-       "A Kalman filter's measurement update mainly:",
-       [("A", "Predicts where the robot will be next", False,
-         "described the prediction step, which propagates the model forward "
-         "before any measurement arrives"),
-        ("B", "Corrects the prediction using a sensor reading, weighted by "
-              "confidence", True, None),
-        ("C", "Replaces the estimate with the sensor reading", False,
-         "discarded the prediction entirely; the update blends the two by their "
-         "relative certainty"),
-        ("D", "Removes all noise from the measurement", False,
-         "treated filtering as noise elimination rather than as weighted "
-         "combination under uncertainty")]),
-
-    _q("rb_t3_q2", "robotics", "State Estimation",
-       "separating process noise from measurement noise",
-       "A filter that trusts its model too much and its sensors too little "
-       "shows:",
-       [("A", "Jittery estimates that track noise", False,
-         "described the opposite failure, which comes from over-trusting the "
-         "sensor"),
-        ("B", "Smooth estimates that lag reality and drift", True, None),
-        ("C", "Divergence within one step", False,
-         "described an immediate numerical failure; mis-weighting degrades the "
-         "estimate gradually"),
-        ("D", "No change in behaviour", False,
-         "treated the noise covariances as having no effect on the outcome")]),
-
-    _q("rb_t3_q3", "robotics", "State Estimation",
-       "reasoning about singularities and degeneracy",
-       "Localising with only one range beacon leaves the pose:",
-       [("A", "Fully determined", False,
-         "treated one constraint as sufficient for a multi-dimensional pose"),
-        ("B", "Constrained to a circle — under-determined", True, None),
-        ("C", "Over-determined", False,
-         "inverted the relationship; over-determined means more constraints "
-         "than unknowns"),
-        ("D", "Undefined and unusable", False,
-         "discarded a genuine partial constraint as worthless")]),
-
-    _q("rb_t3_q4", "robotics", "State Estimation",
-       "justifying claims with a concrete argument",
-       "The strongest evidence that odometry is drifting is:",
-       [("A", "The robot looks slightly off", False,
-         "offered an impression where the claim is about accumulating error "
-         "over time"),
-        ("B", "Estimated pose diverges from a fixed reference, growing with "
-              "distance travelled", True, None),
-        ("C", "The wheels are worn", False,
-         "named a plausible cause and offered it in place of the observation"),
+    _q("rb_t3_q4", "robotics", "Knowing Where It Is",
+       "backing a claim with a measurement",
+       "The strongest evidence that a robot's position estimate is drifting:",
+       [("A", "It looks a bit off", False,
+         "offered an impression where the claim is about error growing over "
+         "time"),
+        ("B", "The gap from a known reference grows the further it travels", True, None),
+        ("C", "The wheels look worn", False,
+         "named a possible cause and offered it in place of the observation"),
         ("D", "The map is old", False,
-         "named a property of the map rather than of the pose estimate")]),
+         "named a property of the map rather than of the estimate")]),
 
-    # -------------------------------------------------- Topic 4: Path Planning
-    _q("rb_t4_q1", "robotics", "Path Planning",
-       "relating search strategy to guarantees",
-       "A* returns an optimal path provided the heuristic is:",
-       [("A", "Fast to compute", False,
-         "named a performance property where optimality depends on a bound"),
-        ("B", "Admissible — never overestimates the true remaining cost", True, None),
-        ("C", "Always zero", False,
-         "named a heuristic that is admissible but reduces A* to Dijkstra; the "
-         "requirement is the bound, not the value"),
-        ("D", "Equal to the true cost", False,
-         "named the ideal case as the requirement; it is sufficient, not "
-         "necessary")]),
+    # ------------------------------------------------- Topic 4: Finding a Path
+    _q("rb_t4_q1", "robotics", "Finding a Path",
+       "choosing a method for the job",
+       "A path-finding method that always gives the shortest route, if one "
+       "exists, is described as:",
+       [("A", "Fast", False,
+         "named speed, which is a separate property from what it guarantees"),
+        ("B", "Guaranteed to find the best path", True, None),
+        ("C", "Random", False,
+         "named an approach that gives no such guarantee"),
+        ("D", "Simple", False,
+         "named ease of writing rather than what it promises")]),
 
-    _q("rb_t4_q2", "robotics", "Path Planning",
-       "relating search strategy to guarantees",
-       "RRT is described as probabilistically complete, which means:",
-       [("A", "It always finds the shortest path", False,
-         "confused completeness with optimality; RRT gives no optimality "
+    _q("rb_t4_q2", "robotics", "Finding a Path",
+       "choosing a method for the job",
+       "A method that tries random points and usually finds a path eventually:",
+       [("A", "Always finds the shortest path", False,
+         "confused finding a path with finding the best one"),
+        ("B", "May find a path, but not necessarily the shortest", True, None),
+        ("C", "Never works", False,
+         "dismissed a method that does work, just without an optimality "
          "guarantee"),
-        ("B", "Given enough samples it will find a path if one exists", True, None),
-        ("C", "It finds a path in bounded time", False,
-         "read a limiting guarantee as a time bound"),
-        ("D", "It never fails", False,
-         "read a probabilistic guarantee as a deterministic one")]),
+        ("D", "Is the same as checking every option", False,
+         "equated sampling with exhaustive search")]),
 
-    _q("rb_t4_q3", "robotics", "Path Planning",
-       "counting work inside loops",
-       "Grid search cost when resolution doubles in each of 3 dimensions:",
-       [("A", "Doubles", False,
-         "scaled the cost by the resolution factor once, though it applies "
-         "along every dimension"),
-        ("B", "Grows 8× — the factor applies per dimension", True, None),
+    _q("rb_t4_q3", "robotics", "Finding a Path",
+       "accounting for weight and force",
+       "You split a map into squares to search it. If you halve the square "
+       "size, the number of squares:",
+       [("A", "Halves", False,
+         "reversed the relationship; smaller squares means more of them"),
+        ("B", "Goes up a lot — roughly four times, on a flat map", True, None),
         ("C", "Stays the same", False,
-         "treated cell count as independent of resolution"),
-        ("D", "Grows 3×", False,
-         "added the dimensions rather than compounding across them")]),
+         "treated the count as independent of the square size"),
+        ("D", "Doubles", False,
+         "applied the factor once, though it applies along both width and "
+         "height")]),
 
-    _q("rb_t4_q4", "robotics", "Path Planning",
-       "composing rigid-body transforms in order",
-       "A path planned in map frame, executed in robot frame, needs:",
-       [("A", "No transform — frames are interchangeable", False,
-         "treated distinct frames as equivalent, which discards the pose "
-         "relating them"),
-        ("B", "The map-to-robot transform applied to each waypoint", True, None),
-        ("C", "Only a rotation", False,
-         "kept the orientation change and dropped the translation between "
-         "frame origins"),
-        ("D", "Re-planning from scratch", False,
-         "discarded a valid plan that a transform would have reused")]),
+    _q("rb_t4_q4", "robotics", "Finding a Path",
+       "combining movements in the right order",
+       "A planned path is a list of points in the map. To follow it, the robot "
+       "must:",
+       [("A", "Ignore its own position", False,
+         "dropped the information needed to know where to go next"),
+        ("B", "Work out where each point is relative to itself", True, None),
+        ("C", "Plan a completely new path", False,
+         "discarded a valid plan instead of using it"),
+        ("D", "Drive in a straight line regardless", False,
+         "ignored the path that was just planned")]),
 
-    # ------------------------------------------------------- Topic 5: Dynamics
-    _q("rb_t5_q1", "robotics", "Dynamics",
-       "distinguishing kinematic from dynamic models",
-       "A kinematic model, unlike a dynamic one, ignores:",
-       [("A", "Joint angles", False,
-         "named the quantity a kinematic model is built from"),
-        ("B", "Mass, inertia and the forces producing the motion", True, None),
-        ("C", "Link lengths", False,
-         "named a geometric parameter kinematics depends on directly"),
-        ("D", "Time entirely", False,
-         "overstated the omission; kinematics handles velocities, just not "
-         "their causes")]),
+    # ------------------------------------------- Topic 5: Weight and Force
+    _q("rb_t5_q1", "robotics", "Weight and Force",
+       "accounting for weight and force",
+       "Planning a robot arm's path using only geometry ignores:",
+       [("A", "The joint angles", False,
+         "named the very thing geometry is built from"),
+        ("B", "Its weight, and the force needed to move it", True, None),
+        ("C", "The link lengths", False,
+         "named another geometric quantity that is included"),
+        ("D", "Time completely", False,
+         "overstated it; geometry handles positions over time, just not the "
+         "forces behind them")]),
 
-    _q("rb_t5_q2", "robotics", "Dynamics",
-       "distinguishing kinematic from dynamic models",
-       "A fast arm tracks a kinematically-planned path poorly mainly because:",
-       [("A", "The path was geometrically wrong", False,
-         "located the fault in the geometry, though the path is reachable; the "
-         "problem is the force needed to follow it at speed"),
-        ("B", "Inertial forces at speed were never accounted for", True, None),
-        ("C", "The controller gain is too low", False,
-         "offered a tuning symptom in place of the modelling gap causing it"),
-        ("D", "Encoders are too slow", False,
-         "named a sensing limit where the omission is in the model")]),
+    _q("rb_t5_q2", "robotics", "Weight and Force",
+       "matching a fix to what went wrong",
+       "A robot arm follows a slow path well but a fast one badly. Most likely "
+       "because:",
+       [("A", "The path is the wrong shape", False,
+         "blamed the geometry, though the same path worked slowly"),
+        ("B", "Moving fast needs more force than was planned for", True, None),
+        ("C", "The motors switch off at speed", False,
+         "described a fault rather than the effect of speed on the force needed"),
+        ("D", "Fast paths are always impossible", False,
+         "treated a tuning and modelling problem as a hard limit")]),
 
-    _q("rb_t5_q3", "robotics", "Dynamics",
-       "reasoning about feedback delay and stability",
-       "Gravity compensation helps mainly by:",
-       [("A", "Making the arm lighter", False,
-         "treated compensation as changing the physical mass rather than "
-         "cancelling a known torque"),
-        ("B", "Removing a predictable standing torque the feedback would "
-              "otherwise fight", True, None),
-        ("C", "Reducing sensor noise", False,
-         "attributed a measurement benefit to a feed-forward torque term"),
-        ("D", "Increasing the maximum speed", False,
-         "named a performance outcome rather than the mechanism")]),
+    _q("rb_t5_q3", "robotics", "Weight and Force",
+       "accounting for weight and force",
+       "Holding a heavy arm still against gravity needs:",
+       [("A", "No effort, it just stays there", False,
+         "assumed a held position is free; gravity pulls on it continuously"),
+        ("B", "A constant push from the motors", True, None),
+        ("C", "Effort only while it is moving", False,
+         "assumed force is needed only for motion, not for holding"),
+        ("D", "The arm to be switched off", False,
+         "removed the force that is holding it up")]),
 
-    _q("rb_t5_q4", "robotics", "Dynamics",
-       "reasoning about singularities and degeneracy",
-       "Near a singularity, commanding a small end-effector motion can require:",
-       [("A", "Smaller joint velocities than usual", False,
-         "inverted the relationship; the mapping degrades, it does not become "
-         "more efficient"),
-        ("B", "Very large joint velocities", True, None),
-        ("C", "Exactly the same joint velocities", False,
-         "treated the joint-to-task mapping as uniform across the workspace"),
-        ("D", "No joint motion at all", False,
-         "described a frozen arm where the actual risk is a violent one")]),
+    _q("rb_t5_q4", "robotics", "Weight and Force",
+       "backing a claim with a measurement",
+       "Your model says the arm needs 5 units of force; in reality it needs 7. "
+       "The sensible response:",
+       [("A", "Insist the model is right", False,
+         "kept the model over the measurement, which is how a wrong model "
+         "survives"),
+        ("B", "Treat the model as approximate and correct for the difference", True, None),
+        ("C", "Ignore the reading", False,
+         "discarded the measurement that revealed the gap"),
+        ("D", "Never use models again", False,
+         "abandoned a useful approximation over one known error")]),
 ]
 
 

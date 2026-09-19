@@ -12,8 +12,8 @@ Each question is tagged with a `concept` — the reasoning skill it tests. The
 same concept deliberately appears in several different topics. That is the
 whole point of the design, and finding it is your main job:
 
-> Three wrong answers spread across Sorting, Recursion and Correctness that all
-> share the concept "counting work inside loops" is ONE gap, not three. Say so.
+> Three wrong answers spread across three different topics that all share one
+> concept is ONE thing to fix, not three. Say so.
 
 Put the sentence in `cross_topic_pattern`, and put the concept's exact name in
 `pattern_concept` — both, or neither. To find it, look for a concept whose
@@ -35,12 +35,12 @@ the evidence contradicts. The claim you are making is that **one explanation
 would fix all of them**, which is a different and much stronger thing. Write it
 that way:
 
-Good: "One idea sits under all four: work inside a loop still costs something.
-In Time Complexity it was the inner shift, in Data Structures the hidden scan,
-in Recursion the merge at each level."
+Good: "One idea explains all three: work happening inside a loop still counts.
+It came up when looking at nested loops, when searching a list, and again when
+checking why something was slow."
 
-Bad: "The same mistake appears in Time Complexity, Data Structures and
-Recursion." — they are not the same mistake, and this will be rejected.
+Bad: "The same mistake appears in three topics." — they are not the same
+mistake, and this will be rejected.
 
 ## Everything is already counted for you
 
@@ -58,8 +58,8 @@ nothing needs matching across lists:
 **Copy `verdict` across unchanged.** Do not recompute it or argue with it.
 
 **A `concept` is always copied verbatim from a `by_concept` row.** Never invent
-one and never use a topic name. "Recursion" and "Data Structures" are topics,
-not concepts; "identifying a terminating base case" is a concept. Putting a
+one and never use a topic name. "Lists and Loops" and "How Code Runs" are topics,
+not concepts; "knowing when a loop or function stops" is a concept. Putting a
 topic where a concept belongs is rejected automatically, in code, before
 anything else reads the report.
 
@@ -92,11 +92,16 @@ from the database; repeating it is how a number gets copied wrong, and a report
 whose prose contradicts its own figures is worse than one that never quoted
 them.
 
-Good: "Each of these counted the outer loop and skipped the work inside it —
-the inner shift, the membership scan, the merge at each level."
-Bad: "Missed 4 of 5 questions on this concept."
+Write it as a full sentence a student can read aloud, not a fragment or a
+note-to-self. It lands directly in a paragraph on their results page.
 
-Naming the topics is fine and useful — "in Recursion and in Correctness" —
+Good: "The misses all counted the obvious loop and forgot the work happening
+inside it."
+Bad: "Missed 4 of 5 questions on this concept."
+Bad: "counted outer loop only" — a fragment, not a sentence.
+
+Naming the topics is fine and useful — "in Lists and Loops, and again in
+Getting It Right" —
 because that is the cross-topic point. Just not the arithmetic.
 
 ### Never say more than the counts allow
@@ -112,7 +117,7 @@ every question on a concept, and that claim is usually wrong.
 
 Write about the misses specifically instead:
 
-- Good: "The misses counted the outer loop and skipped the work inside it."
+- Good: "The misses counted the obvious loop and skipped the work inside it."
 - Good: "One miss chose a sorted structure where a hash lookup was available."
 - Bad: "Each of these missed the hidden scan." — claims it about all of them.
 - Bad: "Every answer here was right." — claims a clean sweep.
@@ -131,6 +136,13 @@ not, and the difference is the whole point of the check.
 
 ## How to write
 
+**Plain English, for a second-year student who has not heard your vocabulary.**
+Write the way a helpful person speaks: short sentences, ordinary words, no
+jargon and no abbreviations. If a term was not in the question they answered,
+do not use it.
+
+- `headline` is one friendly sentence summing up how it went. Not a score - the
+  score is printed right above it.
 - Describe the work, never the person. "This answer counted the outer loop
   only" — not "you are careless" or "you are a weak student".
 - No praise padding and no softening. A gap stated plainly is respectful; a gap
