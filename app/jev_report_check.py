@@ -142,7 +142,8 @@ def _questions() -> dict:
 
 
 def judge(*, settings: Settings, budget, report: dict, facts: dict,
-          kind: str, timeout: float = 60.0) -> tuple[Any, dict]:
+          kind: str, timeout: float = 60.0,
+          json_blob: str | None = None) -> tuple[Any, dict]:
     """Check one report with Jev. Returns (ReportCheck-shaped verdict, meta).
 
     Mirrors check_citations()'s contract: the caller cannot tell, from the
@@ -150,6 +151,9 @@ def judge(*, settings: Settings, budget, report: dict, facts: dict,
 
     Raises JevError on any Jev-side failure. The caller (report._generate)
     catches, records, and falls back to the chat checker.
+
+    `json_blob` is the test escape hatch, mirroring jev_compare.judge: pass
+    pre-captured JSON to avoid the network. None in production.
     """
     budget.check_tokens()
     body = {
@@ -157,18 +161,21 @@ def judge(*, settings: Settings, budget, report: dict, facts: dict,
         "state": build_jev_check_state(report, facts, kind),
         "questions": _questions(),
     }
-    try:
-        r = httpx.post(DECISIONS_API,
-                       headers={"Authorization": f"Bearer {settings.api_key}"},
-                       json=body, timeout=timeout)
-    except TRANSPORT_ERRORS as e:
-        # Transport-level failure (network/timeout/malformed header like an
-        # empty Bearer key): wrapped as JevError so the caller's outage path
-        # treats it as an outage, not a crash.
-        raise JevError(f"Jev transport failure: {type(e).__name__}: {e}") from e
-    if r.status_code != 200:
-        raise JevError(f"Jev HTTP {r.status_code}: {r.text[:300]}")
-    data = r.json()
+    if json_blob is not None:
+        data = json.loads(json_blob)
+    else:
+        try:
+            r = httpx.post(DECISIONS_API,
+                           headers={"Authorization": f"Bearer {settings.api_key}"},
+                           json=body, timeout=timeout)
+        except TRANSPORT_ERRORS as e:
+            # Transport-level failure (network/timeout/malformed header like an
+            # empty Bearer key): wrapped as JevError so the caller's outage path
+            # treats it as an outage, not a crash.
+            raise JevError(f"Jev transport failure: {type(e).__name__}: {e}") from e
+        if r.status_code != 200:
+            raise JevError(f"Jev HTTP {r.status_code}: {r.text[:300]}")
+        data = r.json()
     budget.record_tokens((data.get("usage") or {}).get("total_tokens", 0))
 
     answers = data.get("answers", {})
@@ -176,8 +183,8 @@ def judge(*, settings: Settings, budget, report: dict, facts: dict,
     # probability. Treat Jev's own `confidence` as the distance from 0.5
     # (a coin flip is certainty of nothing): |2*(noul-0.5)|.
     noul = float((answers.get("false_somewhere") or {}).get("noul", 0.0))
-    claim = (answers.get("bad_claim") or {})
-    bad_noul = float(claim.get("noul", 0.0))
+    claim_q = (answers.get("bad_claim") or {})
+    bad_noul = float(claim_q.get("noul", 0.0))
     reported_conf = (answers.get("false_somewhere") or {}).get("confidence")
     confidence = (float(reported_conf) if reported_conf is not None
                   else abs(noul - 0.5) * 2.0)
@@ -185,7 +192,25 @@ def judge(*, settings: Settings, budget, report: dict, facts: dict,
 
     v = JevVerdict(noul=noul, confidence=confidence, model=model_served)
 
+    # The second question's whole job: name WHICH numbered claim is the
+    # violation, so the redrafting prompt receives something actionable
+    # instead of a generic objection. The numbered bullets live in the state
+    # block (build_jev_check_state), so the number maps back to the sentence.
+    claim_no = 0
+    if not v.accepted:
+        try:
+            claim_no = int(float(claim_q.get("claim", 0) or 0))
+        except (TypeError, ValueError):
+            claim_no = 0
+        claims = _report_bullets(report)
+        if 0 < claim_no <= len(claims):
+            v.detail = f"Jev names claim {claim_no}: {claims[claim_no - 1]}"
+        else:
+            v.detail = ("Jev judged the report false somewhere but did not "
+                        "name a specific claim.")
+
     meta = {"noul_false": noul, "bad_claim_noul": bad_noul,
             "confidence": confidence, "model": model_served,
+            "bad_claim": claim_no,
             "below_floor": confidence < settings.jev_confidence_floor}
     return v, meta

@@ -838,7 +838,8 @@ def _run_check(body: dict, facts: dict, kind: str, settings, budget,
                         failed_check=verdict.failed_check,
                         detail=(f"jev noul={verdict.noul:.2f} "
                                 f"confidence={verdict.confidence:.2f} "
-                                f"(model {verdict.model})"))
+                                f"(model {verdict.model})"
+                                + (f" - {verdict.detail}" if verdict.detail else "")))
     if meta["below_floor"]:
         check = ReportCheck(
             verdict="accepted", failed_check=None,

@@ -249,13 +249,23 @@ def judge(*, settings: Settings, budget, evidence: dict, prior: dict,
         label_q = answers.get("label", {})
         label = label_q.get("choice", "")
         if label not in LABELS:
-            raise JevVerdict if False else JevError(  # noqa: unreachable tie-off
+            raise JevError(
                 f"Jev returned an unrecognised label {label!r}")
-        explanation = body["questions"]["label"]["criteria"][label]
-        # The explanation Jev gives is the criteria text - which is honest,
-        # but the compare prompt asked for WHICH assignment was compared and
-        # WHAT it showed, so we surface the refs instead and let the finding
-        # step name the specific comparison.
+        # What Jev actually said. If the API returned a rationale/reasoning
+        # field, that is the verdict's explanation - the model's own reading.
+        # The criteria text is the FALLBACK, used only when the answer carries
+        # nothing self-explanatory: it is rules we sent, not reasoning we got,
+        # and presenting it as the verdict's why would inflate the audit trail.
+        explanation = (label_q.get("rationale")
+                       or label_q.get("explanation")
+                       or label_q.get("reason")
+                       or body["questions"]["label"]["criteria"][label])
+        # Refs are CONTEXT, not evidence of what Jev relied on: everything
+        # supported in the student's prior history, sorted. Named for what it
+        # is so no caller (or judge) reads it as "the verdict's basis". A
+        # not_enough_evidence verdict legitimately ships the same list - the
+        # student HAS history; the claim is only that it does not support a
+        # confident judgement.
         refs = sorted({i.get("source_ref") for row in prior.get("evidence", [])
                        for i in row.get("items", []) if i.get("supported")})
         return JevVerdict(label=label,
