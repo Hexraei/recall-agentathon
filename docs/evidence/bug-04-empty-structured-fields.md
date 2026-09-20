@@ -1,4 +1,4 @@
-# Bug 05 — the AI skips the structured fields more often than it fills them
+# Bug 04 — the AI skips the structured fields more often than it fills them
 
 **Found:** 19 September 2026, Day 1 evening, reviewing real students' reports for the first
 time — not test data, not the simulated cohort in `demo.db`.
@@ -108,3 +108,56 @@ failures undersells what actually held up on real data:
   report.
 - 1 of 22 (4.5%) was flagged unverified by the checker, for a false rejection.
 - 0 of 22 crashed.
+
+---
+
+## Re-measured, 19 September 2026 (later the same day)
+
+Status changed: **largely resolved, and the remainder is not a defect.**
+
+Re-run against all 30 completed real students — the same metric, the same way: a concept
+the counts call `strong` or `weak` that never appears in `strengths` or `gaps`.
+
+| | at review time | re-measured |
+|---|---|---|
+| reports omitting a strong/weak concept | 13 of 22 (**59%**) | 5 of 30 (**17%**) |
+| weak concepts omitted | several, incl. four on one student | **0** |
+| reports with weak concepts and an empty `gaps` list | Gokul (4/20) | **0** |
+
+The Gokul case — the one that mattered most, the lowest scorer with four weak concepts and
+nothing in `gaps` — does not recur. No report now drops a weak concept.
+
+### Why the remaining 17% is correct behaviour, not an omission
+
+All five are the same shape: a **strong** concept left off a student who has five or six
+of them, against a `strengths` list the schema caps at four. For example:
+
+```
+stu_6c627f5d   strengths listed = 4 (cap 4), strong concepts = 5
+  listed   backing up a claim with evidence        3/4
+  listed   picking the right data structure        3/4
+  listed   understanding what a variable holds     3/4
+  OMITTED  working out how long code takes         3/4
+  listed   knowing when a loop or function stops   4/4
+```
+
+Every one is a high scorer whose strengths did not fit. `student_report.md` says *"at most
+four entries in each list [...] listing everything is not a report"*, so this is the
+design working. Counting it as a defect measures the cap, not the model.
+
+What the original metric could not distinguish was **a weak concept silently dropped**
+(a real failure — the student loses a diagnosis) from **a fifth strength not listed**
+(intended — the report stays readable). Only the first is the bug, and it is now at zero.
+
+### What fixed it
+
+No single change aimed at this. The most likely contributors are the schema-shape work in
+[bug 01](bug-01-report-truncation.md) (`_ENTRY`, the explicit field list) and
+`enforce_verdicts()` moving misfiled entries into the right list rather than leaving them
+out — on one of the five, the trail shows a 4-of-5 concept drafted under `gaps` and moved
+to `strengths` in code, which is exactly the "entry exists but in the wrong place" case
+that used to read as an omission.
+
+The honest summary is that this was re-measured rather than fixed deliberately, and the
+number moved. Recorded here rather than quietly dropped, because a bug written up as
+confirmed should not simply disappear from the record.

@@ -86,6 +86,15 @@ everywhere: this is a page a student reads in a minute, not a transcript.
 Every entry's `evidence` field says WHAT THE WRONG ANSWERS HAVE IN COMMON —
 the shared mistake, in one sentence, drawn from `wrong_answers`.
 
+**If a concept has no wrong answers, leave `evidence` as an empty string.**
+There is no shared mistake to describe, and the score beside the entry already
+says they got them all. Do not write "You got all of these right" or any
+variation — that sentence is deleted in code and it wastes the space.
+
+**Never use the same sentence twice.** Each entry describes ITS OWN concept's
+mistakes. A sentence reused under two concepts says something false about at
+least one of them, and the report is rejected for it.
+
 **Do not put scores in it.** Not "missed 3 of 4", not "got 1 of 3", no counts
 and no fractions. The score is already displayed beside every entry, computed
 from the database; repeating it is how a number gets copied wrong, and a report

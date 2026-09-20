@@ -1,4 +1,4 @@
-# Bug 04 — the checker rejected true sentences, using the numbers that proved them
+# Bug 05 — the checker rejected true sentences, using the numbers that proved them
 
 **Found:** 19 September 2026, measuring the report loop over the seeded cohort.
 **Status:** fixed, verified, regression-tested.

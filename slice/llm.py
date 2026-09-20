@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 import time
 from typing import Any, Type
 
@@ -85,6 +86,28 @@ def _retry_after(r: httpx.Response) -> float | None:
                 return parsed
     match = re.search(r"try again in ([\d.]+)s", r.text)
     return float(match.group(1)) if match else None
+
+
+_DEGRADED_WARNED: set[str] = set()
+
+
+def _warn_degraded(model: str, delay: float | None, body: str) -> None:
+    """Tell the operator, once, that the primary is out and we are degrading.
+
+    Stderr rather than an exception: the run is still working, and a fallback
+    that quietly succeeds is the whole point of having one. But a silent
+    degradation before a demo is how you find out during the demo.
+    """
+    if model in _DEGRADED_WARNED:
+        return
+    _DEGRADED_WARNED.add(model)
+    detail = ""
+    if "tokens per day" in body or "TPD" in body:
+        detail = " (daily token quota spent - this will not clear until the quota resets)"
+    wait = f" for ~{delay/60:.0f} min" if delay else ""
+    print(f"\n  [slice] {model} is rate limited{wait}{detail}.\n"
+          f"  [slice] Falling back to the secondary model. Reports will still "
+          f"generate, more slowly.\n", file=sys.stderr)
 
 
 def _duration(raw: str) -> float | None:
@@ -275,6 +298,15 @@ def complete(
                     waited = True
                     i -= 1                              # try this model again
                     continue
+                # Too long to wait out, so we will degrade to the fallback and
+                # keep working. Say so ONCE per process: a daily-quota 429
+                # quotes ~15 minutes and repeats on every call for the rest of
+                # the day, so the primary is simply gone and every report is
+                # being served by the slower fallback. Measured: 29 of 30
+                # reports ran on the fallback without a word on screen, which
+                # looks like "the system got slower" rather than "the fast
+                # provider is out of quota until tomorrow".
+                _warn_degraded(mid, delay, r.text)
 
             # A 400 with this specific code is Groq's own schema-enforced
             # generation running out of room before it could produce valid
@@ -286,9 +318,21 @@ def complete(
             # simply be terser, so it gets the same treatment as a real 4xx/5xx.
             transient_400 = (r.status_code == 400
                              and "json_validate_failed" in r.text)
-            if (r.status_code in (429, 500, 502, 503) or transient_400) \
-                    and role == "primary":
-                span.record(output={"model": mid, "transient_400": transient_400})
+            # A 413 here is Groq's PER-MINUTE input token limit, not the
+            # request being malformed - found live building the memory demo,
+            # where a comparison step reading 5 prior sittings' worth of real
+            # history (7315 tokens) exceeded the 7000 ITPM cap on a run that
+            # a shorter history would have cleared. The request is not
+            # oversized in any absolute sense, only relative to a quota that
+            # resets every minute - so it is exactly the kind of transient
+            # condition a fallback (a different provider, a different quota)
+            # should absorb rather than fail the whole run over. Retrying the
+            # SAME model changes nothing; the request is still the same size.
+            too_large = r.status_code == 413
+            if (r.status_code in (429, 500, 502, 503) or transient_400
+                    or too_large) and role == "primary":
+                span.record(output={"model": mid, "transient_400": transient_400,
+                                    "too_large": too_large})
                 continue                                # transient: fall back
             if r.status_code != 200:
                 raise ModelError(f"{mid} returned HTTP {r.status_code}: {r.text[:300]}")

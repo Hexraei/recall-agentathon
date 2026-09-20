@@ -1,0 +1,1180 @@
+[
+  {
+    "id": "mem_robotics_a",
+    "display": "Priya R.",
+    "department": "robotics",
+    "category": "A",
+    "expect": "recurring",
+    "concept": "backing a claim with a measurement",
+    "why": "All four sittings get a 'backing a claim with a measurement' question wrong, and three of them pick the same option - 'offered a single impression where a tuning claim needs numbers'. That is one misconception recurring, not four unrelated slips.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "date": "2026-06-08",
+        "run_id": "run_58afb19b3f9f",
+        "score": 18,
+        "real_student_id": "stu_f1228d0d00",
+        "real_student_name": "Sailakshmi  ThirumalaiVenkatesan",
+        "prior_evidence_rows": 0,
+        "prior_assignments": [],
+        "label": "not_enough_evidence",
+        "explanation": "There is no earlier evidence for any of the objectives in the current submission. This is the student's first submission for these learning goals.",
+        "related_refs": [],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In two questions, the student did not back a claim with a measurement. In rb_t2_q3, the student treated delay as helpful, ignoring that corrections based on old information arrive too late to fit the situation. In rb_t2_q4, the student offered a single impression where a tuning claim needs numbers.",
+          "supporting_refs": [
+            "rb_t2_q3#A",
+            "rb_t2_q4#D"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": "The finding is supported by the evidence and is appropriately bounded as a first signal."
+        },
+        "state": "complete",
+        "paused_for_human": null
+      },
+      {
+        "sitting": 2,
+        "date": "2026-06-29",
+        "run_id": "run_0edb80e67a6c",
+        "score": 19,
+        "real_student_id": "stu_d5a01e41f9",
+        "real_student_name": "Logeswari",
+        "prior_evidence_rows": 1,
+        "prior_assignments": [
+          "diagnostic_sitting_1"
+        ],
+        "label": "recurring",
+        "explanation": "In both diagnostic_sitting_1 and the current submission, the student did not back a claim with a measurement. In diagnostic_sitting_1, the student offered a single impression where a tuning claim needs numbers in rb_t2_q4. In the current submission, the student again offered a single impression where a tuning claim needs numbers in rb_t2_q4. The same misunderstanding is present in both instances.",
+        "related_refs": [
+          "rb_t2_q4#D"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In two diagnostic sittings, the student did not back a claim with a measurement, offering a single impression where a tuning claim needs numbers in both instances.",
+          "supporting_refs": [
+            "rb_t2_q4#D"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established",
+          "proposed_next_step": "In the next assignment, ask the student to provide a measurement to back up a tuning claim in a similar context."
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": "The finding is supported by two instances of the same difficulty, but the recurrence across the term is not established, making it consequential enough for a professor to review."
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In two diagnostic sittings, the student did not back a claim with a measurement, offering a single impression where a tuning claim needs numbers in both instances.\nComparison: recurring - In both diagnostic_sitting_1 and the current submission, the student did not back a claim with a measurement. In diagnostic_sitting_1, the student offered a single impression where a tuning claim needs numbers in rb_t2_q4. In the current submission, the student again offered a single impression where a tuning claim needs numbers in rb_t2_q4. The same misunderstanding is present in both instances.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 3,
+        "date": "2026-07-20",
+        "run_id": "run_29c834a43954",
+        "score": 17,
+        "real_student_id": "stu_93dfa11827",
+        "real_student_name": "N.karthikeyn",
+        "prior_evidence_rows": 2,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2"
+        ],
+        "label": "recurring",
+        "explanation": "In both diagnostic sittings, the student did not back a claim with a measurement, offering a single impression where a tuning claim needs numbers. In the current submission, the student cited values chosen for a different machine instead of this one's measured behaviour, which is a similar issue of not backing a claim with a measurement.",
+        "related_refs": [
+          "rb_t2_q4#D",
+          "rb_t2_q4#D",
+          "rb_t2_q3#A",
+          "rb_t2_q4#D"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In two diagnostic sittings, the student did not back a claim with a measurement, offering a single impression where a tuning claim needs numbers. In the current submission, the student cited values chosen for a different machine instead of this one's measured behaviour, which is a similar issue of not backing a claim with a measurement.",
+          "supporting_refs": [
+            "rb_t2_q4#B",
+            "rb_t2_q3#A",
+            "rb_t2_q4#D"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established",
+          "proposed_next_step": "In the next assignment, ask the student to provide measurements to back up their claims in at least one task."
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": "The finding is supported and bounded, but acting on a candidate_recurring status is consequential and requires a professor's review."
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In two diagnostic sittings, the student did not back a claim with a measurement, offering a single impression where a tuning claim needs numbers. In the current submission, the student cited values chosen for a different machine instead of this one's measured behaviour, which is a similar issue of not backing a claim with a measurement.\nComparison: recurring - In both diagnostic sittings, the student did not back a claim with a measurement, offering a single impression where a tuning claim needs numbers. In the current submission, the student cited values chosen for a different machine instead of this one's measured behaviour, which is a similar issue of not backing a claim with a measurement.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 4,
+        "date": "2026-08-10",
+        "run_id": "run_3fe0135ee29e",
+        "score": 17,
+        "real_student_id": "stu_c70717f485",
+        "real_student_name": "Krish",
+        "prior_evidence_rows": 3,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3"
+        ],
+        "label": "recurring",
+        "explanation": "In diagnostic sitting 1, the student offered a single impression where a tuning claim needs numbers in rb_t2_q4. In the current submission, the student again offered a single impression where a tuning claim needs numbers in rb_t2_q4. Both instances show the student not backing a claim with a measurement, indicating a recurring difficulty.",
+        "related_refs": [
+          "rb_t2_q4#D"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In two assignments, the student offered a single impression where a tuning claim needs numbers, without backing the claim with a measurement.",
+          "supporting_refs": [
+            "rb_t2_q4#D"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established.",
+          "proposed_next_step": "In a new task, ask the student to make a tuning claim and support it with a measurement."
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": "The finding is supported and bounded, but acting on a candidate_recurring finding is consequential and requires a professor's review."
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In two assignments, the student offered a single impression where a tuning claim needs numbers, without backing the claim with a measurement.\nComparison: recurring - In diagnostic sitting 1, the student offered a single impression where a tuning claim needs numbers in rb_t2_q4. In the current submission, the student again offered a single impression where a tuning claim needs numbers in rb_t2_q4. Both instances show the student not backing a claim with a measurement, indicating a recurring difficulty.\n\nConfirm, revise, reject, or request more evidence."
+      }
+    ],
+    "final_label": "recurring",
+    "final_run_id": "run_3fe0135ee29e",
+    "sittings_with_history": 3,
+    "recurring_claims": 3,
+    "outcome": "found the recurrence on 3 of 3 sittings that had a history to read",
+    "meets_expectation": true
+  },
+  {
+    "id": "mem_cs_a",
+    "display": "Arjun M.",
+    "department": "computer_science",
+    "category": "A",
+    "expect": "recurring",
+    "concept": "understanding what a variable holds",
+    "why": "Every sitting misses 'understanding what a variable holds', and three of the four pick the identical wrong option on cs_t4_q1 - treating `b = a` as making a copy. The strongest clean signal in the whole dataset.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "date": "2026-06-08",
+        "run_id": "run_c3b15982eb0c",
+        "score": 19,
+        "real_student_id": "stu_2bf3073f73",
+        "real_student_name": "MONISH",
+        "prior_evidence_rows": 0,
+        "prior_assignments": [],
+        "label": "not_enough_evidence",
+        "explanation": "There is no earlier evidence for any of the objectives in the current submission. This is the student's first submission for these learning goals.",
+        "related_refs": [],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In the diagnostic sitting, the student treated `b = a` as making a copy of a list, rather than making `b` point to the same list as `a`.",
+          "supporting_refs": [
+            "cs_t4_q1#C"
+          ],
+          "uncertainty": "One task only; recurrence across the term is not established.",
+          "proposed_next_step": "None yet."
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": "The finding is supported by the evidence and is appropriately bounded as a first signal."
+        },
+        "state": "complete",
+        "paused_for_human": null
+      },
+      {
+        "sitting": 2,
+        "date": "2026-06-29",
+        "run_id": "run_9004a82c9300",
+        "score": 19,
+        "real_student_id": "stu_fb9298c06a",
+        "real_student_name": "Manoj P",
+        "prior_evidence_rows": 1,
+        "prior_assignments": [
+          "diagnostic_sitting_1"
+        ],
+        "label": "recurring",
+        "explanation": "In the diagnostic sitting, the student treated `b = a` as making a copy of a list, rather than making `b` point to the same list as `a`. In the current submission, the student treated `y = x` as a permanent link, copying the value at that moment and nothing after. Both instances show a misunderstanding of how variable assignment works with mutable objects like lists.",
+        "related_refs": [
+          "cs_t4_q1#C",
+          "cs_t1_q4#C"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In two assignments, the student treated `y = x` as a permanent link, copying the value at that moment and nothing after, indicating a misunderstanding of how variable assignment works with mutable objects like lists.",
+          "supporting_refs": [
+            "cs_t1_q4#C",
+            "cs_t4_q1#C"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established",
+          "proposed_next_step": "Complete a short exercise on variable assignment with mutable objects to assess understanding."
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": "The finding is supported and bounded, but acting on it is consequential as it suggests a recurring misunderstanding that may require intervention."
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In two assignments, the student treated `y = x` as a permanent link, copying the value at that moment and nothing after, indicating a misunderstanding of how variable assignment works with mutable objects like lists.\nComparison: recurring - In the diagnostic sitting, the student treated `b = a` as making a copy of a list, rather than making `b` point to the same list as `a`. In the current submission, the student treated `y = x` as a permanent link, copying the value at that moment and nothing after. Both instances show a misunderstanding of how variable assignment works with mutable objects like lists.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 3,
+        "date": "2026-07-20",
+        "run_id": "run_bc2d02af7eec",
+        "score": 17,
+        "real_student_id": "stu_0cf341b68e",
+        "real_student_name": "Harshadraam D",
+        "prior_evidence_rows": 2,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2"
+        ],
+        "label": "recurring",
+        "explanation": "In the current submission, the student again treated `b = a` as making a copy of a list, rather than making `b` point to the same list as `a`. This is the same misunderstanding as seen in the earlier records, where the student treated `y = x` as a permanent link, copying the value at that moment and nothing after. This indicates a recurring difficulty with understanding what a variable holds, specifically with mutable objects like lists.",
+        "related_refs": [
+          "cs_t4_q1#C",
+          "cs_t1_q4#C"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In two assignments, the student treated `b = a` as making a copy of a list, rather than making `b` point to the same list as `a`.",
+          "supporting_refs": [
+            "cs_t4_q1#C",
+            "cs_t1_q4#C"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established.",
+          "proposed_next_step": "Write a function that takes a list and returns a new list with the same elements, then use it to show that `b = a` does not make a copy."
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": "The finding is supported by two instances of the same misunderstanding, but the recurrence across the term is not fully established."
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In two assignments, the student treated `b = a` as making a copy of a list, rather than making `b` point to the same list as `a`.\nComparison: recurring - In the current submission, the student again treated `b = a` as making a copy of a list, rather than making `b` point to the same list as `a`. This is the same misunderstanding as seen in the earlier records, where the student treated `y = x` as a permanent link, copying the value at that moment and nothing after. This indicates a recurring difficulty with understanding what a variable holds, specifically with mutable objects like lists.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 4,
+        "date": "2026-08-10",
+        "run_id": "run_f44cf8e68e49",
+        "score": 15,
+        "real_student_id": "stu_c744ac76e6",
+        "real_student_name": "Harshavardhan K",
+        "prior_evidence_rows": 3,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3"
+        ],
+        "label": "similar",
+        "explanation": "In the current submission, the student chose option A on cs_t4_q1, assuming a restriction that does not exist, which is similar to the earlier difficulty where the student treated `b = a` as making a copy of a list. Both involve a misunderstanding of what a variable holds, but the specific misunderstandings are different: one assumes a non-existent restriction, and the other assumes a copy is made. Therefore, the current difficulty is similar to but not the same as the earlier one.",
+        "related_refs": [
+          "cs_t4_q1#A",
+          "cs_t4_q1#C"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In two assignments, the student assumed a restriction that does not exist and that a new name means new data, indicating a difficulty with understanding what a variable holds.",
+          "supporting_refs": [
+            "cs_t4_q1#A",
+            "cs_t4_q2#B"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established.",
+          "proposed_next_step": "Complete a short exercise on variable assignment and scope to confirm whether this difficulty persists."
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": "The finding is supported by the evidence and is appropriately bounded as a first signal, not overstating the student's difficulty."
+        },
+        "state": "complete",
+        "paused_for_human": null
+      }
+    ],
+    "final_label": "similar",
+    "final_run_id": "run_f44cf8e68e49",
+    "sittings_with_history": 3,
+    "recurring_claims": 2,
+    "outcome": "found the recurrence on 2 of 3 sittings that had a history to read",
+    "meets_expectation": true
+  },
+  {
+    "id": "mem_robotics_b",
+    "display": "Karthik S.",
+    "department": "robotics",
+    "category": "B",
+    "expect": "not_enough_evidence | similar | low confidence",
+    "concept": null,
+    "clean_control": true,
+    "why": "A true negative control: the three sittings share no wrong question AND no wrong concept, so there is provably nothing to find. Three sittings, not four - in 18 real robotics students no group of four with zero concept overlap exists, and padding it with a fourth would have smuggled a real pattern into the control.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "date": "2026-06-08",
+        "run_id": "run_ab4ba4fff9bf",
+        "score": 15,
+        "real_student_id": "stu_010df982b7",
+        "real_student_name": "Sathiyapriyan",
+        "prior_evidence_rows": 0,
+        "prior_assignments": [],
+        "label": "not_enough_evidence",
+        "explanation": "There is no earlier evidence for any of the objectives in the current submission. This is the student's first submission, so there is not enough evidence to determine any pattern or recurrence.",
+        "related_refs": [],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In the first diagnostic sitting, the student struggled to combine movements in the right order, working out where the robot ends up, and choosing a method for the job. They chose options that indicated a misunderstanding of the order of movements, the nature of distances, and the properties of methods. However, they also demonstrated strengths in working out where the robot ends up and matching a fix to what went wrong in some questions.",
+          "supporting_refs": [
+            "rb_t1_q3#B",
+            "rb_t1_q4#C",
+            "rb_t3_q3#D",
+            "rb_t4_q1#A",
+            "rb_t4_q2#C",
+            "rb_t1_q1#A",
+            "rb_t1_q2#D",
+            "rb_t2_q1#D"
+          ],
+          "uncertainty": "This is the student's first submission, so recurrence across the term is not established.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": "The finding describes the student's performance in the first diagnostic sitting, but the status is 'first_signal' and the uncertainty notes that recurrence is not established. The professor should review to determine if any action is needed based on this initial evidence."
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In the first diagnostic sitting, the student struggled to combine movements in the right order, working out where the robot ends up, and choosing a method for the job. They chose options that indicated a misunderstanding of the order of movements, the nature of distances, and the properties of methods. However, they also demonstrated strengths in working out where the robot ends up and matching a fix to what went wrong in some questions.\nComparison: not_enough_evidence - There is no earlier evidence for any of the objectives in the current submission. This is the student's first submission, so there is not enough evidence to determine any pattern or recurrence.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 2,
+        "date": "2026-06-29",
+        "run_id": "run_a2dd5ca0fd27",
+        "score": 17,
+        "real_student_id": "stu_833fb269ea",
+        "real_student_name": "Mugilan K",
+        "prior_evidence_rows": 1,
+        "prior_assignments": [
+          "diagnostic_sitting_1"
+        ],
+        "label": "similar",
+        "explanation": "The student's current difficulties in accounting for weight and force and matching a fix to what went wrong are similar to their earlier difficulties in combining movements in the right order and choosing a method for the job. Both sets of difficulties involve a misunderstanding of fundamental concepts, but the specific misunderstandings are different. In the current submission, the student chose options that indicated a lack of understanding of weight and force and a tendency to blame the wrong factor for a problem. In the earlier submission, the student chose options that indicated a misunderstanding of the order of movements and the properties of methods. While both sets of difficulties involve a lack of understanding, the specific concepts involved are different, so the difficulties are similar but not recurring.",
+        "related_refs": [
+          "rb_t5_q1#D",
+          "rb_t5_q2#C",
+          "rb_t5_q3#B",
+          "rb_t1_q3#B",
+          "rb_t1_q4#C",
+          "rb_t4_q1#A",
+          "rb_t4_q2#C"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In the diagnostic sitting, the student chose options that indicated a lack of understanding of weight and force and a tendency to blame the wrong factor for a problem. Specifically, they chose option D on rb_t5_q1, option C on rb_t5_q2, and option B on rb_t5_q3, which all suggest a misunderstanding of fundamental concepts related to accounting for weight and force and matching a fix to what went wrong.",
+          "supporting_refs": [
+            "rb_t5_q1#D",
+            "rb_t5_q2#C",
+            "rb_t5_q3#B"
+          ],
+          "uncertainty": "This finding is based on a single diagnostic sitting. The student's understanding of these concepts across the term is not established.",
+          "proposed_next_step": "Complete a short exercise on accounting for weight and force and matching a fix to what went wrong to see if the difficulty persists."
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": "The finding is supported, but the proposed next step is consequential and should be reviewed by a professor before acting on it."
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In the diagnostic sitting, the student chose options that indicated a lack of understanding of weight and force and a tendency to blame the wrong factor for a problem. Specifically, they chose option D on rb_t5_q1, option C on rb_t5_q2, and option B on rb_t5_q3, which all suggest a misunderstanding of fundamental concepts related to accounting for weight and force and matching a fix to what went wrong.\nComparison: similar - The student's current difficulties in accounting for weight and force and matching a fix to what went wrong are similar to their earlier difficulties in combining movements in the right order and choosing a method for the job. Both sets of difficulties involve a misunderstanding of fundamental concepts, but the specific misunderstandings are different. In the current submission, the student chose options that indicated a lack of understanding of weight and force and a tendency to blame the wrong factor for a problem. In the earlier submission, the student chose options that indicated a misunderstanding of the order of movements and the properties of methods. While both sets of difficulties involve a lack of understanding, the specific concepts involved are different, so the difficulties are similar but not recurring.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 3,
+        "date": "2026-07-20",
+        "run_id": "run_ee140ca91be9",
+        "score": 18,
+        "real_student_id": "stu_f1228d0d00",
+        "real_student_name": "Sailakshmi  ThirumalaiVenkatesan",
+        "prior_evidence_rows": 2,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2"
+        ],
+        "label": "similar",
+        "explanation": "The student's current difficulties in backing a claim with a measurement are similar to their earlier difficulties in choosing a method for the job and matching a fix to what went wrong. While both involve making claims or choices, the specific misunderstandings are different. In the current submission, the student treated delay as helpful and offered a single impression where a tuning claim needs numbers. In earlier submissions, the student named speed as a method, equated sampling with exhaustive search, and blamed the geometry for a problem. These are distinct issues that would require different explanations to address.",
+        "related_refs": [
+          "rb_t2_q3#A",
+          "rb_t2_q4#D",
+          "rb_t4_q1#A",
+          "rb_t4_q2#C",
+          "rb_t5_q2#C"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In two assignments, the student treated delay as helpful and offered a single impression where a tuning claim needs numbers.",
+          "supporting_refs": [
+            "rb_t2_q3#A",
+            "rb_t2_q4#D"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established.",
+          "proposed_next_step": "None yet."
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": "The finding is supported by the evidence and is appropriately bounded as a first signal, not making overstated claims about the student's understanding."
+        },
+        "state": "complete",
+        "paused_for_human": null
+      }
+    ],
+    "final_label": "similar",
+    "final_run_id": "run_ee140ca91be9",
+    "sittings_with_history": 2,
+    "recurring_claims": 0,
+    "outcome": "claimed no recurrence on all 2 sittings",
+    "meets_expectation": true
+  },
+  {
+    "id": "mem_cs_b",
+    "display": "Nithya V.",
+    "department": "computer_science",
+    "category": "B",
+    "expect": "not_enough_evidence | similar | low confidence",
+    "concept": null,
+    "clean_control": false,
+    "why": "The weakest signal available in computer science, and NOT a clean control - we say so rather than pretend otherwise. No question is missed twice, but with only five CS concepts and 13 students, no group of four exists with zero concept overlap: two sittings here both touch 'understanding what a variable holds' and two both touch 'backing up a claim with evidence'. If the system reports a recurrence it must cite one of those, and a professor can then judge whether two different questions on one concept is a pattern or a coincidence. That judgement is the professor's, which is the point.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "date": "2026-06-08",
+        "run_id": "run_22b450ca886b",
+        "score": 19,
+        "real_student_id": "stu_2bf3073f73",
+        "real_student_name": "MONISH",
+        "prior_evidence_rows": 0,
+        "prior_assignments": [],
+        "label": "not_enough_evidence",
+        "explanation": "There is no earlier evidence for any of the objectives in the current submission. This is the student's first submission for these learning goals.",
+        "related_refs": [],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In the first diagnostic sitting, the student selected the option treating `b = a` as creating a copy of a list, rather than recognizing that both names reference the same object.",
+          "supporting_refs": [
+            "cs_t4_q1#C"
+          ],
+          "uncertainty": "This is a single observation from the first diagnostic; it does not establish a recurring pattern or a general lack of understanding of variable binding.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": "The finding is supported by the evidence and is appropriately bounded as a first signal from a single observation."
+        },
+        "state": "complete",
+        "paused_for_human": null
+      },
+      {
+        "sitting": 2,
+        "date": "2026-06-29",
+        "run_id": "run_55b1db2a19d6",
+        "score": 18,
+        "real_student_id": "stu_b5cb2df8b5",
+        "real_student_name": "Barathkumar MP",
+        "prior_evidence_rows": 1,
+        "prior_assignments": [
+          "diagnostic_sitting_1"
+        ],
+        "label": "similar",
+        "explanation": "The student has shown difficulties in two different areas: picking the right data structure and backing up a claim with evidence. The earlier record shows a difficulty in understanding what a variable holds, which is unrelated to the current difficulties. The current difficulties are similar in that they both involve making incorrect choices, but they are not caused by the same underlying misunderstanding. The student chose a last-in-first-out structure where an oldest-first structure was needed, and offered an impression where a timing claim needs a measurement. These are two distinct issues that would require different explanations to resolve.",
+        "related_refs": [
+          "cs_t2_q3#C",
+          "cs_t5_q1#B",
+          "cs_t4_q1#C"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In two assignments, the student chose a data structure that did not match the requirements and offered an impression where a timing claim needed a measurement.",
+          "supporting_refs": [
+            "cs_t2_q3#C",
+            "cs_t5_q1#B"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established.",
+          "proposed_next_step": "None yet."
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": "The finding is supported by the evidence and is appropriately bounded as a first signal, not making overstated claims about the student's understanding."
+        },
+        "state": "complete",
+        "paused_for_human": null
+      },
+      {
+        "sitting": 3,
+        "date": "2026-07-20",
+        "run_id": "run_da9a5825990d",
+        "score": 18,
+        "real_student_id": "stu_f834cd4135",
+        "real_student_name": "Anbuselvan",
+        "prior_evidence_rows": 2,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2"
+        ],
+        "label": "similar",
+        "explanation": "The student's current difficulties in backing up a claim with evidence and working out how long code takes are similar to their earlier difficulties, but not caused by the same misunderstanding. In the current submission, the student treated the work as fixed in a loop and drew an unsupported conclusion from a small test. Earlier, the student chose a data structure that did not match the requirements and offered an impression where a timing claim needed a measurement. While both involve a lack of evidence, the specific mistakes are different.",
+        "related_refs": [
+          "cs_t1_q1#B",
+          "cs_t1_q3#B",
+          "cs_t2_q3#C",
+          "cs_t5_q1#B"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In two assignments, the student treated the work as fixed in a loop and drew an unsupported conclusion from a small test.",
+          "supporting_refs": [
+            "cs_t1_q1#B",
+            "cs_t1_q3#B"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established.",
+          "proposed_next_step": "None yet."
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": "The finding is supported by the evidence and is appropriately bounded as a first signal, not claiming more than the evidence supports."
+        },
+        "state": "complete",
+        "paused_for_human": null
+      },
+      {
+        "sitting": 4,
+        "date": "2026-08-10",
+        "run_id": "run_303cda888bca",
+        "score": 19,
+        "real_student_id": "stu_fb9298c06a",
+        "real_student_name": "Manoj P",
+        "prior_evidence_rows": 3,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3"
+        ],
+        "label": "recurring",
+        "explanation": "In the current submission, the student chose option C on cs_t1_q4, treating `y = x` as a permanent link, indicating a misunderstanding of variable assignment. This is similar to the earlier evidence from diagnostic sitting 1, where the student chose option C on cs_t4_q1, treating `b = a` as making a copy. Both instances show a recurring misunderstanding of how variable assignment works in programming, where the student believes that assigning one variable to another creates a permanent link or copy, rather than understanding that it points to the same object in memory.",
+        "related_refs": [
+          "cs_t1_q4#C",
+          "cs_t4_q1#C"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In two assignments, the student treated variable assignment as a permanent link, copying the value at that moment and nothing after.",
+          "supporting_refs": [
+            "cs_t1_q4#C",
+            "cs_t4_q1#C"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established.",
+          "proposed_next_step": "Write a short program that demonstrates the difference between variable assignment and a permanent link."
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": "The finding is supported by two instances of the same misunderstanding, but the comparison does not establish a recurring pattern across the term, making it consequential enough for a professor to review."
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In two assignments, the student treated variable assignment as a permanent link, copying the value at that moment and nothing after.\nComparison: recurring - In the current submission, the student chose option C on cs_t1_q4, treating `y = x` as a permanent link, indicating a misunderstanding of variable assignment. This is similar to the earlier evidence from diagnostic sitting 1, where the student chose option C on cs_t4_q1, treating `b = a` as making a copy. Both instances show a recurring misunderstanding of how variable assignment works in programming, where the student believes that assigning one variable to another creates a permanent link or copy, rather than understanding that it points to the same object in memory.\n\nConfirm, revise, reject, or request more evidence."
+      }
+    ],
+    "final_label": "recurring",
+    "final_run_id": "run_303cda888bca",
+    "sittings_with_history": 3,
+    "recurring_claims": 1,
+    "outcome": "1 of 3 sittings claimed a recurrence; every one cited its evidence and paused for a human",
+    "meets_expectation": true
+  },
+  {
+    "id": "mem_robotics_clean_dept",
+    "display": "Devika R.",
+    "department": "robotics",
+    "category": "A",
+    "expect": "recurring",
+    "concept": "working out where the robot ends up",
+    "why": "Chosen at the department level, not hand-picked within a smaller group: this is the single most common real mistake in the whole robotics cohort. Measured directly from webapp.db - 13 of 19 completed robotics students (68%) got at least one 'working out where the robot ends up' question wrong, and 7 of those 13 independently chose the identical wrong option (B) on the identical question (rb_t1_q2) for the identical reason - 'assumed the forward calculation simply reverses; it does not'. This group is those 7. The department was picked for the clean-pattern demo BECAUSE of this measurement, not the other way around - see docs/memory-demo-department-selection.md.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "date": "2026-06-08",
+        "run_id": "run_b5bf2b9e6bec",
+        "score": 15,
+        "real_student_id": "stu_76d01d7712",
+        "real_student_name": "Harshavaradhan G",
+        "prior_evidence_rows": 6,
+        "prior_assignments": [
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3",
+          "diagnostic_sitting_4",
+          "diagnostic_sitting_5",
+          "diagnostic_sitting_6",
+          "diagnostic_sitting_7"
+        ],
+        "label": "not_enough_evidence",
+        "explanation": "There is no earlier evidence for these objectives.",
+        "related_refs": [],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In diagnostic_sitting_1, the student selected incorrect options on five questions across four distinct concepts, including assuming forward calculation reverses (rb_t1_q2#B), blaming the goal for a response-caused pattern (rb_t2_q2#D), treating a known problem as an improvement (rb_t2_q3#D), equating sampling with exhaustive search (rb_t4_q2#C), and overstating the role of geometry in handling forces (rb_t5_q1#C).",
+          "supporting_refs": [
+            "rb_t1_q2#B",
+            "rb_t2_q2#D",
+            "rb_t2_q3#D",
+            "rb_t4_q2#C",
+            "rb_t5_q1#C"
+          ],
+          "uncertainty": "This is a single diagnostic sitting; recurrence across the term is not established.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": ""
+        },
+        "state": "complete",
+        "paused_for_human": null
+      },
+      {
+        "sitting": 2,
+        "date": "2026-06-29",
+        "run_id": "run_ab014fe3cbc6",
+        "score": 16,
+        "real_student_id": "stu_fd49dd9cfd",
+        "real_student_name": "JYOTHISH",
+        "prior_evidence_rows": 6,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_3",
+          "diagnostic_sitting_4",
+          "diagnostic_sitting_5",
+          "diagnostic_sitting_6",
+          "diagnostic_sitting_7"
+        ],
+        "label": "recurring",
+        "explanation": "In diagnostic_sitting_1, the student made a specific error on rb_t1_q2 by assuming the forward calculation simply reverses. In the current submission, the student made the exact same error on the same question (rb_t1_q2), again assuming the forward calculation simply reverses. This is a recurrence of the same specific misunderstanding regarding forward kinematics.",
+        "related_refs": [
+          "rb_t1_q2#B"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In diagnostic_sitting_2, the student selected option B on rb_t1_q2, assuming the forward calculation simply reverses; this specific error was also present in diagnostic_sitting_1 on the same question.",
+          "supporting_refs": [
+            "rb_t1_q2#B"
+          ],
+          "uncertainty": "This finding is based on two diagnostic sittings; it does not establish whether this misunderstanding persists across other contexts or assignments.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": ""
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In diagnostic_sitting_2, the student selected option B on rb_t1_q2, assuming the forward calculation simply reverses; this specific error was also present in diagnostic_sitting_1 on the same question.\nComparison: recurring - In diagnostic_sitting_1, the student made a specific error on rb_t1_q2 by assuming the forward calculation simply reverses. In the current submission, the student made the exact same error on the same question (rb_t1_q2), again assuming the forward calculation simply reverses. This is a recurrence of the same specific misunderstanding regarding forward kinematics.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 3,
+        "date": "2026-07-20",
+        "run_id": "run_dbd5499c53bd",
+        "score": 17,
+        "real_student_id": "stu_c70717f485",
+        "real_student_name": "Krish",
+        "prior_evidence_rows": 6,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_4",
+          "diagnostic_sitting_5",
+          "diagnostic_sitting_6",
+          "diagnostic_sitting_7"
+        ],
+        "label": "recurring",
+        "explanation": "The student has repeatedly assumed the forward calculation simply reverses in rb_t1_q2 across multiple diagnostic sittings (diagnostic_sitting_1 and diagnostic_sitting_2). This indicates a recurring misunderstanding in the concept of working out where the robot ends up.",
+        "related_refs": [
+          "rb_t1_q2#B",
+          "rb_t1_q2#B"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In diagnostic_sitting_3, the student selected option B on rb_t1_q2, assuming the forward calculation simply reverses, which is incorrect. This specific error pattern was also observed in diagnostic_sitting_1 and diagnostic_sitting_2 for the same question.",
+          "supporting_refs": [
+            "rb_t1_q2#B"
+          ],
+          "uncertainty": "This finding is based on three diagnostic sittings; it does not establish whether the student can apply correct forward calculation in novel, non-diagnostic contexts.",
+          "proposed_next_step": "In a short exercise, trace the robot's position through a sequence of three moves where the final move is a rotation, and explicitly calculate the final coordinates rather than reversing the first move."
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": ""
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In diagnostic_sitting_3, the student selected option B on rb_t1_q2, assuming the forward calculation simply reverses, which is incorrect. This specific error pattern was also observed in diagnostic_sitting_1 and diagnostic_sitting_2 for the same question.\nComparison: recurring - The student has repeatedly assumed the forward calculation simply reverses in rb_t1_q2 across multiple diagnostic sittings (diagnostic_sitting_1 and diagnostic_sitting_2). This indicates a recurring misunderstanding in the concept of working out where the robot ends up.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 4,
+        "date": "2026-08-10",
+        "run_id": "run_f73a923f59c8",
+        "score": 17,
+        "real_student_id": "stu_93dfa11827",
+        "real_student_name": "N.karthikeyn",
+        "prior_evidence_rows": 6,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3",
+          "diagnostic_sitting_5",
+          "diagnostic_sitting_6",
+          "diagnostic_sitting_7"
+        ],
+        "label": "recurring",
+        "explanation": "The student has repeatedly assumed the forward calculation simply reverses in rb_t1_q2 across multiple diagnostic sittings (diagnostic_sitting_1, diagnostic_sitting_2, and diagnostic_sitting_3). This indicates a recurring misunderstanding of how to work out where the robot ends up. The same error is present in the current submission, showing a consistent pattern of difficulty with this concept.",
+        "related_refs": [
+          "rb_t1_q2#B",
+          "rb_t1_q2#B",
+          "rb_t1_q2#B"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In diagnostic_sitting_4, the student selected option B on rb_t1_q2, assuming the forward calculation simply reverses, which is incorrect. This specific error pattern has been observed in the same question across diagnostic_sitting_1, diagnostic_sitting_2, and diagnostic_sitting_3.",
+          "supporting_refs": [
+            "rb_t1_q2#B"
+          ],
+          "uncertainty": "The evidence consists of four instances of the same specific question (rb_t1_q2) across four sittings. It does not establish whether the student can apply the correct forward calculation logic to novel problems or different question formats.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": ""
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In diagnostic_sitting_4, the student selected option B on rb_t1_q2, assuming the forward calculation simply reverses, which is incorrect. This specific error pattern has been observed in the same question across diagnostic_sitting_1, diagnostic_sitting_2, and diagnostic_sitting_3.\nComparison: recurring - The student has repeatedly assumed the forward calculation simply reverses in rb_t1_q2 across multiple diagnostic sittings (diagnostic_sitting_1, diagnostic_sitting_2, and diagnostic_sitting_3). This indicates a recurring misunderstanding of how to work out where the robot ends up. The same error is present in the current submission, showing a consistent pattern of difficulty with this concept.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 5,
+        "date": "2026-08-31",
+        "run_id": "run_666c68c51c6c",
+        "score": 15,
+        "real_student_id": "stu_dfa174a2db",
+        "real_student_name": "Sathya Sa",
+        "prior_evidence_rows": 6,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3",
+          "diagnostic_sitting_4",
+          "diagnostic_sitting_6",
+          "diagnostic_sitting_7"
+        ],
+        "label": "recurring",
+        "explanation": "The student has repeatedly assumed the forward calculation simply reverses in rb_t1_q2 across multiple diagnostic sittings (run_b5bf2b9e6bec, run_ab014fe3cbc6, run_dbd5499c53bd, run_f73a923f59c8). This indicates a recurring misunderstanding of the concept of working out where the robot ends up.",
+        "related_refs": [
+          "rb_t1_q2#B"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In four diagnostic sittings, the student selected the option on rb_t1_q2 that assumes the forward calculation simply reverses, despite the angles and link lengths fully determining the position.",
+          "supporting_refs": [
+            "rb_t1_q2#B"
+          ],
+          "uncertainty": "This finding is based on a single question item (rb_t1_q2) repeated across four sittings; it does not establish whether the student applies this specific reversal assumption to other forward kinematics problems or if it is isolated to this particular question format.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": ""
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In four diagnostic sittings, the student selected the option on rb_t1_q2 that assumes the forward calculation simply reverses, despite the angles and link lengths fully determining the position.\nComparison: recurring - The student has repeatedly assumed the forward calculation simply reverses in rb_t1_q2 across multiple diagnostic sittings (run_b5bf2b9e6bec, run_ab014fe3cbc6, run_dbd5499c53bd, run_f73a923f59c8). This indicates a recurring misunderstanding of the concept of working out where the robot ends up.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 6,
+        "date": "2026-09-21",
+        "run_id": "run_dc8731143cb7",
+        "score": 13,
+        "real_student_id": "stu_bc79a33738",
+        "real_student_name": "Tinku kannaa",
+        "prior_evidence_rows": 6,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3",
+          "diagnostic_sitting_4",
+          "diagnostic_sitting_5",
+          "diagnostic_sitting_7"
+        ],
+        "label": "recurring",
+        "explanation": "The student has repeatedly chosen option B on rb_t1_q2, assuming the forward calculation simply reverses, which is incorrect. This specific error pattern has been observed in diagnostic_sitting_1, diagnostic_sitting_2, diagnostic_sitting_3, diagnostic_sitting_4, and diagnostic_sitting_5. This indicates a recurring misunderstanding of the concept of working out where the robot ends up, specifically in the context of forward kinematics calculations. The student's consistent choice of the same incorrect option across multiple sittings suggests a persistent difficulty in this area. The earlier records show the same mistake in the same question across multiple sittings, which aligns with the current submission's difficulty in the same concept and question. The student's consistent error pattern indicates a recurring issue that needs to be addressed.",
+        "related_refs": [
+          "rb_t1_q2#B"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In diagnostic_sitting_6, the student selected option B on rb_t1_q2, assuming the forward calculation simply reverses, which is incorrect. This specific error pattern has been observed in diagnostic_sitting_1, diagnostic_sitting_2, diagnostic_sitting_3, diagnostic_sitting_4, and diagnostic_sitting_5. This indicates a recurring misunderstanding of the concept of working out where the robot ends up, specifically in the context of forward kinematics calculations. The student's consistent choice",
+          "supporting_refs": [
+            "rb_t1_q2#B"
+          ],
+          "uncertainty": "The evidence provided only lists the current sitting's error and a summary of past sittings; it does not include the specific evidence from the previous five sittings to verify the exact nature of the errors in those instances.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": ""
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In diagnostic_sitting_6, the student selected option B on rb_t1_q2, assuming the forward calculation simply reverses, which is incorrect. This specific error pattern has been observed in diagnostic_sitting_1, diagnostic_sitting_2, diagnostic_sitting_3, diagnostic_sitting_4, and diagnostic_sitting_5. This indicates a recurring misunderstanding of the concept of working out where the robot ends up, specifically in the context of forward kinematics calculations. The student's consistent choice\nComparison: recurring - The student has repeatedly chosen option B on rb_t1_q2, assuming the forward calculation simply reverses, which is incorrect. This specific error pattern has been observed in diagnostic_sitting_1, diagnostic_sitting_2, diagnostic_sitting_3, diagnostic_sitting_4, and diagnostic_sitting_5. This indicates a recurring misunderstanding of the concept of working out where the robot ends up, specifically in the context of forward kinematics calculations. The student's consistent choice of the same incorrect option across multiple sittings suggests a persistent difficulty in this area. The earlier records show the same mistake in the same question across multiple sittings, which aligns with the current submission's difficulty in the same concept and question. The student's consistent error pattern indicates a recurring issue that needs to be addressed.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 7,
+        "date": "2026-10-12",
+        "run_id": "run_90cf4a40fe7a",
+        "score": 12,
+        "real_student_id": "stu_92d79a393b",
+        "real_student_name": "Yuvaraaja Ganesh V",
+        "prior_evidence_rows": 6,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3",
+          "diagnostic_sitting_4",
+          "diagnostic_sitting_5",
+          "diagnostic_sitting_6"
+        ],
+        "label": "recurring",
+        "explanation": "The student has consistently assumed the forward calculation simply reverses in rb_t1_q2 across multiple diagnostic sittings (run_b5bf2b9e6bec, run_ab014fe3cbc6, run_dbd5499c53bd, run_f73a923f59c8, run_666c68c51c6c, run_dc8731143cb7). This indicates a recurring misunderstanding of the concept of working out where the robot ends up, specifically in the context of forward kinematics calculations.",
+        "related_refs": [
+          "rb_t1_q2#B"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In six diagnostic sittings, the student selected the option on rb_t1_q2 that assumes the forward calculation simply reverses, rather than accounting for the specific geometric constraints of the movement.",
+          "supporting_refs": [
+            "rb_t1_q2#B"
+          ],
+          "uncertainty": "This finding is based on a single question item (rb_t1_q2) repeated across multiple sittings; it does not establish whether the student applies this same reversal assumption to other types of kinematic problems or different robot configurations.",
+          "proposed_next_step": "Complete a short exercise tracing a robot's position through a sequence of three moves, explicitly writing down the coordinate change for each step before calculating the final position."
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": ""
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In six diagnostic sittings, the student selected the option on rb_t1_q2 that assumes the forward calculation simply reverses, rather than accounting for the specific geometric constraints of the movement.\nComparison: recurring - The student has consistently assumed the forward calculation simply reverses in rb_t1_q2 across multiple diagnostic sittings (run_b5bf2b9e6bec, run_ab014fe3cbc6, run_dbd5499c53bd, run_f73a923f59c8, run_666c68c51c6c, run_dc8731143cb7). This indicates a recurring misunderstanding of the concept of working out where the robot ends up, specifically in the context of forward kinematics calculations.\n\nConfirm, revise, reject, or request more evidence."
+      }
+    ],
+    "final_label": "recurring",
+    "final_run_id": "run_90cf4a40fe7a",
+    "sittings_with_history": 7,
+    "recurring_claims": 6,
+    "outcome": "found the recurrence on 6 of 7 sittings that had a history to read",
+    "meets_expectation": true
+  },
+  {
+    "id": "mem_cs_erratic_dept",
+    "display": "Aravind S.",
+    "department": "computer_science",
+    "category": "B",
+    "expect": "not_enough_evidence | similar | low confidence",
+    "concept": null,
+    "clean_control": false,
+    "why": "Chosen at the department level: computer science, measured directly, has NO single dominant misconception. Three concepts are tied at exactly 10 of 14 completed students each - 'backing up a claim with evidence', 'picking the right data structure', 'understanding what a variable holds' - so there is no clear winner for the system to confidently converge on, unlike robotics' 68%/47%-of-those matching split. This group's six members were picked to carry genuinely different concept profiles (one concept each, up to four each), and they DO share some individual questions pairwise - real overlap, not a clean control - but scattered across seven different question pairs with no two sittings sharing the same pair twice. That scatter, not a forced absence of any overlap, is what 'erratic' means here. See docs/memory-demo-department-selection.md.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "date": "2026-06-08",
+        "run_id": "run_d4f7980a83f5",
+        "score": 18,
+        "real_student_id": "stu_f834cd4135",
+        "real_student_name": "Anbuselvan",
+        "prior_evidence_rows": 5,
+        "prior_assignments": [
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3",
+          "diagnostic_sitting_4",
+          "diagnostic_sitting_5",
+          "diagnostic_sitting_6"
+        ],
+        "label": "not_enough_evidence",
+        "explanation": "There is no earlier evidence for these objectives; the student's records are empty.",
+        "related_refs": [],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In diagnostic_sitting_1, the student selected option B on cs_t1_q1, treating the work of a loop that visits every item as fixed rather than scaling with input size, and selected option B on cs_t1_q3, drawing a conclusion unsupported by a single small test.",
+          "supporting_refs": [
+            "cs_t1_q1#B",
+            "cs_t1_q3#B"
+          ],
+          "uncertainty": "This is a single diagnostic sitting; recurrence across the term is not established.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": ""
+        },
+        "state": "complete",
+        "paused_for_human": null
+      },
+      {
+        "sitting": 2,
+        "date": "2026-06-29",
+        "run_id": "run_3559a3650111",
+        "score": 19,
+        "real_student_id": "stu_2bf3073f73",
+        "real_student_name": "MONISH",
+        "prior_evidence_rows": 5,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_3",
+          "diagnostic_sitting_4",
+          "diagnostic_sitting_5",
+          "diagnostic_sitting_6"
+        ],
+        "label": "improving",
+        "explanation": "In diagnostic_sitting_1, the student struggled with 'working out how long code takes' (cs_t1_q1) by treating loop work as fixed, and 'backing up a claim with evidence' (cs_t1_q3) by drawing unsupported conclusions. In the current submission, the student correctly answered cs_t1_q1 (chose C) and cs_t1_q3 (chose A), demonstrating success on the specific items previously identified as difficulties.",
+        "related_refs": [
+          "cs_t1_q1#B",
+          "cs_t1_q3#B"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "improving",
+          "statement": "In diagnostic_sitting_2, the student correctly answered cs_t1_q1 and cs_t1_q3, items previously identified as difficulties in diagnostic_sitting_1.",
+          "supporting_refs": [
+            "cs_t1_q1#C",
+            "cs_t1_q3#A"
+          ],
+          "uncertainty": "This finding is based on two specific items; it does not establish that the difficulty with time complexity or evidence-based reasoning has been fully resolved across the term.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": "The finding is supported by the evidence and is bounded by the uncertainty note, indicating that it is based on specific items and does not claim full resolution of the difficulties."
+        },
+        "state": "complete",
+        "paused_for_human": null
+      },
+      {
+        "sitting": 3,
+        "date": "2026-07-20",
+        "run_id": "run_e6d32a40664a",
+        "score": 15,
+        "real_student_id": "stu_c744ac76e6",
+        "real_student_name": "Harshavardhan K",
+        "prior_evidence_rows": 5,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_4",
+          "diagnostic_sitting_5",
+          "diagnostic_sitting_6"
+        ],
+        "label": "similar",
+        "explanation": "The student has shown difficulties in understanding what a variable holds, picking the right data structure, and backing up a claim with evidence. These difficulties are similar to those observed in earlier submissions, but they are not caused by the same misunderstanding. The student's difficulty with variables involves different misunderstandings in different contexts, and the difficulty with data structures is a new issue. The difficulty with evidence-based reasoning is similar to an earlier issue but not identical.",
+        "related_refs": [
+          "cs_t1_q1#B",
+          "cs_t1_q3#B",
+          "cs_t4_q1#C",
+          "cs_t4_q1#A",
+          "cs_t4_q2#B",
+          "cs_t1_q3#B",
+          "cs_t3_q4#D"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In diagnostic_sitting_3, the student selected answers that treated a variable name inside a function as referring to the outer scope (cs_t3_q3#B), assumed a new name implies new data (cs_t4_q2#B), and assumed a non-existent restriction on variable usage (cs_t4_q1#A). Additionally, the student chose a last-in-first-out structure when oldest-first was required (cs_t2_q3#C) and discarded limited evidence entirely when backing up a claim (cs_t3_q4#D).",
+          "supporting_refs": [
+            "cs_t3_q3#B",
+            "cs_t4_q2#B",
+            "cs_t4_q1#A",
+            "cs_t2_q3#C",
+            "cs_t3_q4#D"
+          ],
+          "uncertainty": "This finding is based on a single diagnostic sitting. While the comparison label is 'similar' to prior work, the specific misunderstandings regarding variable scope and data structure selection are distinct from previous instances, so recurrence of the exact same conceptual gap is not established.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": ""
+        },
+        "state": "complete",
+        "paused_for_human": null
+      },
+      {
+        "sitting": 4,
+        "date": "2026-08-10",
+        "run_id": "run_0109e71170af",
+        "score": 16,
+        "real_student_id": "stu_6c627f5ddc",
+        "real_student_name": "Rafan M A",
+        "prior_evidence_rows": 5,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3",
+          "diagnostic_sitting_5",
+          "diagnostic_sitting_6"
+        ],
+        "label": "similar",
+        "explanation": "In the current submission, the student chose option C on cs_t2_q3, indicating a misunderstanding of data structures by selecting a last-in-first-out structure when the question required oldest-first. This is similar to the student's previous difficulty in diagnostic_sitting_3, where they also chose option C on cs_t2_q3 for the same reason. However, the current submission also includes a new difficulty with understanding what a variable holds, where the student treated `y = x` as a permanent link, which was not present in the earlier records. Therefore, the current work is similar to but not recurring with the earlier work.",
+        "related_refs": [
+          "cs_t2_q3#C",
+          "cs_t1_q4#C"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In diagnostic_sitting_4, the student selected option C on cs_t2_q3, choosing a last-in-first-out structure when the question required oldest-first, and selected option C on cs_t1_q4, treating `y = x` as a permanent link rather than a value copy.",
+          "supporting_refs": [
+            "cs_t2_q3#C",
+            "cs_t1_q4#C"
+          ],
+          "uncertainty": "This is a single diagnostic sitting; recurrence across the term is not established.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "accepted",
+          "failed_check": null,
+          "detail": ""
+        },
+        "state": "complete",
+        "paused_for_human": null
+      },
+      {
+        "sitting": 5,
+        "date": "2026-08-31",
+        "run_id": "run_f3045ba244c6",
+        "score": 16,
+        "real_student_id": "stu_b199f4e5d6",
+        "real_student_name": "Vishnu",
+        "prior_evidence_rows": 5,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3",
+          "diagnostic_sitting_4",
+          "diagnostic_sitting_6"
+        ],
+        "label": "similar",
+        "explanation": "The student's current difficulties in understanding what a variable holds (cs_t4_q1#C) and picking the right data structure (cs_t4_q4#B) are similar to their earlier difficulties in the same areas, but the specific misunderstandings are different. In the current submission, the student treated `b = a` as making a copy (cs_t4_q1#C) and attributed the speed to ordering in a dictionary (cs_t4_q4#B). Earlier, the student had difficulties with variable scope (cs_t3_q3#B) and assuming new names imply new data (cs_t4_q2#B). These are related but distinct misunderstandings, so the label is 'similar'.",
+        "related_refs": [
+          "cs_t4_q1#C",
+          "cs_t4_q4#B",
+          "cs_t3_q3#B",
+          "cs_t4_q2#B"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "first_signal",
+          "statement": "In diagnostic_sitting_5, the student selected option C on cs_t4_q1, treating `b = a` as creating a copy of the list rather than a reference to the same object, and selected option B on cs_t4_q4, attributing the performance of a dictionary to its ordering. These specific errors align with earlier difficulties in the same conceptual areas, such as variable scope in cs_t3_q3 and the assumption that new names imply new data in cs_t4_q2.",
+          "supporting_refs": [
+            "cs_t4_q1#C",
+            "cs_t4_q4#B",
+            "cs_t3_q3#B",
+            "cs_t4_q2#B"
+          ],
+          "uncertainty": "The evidence consists of four specific multiple-choice items across two sittings. It does not establish whether the student consistently applies these misunderstandings in open-ended coding tasks or if the errors are isolated to the specific phrasing of these questions.",
+          "proposed_next_step": "None yet"
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": "The finding correctly identifies specific errors and their alignment with earlier difficulties, but the proposed next step is 'None yet', and the evidence does not establish whether the errors are consistent across different task types."
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In diagnostic_sitting_5, the student selected option C on cs_t4_q1, treating `b = a` as creating a copy of the list rather than a reference to the same object, and selected option B on cs_t4_q4, attributing the performance of a dictionary to its ordering. These specific errors align with earlier difficulties in the same conceptual areas, such as variable scope in cs_t3_q3 and the assumption that new names imply new data in cs_t4_q2.\nComparison: similar - The student's current difficulties in understanding what a variable holds (cs_t4_q1#C) and picking the right data structure (cs_t4_q4#B) are similar to their earlier difficulties in the same areas, but the specific misunderstandings are different. In the current submission, the student treated `b = a` as making a copy (cs_t4_q1#C) and attributed the speed to ordering in a dictionary (cs_t4_q4#B). Earlier, the student had difficulties with variable scope (cs_t3_q3#B) and assuming new names imply new data (cs_t4_q2#B). These are related but distinct misunderstandings, so the label is 'similar'.\n\nConfirm, revise, reject, or request more evidence."
+      },
+      {
+        "sitting": 6,
+        "date": "2026-09-21",
+        "run_id": "run_7198758f051b",
+        "score": 18,
+        "real_student_id": "stu_202b6988d7",
+        "real_student_name": "Thaneesha J",
+        "prior_evidence_rows": 5,
+        "prior_assignments": [
+          "diagnostic_sitting_1",
+          "diagnostic_sitting_2",
+          "diagnostic_sitting_3",
+          "diagnostic_sitting_4",
+          "diagnostic_sitting_5"
+        ],
+        "label": "recurring",
+        "explanation": "In diagnostic_sitting_5, the student selected option B on cs_t1_q3, drawing a conclusion unsupported by a single small test, which is the same mistake as in diagnostic_sitting_1 and diagnostic_sitting_4. In both cases, the student drew a conclusion without adequate evidence, demonstrating a recurring difficulty with backing up a claim with evidence.",
+        "related_refs": [
+          "cs_t1_q3#B",
+          "cs_t1_q3#B",
+          "cs_t1_q3#B"
+        ],
+        "finding": {
+          "revision": 1,
+          "status": "candidate_recurring",
+          "statement": "In two assignments, the student drew conclusions without adequate evidence, selecting option B on cs_t1_q3 in both cases. The conclusions were unsupported by a single small test, demonstrating a recurring difficulty with backing up a claim with evidence.",
+          "supporting_refs": [
+            "cs_t1_q3#B",
+            "cs_t1_q3#B"
+          ],
+          "uncertainty": "Two tasks only; recurrence across the term is not established.",
+          "proposed_next_step": "Ask the student to justify a claim with multiple pieces of evidence in a short exercise."
+        },
+        "check": {
+          "verdict": "needs_review",
+          "failed_check": null,
+          "detail": "The finding is supported by two instances of the same mistake, but the recurrence across the term is not fully established, making it consequential enough for a professor to review."
+        },
+        "state": "needs_review",
+        "paused_for_human": "The finding was flagged as consequential.\n\nFinding: In two assignments, the student drew conclusions without adequate evidence, selecting option B on cs_t1_q3 in both cases. The conclusions were unsupported by a single small test, demonstrating a recurring difficulty with backing up a claim with evidence.\nComparison: recurring - In diagnostic_sitting_5, the student selected option B on cs_t1_q3, drawing a conclusion unsupported by a single small test, which is the same mistake as in diagnostic_sitting_1 and diagnostic_sitting_4. In both cases, the student drew a conclusion without adequate evidence, demonstrating a recurring difficulty with backing up a claim with evidence.\n\nConfirm, revise, reject, or request more evidence."
+      }
+    ],
+    "final_label": "recurring",
+    "final_run_id": "run_7198758f051b",
+    "sittings_with_history": 6,
+    "recurring_claims": 1,
+    "outcome": "1 of 6 sittings claimed a recurrence; every one cited its evidence and paused for a human",
+    "meets_expectation": true
+  }
+]

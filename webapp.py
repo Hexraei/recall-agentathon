@@ -9,6 +9,7 @@ Shape of the thing
     /teacher         pick a department
     /teacher/{dept}  class report + per-student list, both agent-written
     /teacher/{dept}/{sid}  one student, seen by the teacher
+    /api/memory/*    JSON, read-only: the persistent-memory demo for the app
 
 Why there is no feedback per question
 -------------------------------------
@@ -34,10 +35,10 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from slice.config import settings as load_settings
-from slice.llm import complete
+from slice.llm import ModelError, complete
 from slice.store import Store
 
-from app import bank, report, roster
+from app import bank, memory_api, report, roster
 
 DB = Path(__file__).parent / os.environ.get("RECALL_DB", "webapp.db")
 """Which database this process writes to.
@@ -57,6 +58,13 @@ fiction, with no way to tell afterwards which rows were which.
 """
 
 app = FastAPI()
+
+# The mobile app's read-only view of the persistent-memory demo, served from
+# memory.db rather than this process's database. It opens its own read-only
+# connection per request, so it shares none of the locking machinery below and
+# cannot write to anything. None of the quiz routes change because of it.
+app.include_router(memory_api.router)
+
 _settings = load_settings()
 _store: Store | None = None
 _store_lock = threading.RLock()
@@ -216,6 +224,46 @@ def esc(s) -> str:
             .replace(">", "&gt;").replace('"', "&quot;"))
 
 
+def _model_error_page(exc: ModelError, back_href: str) -> HTMLResponse:
+    """A styled, honest page for a report that could not be generated.
+
+    Before this, a ModelError from report.for_student/for_class propagated
+    all the way up through no try/except anywhere in this file and FastAPI's
+    default handler turned it into a bare 500 with the body "Internal Server
+    Error" - no explanation, nothing a teammate or a judge could act on.
+    Confirmed live: with both API keys empty, httpx refuses to even send the
+    request ("Illegal header value b'Bearer '") and that exception reached
+    the browser completely unstyled. Caught here instead, with the actual
+    cause named plainly - this is exactly the failure mode ON-THE-DAY.md asks
+    a team to be able to demonstrate handling, not hide.
+
+    Distinguishes "no key configured" (an setup problem, obvious once said)
+    from a genuine outage (rate limit, network, provider down) since the
+    fix for each is different and a reader should not have to guess which.
+    """
+    msg = str(exc)
+    no_key = "Illegal header value" in msg or "Bearer" in msg
+    if no_key:
+        headline = "No API key is configured"
+        detail = ("The server has no working Groq or OpenRouter key set, so "
+                  "the model that writes this report could not be reached at "
+                  "all. Set GROQ_API_KEY or OPENROUTER_API_KEY in .env and "
+                  "restart the app.")
+    else:
+        headline = "The report could not be generated"
+        detail = ("The model that writes this report is unreachable right "
+                  "now - a rate limit or a provider outage, not a bug in the "
+                  "quiz data. Waiting a moment and reloading this page "
+                  "usually resolves it.")
+    return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>{esc(headline)}</h1>
+<div class="card key"><p style="margin:0">{esc(detail)}</p></div>
+<p class="muted" style="margin-top:.6rem">Technical detail: {esc(msg)}</p>
+<div class="row"><a href="{back_href}">Back</a></div>
+""")
+
+
 def bar(correct: int, asked: int) -> str:
     """A score and a plain green fill.
 
@@ -355,10 +403,15 @@ def answer(sid: str = Form(...), qid: str = Form(...), chosen: str = Form(...),
 def _concept_cards(rows, css: str) -> str:
     if not rows:
         return '<p class="muted">Nothing in this group.</p>'
+    # A concept with no wrong answers carries no sentence - the score beside it
+    # already says they got them all, and the paragraph is omitted rather than
+    # rendered empty. See strip_empty_evidence() in app/report.py.
     return "".join(
         f'<div class="card {css}"><b>{esc(r["concept"])}</b> '
         f'<span class="chip">{esc(r["verdict"])}</span>'
-        f'<p class="muted" style="margin:.45rem 0 0">{esc(r["evidence"])}</p></div>'
+        + (f'<p class="muted" style="margin:.45rem 0 0">'
+           f'{esc(r["evidence"])}</p>' if (r.get("evidence") or "").strip() else "")
+        + '</div>'
         for r in rows)
 
 
@@ -370,6 +423,13 @@ def _trail_html(body: dict) -> str:
     for row in trail:
         if row["step"] == "draft":
             lines.append(f'draft  r{row["revision"]}  → {row["body"].get("headline","")[:70]}')
+        elif row["step"] == "correct":
+            # What CODE fixed before any check ran - a verdict recomputed from
+            # the counts, an entry moved to the list it belongs in, a pattern
+            # dropped, filler cleared. Worth showing: it is the half of this
+            # system that is arithmetic rather than judgement.
+            for note in row["body"].get("corrections", []):
+                lines.append(f'code   r{row["revision"]}  → {note[:80]}')
         else:
             b = row["body"]
             verdict = b.get("verdict", "")
@@ -395,17 +455,27 @@ def student_report(sid: str, force: int = 0):
     if asked == 0:
         return RedirectResponse(f"/quiz/{sid}", status_code=303)
 
-    body = report.for_student(s, sid, _settings, call=complete, force=bool(force))
+    try:
+        body = report.for_student(s, sid, _settings, call=complete, force=bool(force))
+    except ModelError as e:
+        return _model_error_page(e, f"/quiz/{sid}")
 
     topics = "".join(
         f'<tr><td>{esc(t["topic"])}</td><td>{bar(t["correct"], t["asked"])}</td></tr>'
         for t in roster.by_topic(s, sid))
 
-    # The student's page carries no machinery: no draft trail, no reviewer
-    # banner, no "what this cannot tell you", no re-run button and no link into
-    # the teacher's dashboard. Those exist for us and for a judge, and they are
-    # still in the database and on the teacher's side - but a student reading
-    # their own result should meet a plain page, not an audit log.
+    # The student's page carries no machinery: no draft trail, no re-run
+    # button and no link into the teacher's dashboard. Those exist for us and
+    # for a judge, and they are still in the database and on the teacher's
+    # side - a student reading their own result should meet a plain page, not
+    # an audit log.
+    #
+    # The one exception is _unverified below. Before this, only the TEACHER's
+    # page showed it - a student reading the exact same unsigned-off report
+    # had no way to know its wording never passed the checker. That is a fact
+    # about the report in front of them, not internal machinery, so it gets a
+    # single plain sentence here - no "reviewer", no "checker", no jargon the
+    # rest of this page already avoids.
     parts = [
         f'<a class="brand" href="/">Recall</a>',
         f'<p class="muted">{esc(stu["name"])} · '
@@ -414,6 +484,12 @@ def student_report(sid: str, force: int = 0):
         f'/{asked}</span></div>',
         f'<h1>{esc(body["headline"])}</h1>',
     ]
+
+    if body.get("_unverified"):
+        parts.append(
+            '<div class="card key"><p style="margin:0">This wording has not '
+            'been double-checked yet - the numbers behind it are still '
+            'accurate.</p></div>')
 
     if body.get("cross_topic_pattern"):
         parts.append(
@@ -428,6 +504,11 @@ def student_report(sid: str, force: int = 0):
                  f'{esc(body["next_step"])}</div>')
     parts.append('<p class="muted" style="margin-top:2rem">Thank you for taking '
                  'this quiz.</p>')
+    if body.get("_from_cache"):
+        parts.append(
+            '<p class="muted" style="margin-top:.4rem">Showing the report from '
+            'when you finished the quiz. '
+            f'<a href="/report/{sid}?force=1">Regenerate it</a>.</p>')
     return page("".join(parts))
 
 
@@ -454,9 +535,11 @@ def _prose(strengths, gaps) -> list[str]:
         lead = "The part to work on is " if len(bad) == 1 else "The parts to work on are "
         out.append(lead + _join(bad) + ".")
         # One concrete example of what went wrong, so the advice is not abstract.
-        first = (gaps or [{}])[0].get("evidence")
+        # The first gap that HAS a sentence: a clean concept now carries none.
+        first = next((g["evidence"] for g in (gaps or [])
+                      if (g.get("evidence") or "").strip()), "")
         if first:
-            out.append(first[0].upper() + first[1:] if first else "")
+            out.append(first[0].upper() + first[1:])
     if not good and not bad:
         out.append("Your answers were spread fairly evenly, with no single "
                    "area standing out either way.")
@@ -504,7 +587,10 @@ def teacher_class(dept: str, force: int = 0):
 agent has something to read.</div>
 <div class="row"><a href="/teacher">Back</a></div>""")
 
-    body = report.for_class(s, dept, _settings, call=complete, force=bool(force))
+    try:
+        body = report.for_class(s, dept, _settings, call=complete, force=bool(force))
+    except ModelError as e:
+        return _model_error_page(e, "/teacher")
 
     topics = "".join(
         f'<tr><td>{esc(t["topic"])}</td><td>{bar(t["correct"], t["answered"])}</td></tr>'
@@ -538,9 +624,18 @@ agent has something to read.</div>
                 'strong/weak calls below are computed in code. The reviewer '
                 'did not sign off on the phrasing.</p></div>')
 
+    # A plain reload replays the cached row (~1ms, no model call at all) - the
+    # "Re-run the agent" link already existed to force a fresh one, but
+    # nothing on the page said which kind you were looking at, so reloading
+    # to "show it running" during a demo would silently show nothing running.
+    freshness = ('freshly generated' if not body.get('_from_cache')
+                else 'from an earlier run')
+
     return page(f"""
 <a class="brand" href="/">Recall</a>
-<p class="muted">{esc(bank.DEPARTMENTS[dept])} · {n} student(s)</p>
+<p class="muted">{esc(bank.DEPARTMENTS[dept])} · {n} student(s) ·
+ <span title="Cached reports are a database read, not a new model call.">
+ {freshness}</span></p>
 <h1>{esc(body["headline"])}</h1>
 {warn}{split}
 <h2>Teach again</h2>{_concept_cards(body.get("teach_again"), "bad")}
