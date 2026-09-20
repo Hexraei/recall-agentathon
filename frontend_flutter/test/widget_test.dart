@@ -1,0 +1,115 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:recall/main.dart';
+import 'package:recall/theme/colors.dart';
+import 'package:recall/widgets/shared/responsive_shell.dart';
+
+/// Splash restores the session on a 900ms delay and animates a looping bar
+/// while it does, so a test that stops on Splash would leave both a pending
+/// timer and a never-settling animation. Every test below runs the clock past
+/// the restore first, which disposes Splash and lands on the auth screen.
+Future<void> _bootToAuth(WidgetTester tester) async {
+  await tester.pumpWidget(const RecallApp());
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 1));
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  testWidgets('Splash shows the lockup while the session restores', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const RecallApp());
+    await tester.pump();
+
+    expect(find.text('Recall'), findsOneWidget);
+    expect(find.text('Restoring your session'), findsOneWidget);
+
+    // Let the restore finish so Splash is disposed with nothing left pending.
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('the splash lockup is centred on the screen', (tester) async {
+    await tester.pumpWidget(const RecallApp());
+    await tester.pump();
+
+    final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+    final lockup = tester.getCenter(find.text('Recall'));
+
+    // The mark sits above the word, so the pair's centre is a little above
+    // the word's own centre. A generous tolerance still catches the old
+    // layout, which sat the lockup roughly 65 points high.
+    expect(
+      (lockup.dy - screen.height / 2).abs(),
+      lessThan(40),
+      reason:
+          'the lockup should be centred on the screen, not on the space '
+          'left over above the status block',
+    );
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+    'ResponsiveShell does not constrain the page outside a web build',
+    (tester) async {
+      // flutter_test's default surface is 800 wide, well past the
+      // shell's breakpoint. If it applied here the way it does on web,
+      // the sign-in card would be centred in a narrower box; on every
+      // other platform — including this test binary — it must render
+      // full width instead, gated by kIsWeb rather than by width alone.
+      await _bootToAuth(tester);
+
+      final field = tester.getSize(find.byType(TextField).first);
+      expect(
+        field.width,
+        greaterThan(ResponsiveShell.maxContentWidth),
+        reason:
+            'a non-web run must not be squeezed into the web-only '
+            'centred column',
+      );
+    },
+  );
+
+  testWidgets('An unrestored session lands on sign in', (tester) async {
+    await _bootToAuth(tester);
+
+    expect(find.text('Sign in'), findsWidgets);
+    expect(find.text('Use your college email or roll number.'), findsOneWidget);
+  });
+
+  testWidgets('The ground colour is the warm off-white, not white', (
+    tester,
+  ) async {
+    await _bootToAuth(tester);
+
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+    expect(scaffold.backgroundColor, AppColors.ground);
+  });
+
+  testWidgets('Sign in is where the account is created from too', (
+    tester,
+  ) async {
+    await _bootToAuth(tester);
+
+    // The toggle is one Text.rich, so its label only matches with
+    // findRichText; the tap target is the GestureDetector wrapping it.
+    final toggle = find
+        .ancestor(
+          of: find.textContaining('Create an account', findRichText: true),
+          matching: find.byType(GestureDetector),
+        )
+        .first;
+    await tester.ensureVisible(toggle);
+    await tester.pumpAndSettle();
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create your account'), findsOneWidget);
+    // Role is chosen once at sign-up and presented as permanent.
+    expect(find.text('Teacher'), findsOneWidget);
+    expect(find.text('Student'), findsOneWidget);
+  });
+}

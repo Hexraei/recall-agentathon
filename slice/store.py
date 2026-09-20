@@ -83,9 +83,10 @@ BEGIN SELECT RAISE(ABORT, 'versions is append-only: history is not editable'); E
 class Store:
     """Durable run state. One file. Commit it, ship it, replay it."""
 
-    def __init__(self, path: str | Path = "run.db") -> None:
+    def __init__(self, path: str | Path = "run.db", check_same_thread: bool = True) -> None:
         self.path = str(path)
-        self.db = sqlite3.connect(self.path, isolation_level=None)
+        self.db = sqlite3.connect(self.path, isolation_level=None,
+                                  check_same_thread=check_same_thread)
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA foreign_keys=ON")

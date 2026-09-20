@@ -437,21 +437,31 @@ def test_low_confidence_check_ships_unverified(store, monkeypatch):
 
 
 def test_jev_off_uses_the_chat_check_and_never_touches_the_judge(store, monkeypatch):
-    """The offline path - settings=None, exactly what the team's own tests
-    pass - must never attempt a Jev call and must leave no fallback debris."""
+    """Jev unset (settings PRESENT with jev_model empty) - the pre-Jev path:
+    the chat checker answers, the judge is never reached, no fallback debris.
+    (settings=None is a different path now: it matches main's code-only
+    accept with no transport at all - pinned by test_jev_check_outage and
+    the quiz_app loop tests.)"""
     from app import report as report_module
     import app.jev_report_check as jrc
+    from slice.config import Settings
 
     touched: list = []
     monkeypatch.setattr(jrc, "judge",
                         lambda **kw: touched.append(1) or 1 / 0)
 
+    s = Settings(
+        api_key="", groq_key="", model="test/chat", fallback_model="",
+        escalation_model="", max_tokens=1200, max_tokens_per_run=250000,
+        max_attempts_per_step=3, expert_timeout_minutes=1,
+        langfuse_public="", langfuse_secret="", langfuse_host="",
+        jev_model="")
     chat = _ChatDouble(allow=("report_check",))
     body = dict(_REPORT_OK)
     trail: list = []
-    check = report_module._run_check(body, _FACTS, "student", None, _Budget(),
+    check = report_module._run_check(body, _FACTS, "student", s, _Budget(),
                                      None, "r1", trail, None, call=chat)
     assert check.verdict == "accepted"
     assert chat.calls == ["report_check"]
     assert not trail              # no jev_fallback row
-    assert not touched, "the judge was reached although settings is None"
+    assert not touched, "the judge was reached although Jev is unset"

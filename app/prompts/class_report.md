@@ -52,6 +52,13 @@ telling a teacher to group them on that basis is wrong.
 Every entry's `evidence` field says WHAT the class got wrong together — the
 shared mistake behind the wrong option they converged on, in one sentence.
 
+**If a concept has no wrong answers, leave `evidence` as an empty string.**
+There is nothing shared to describe and the score already says so. Do not
+write "the class got all of these right" or any variation — it is deleted in
+code.
+
+**Never use the same sentence twice.** Each entry describes its own concept.
+
 **Do not put scores or tallies in it.** No "22 of 31", no percentages, no
 counts of any kind. Those are displayed beside every entry already, computed
 from the database. Repeating them is how a number gets copied wrong, and a

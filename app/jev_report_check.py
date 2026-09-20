@@ -40,7 +40,7 @@ import httpx
 from slice.config import Settings
 from slice.llm import _Span
 
-from .jev_compare import DECISIONS_API, JevError
+from .jev_compare import DECISIONS_API, JevError, TRANSPORT_ERRORS
 
 
 class JevVerdict:
@@ -157,9 +157,15 @@ def judge(*, settings: Settings, budget, report: dict, facts: dict,
         "state": build_jev_check_state(report, facts, kind),
         "questions": _questions(),
     }
-    r = httpx.post(DECISIONS_API,
-                   headers={"Authorization": f"Bearer {settings.api_key}"},
-                   json=body, timeout=timeout)
+    try:
+        r = httpx.post(DECISIONS_API,
+                       headers={"Authorization": f"Bearer {settings.api_key}"},
+                       json=body, timeout=timeout)
+    except TRANSPORT_ERRORS as e:
+        # Transport-level failure (network/timeout/malformed header like an
+        # empty Bearer key): wrapped as JevError so the caller's outage path
+        # treats it as an outage, not a crash.
+        raise JevError(f"Jev transport failure: {type(e).__name__}: {e}") from e
     if r.status_code != 200:
         raise JevError(f"Jev HTTP {r.status_code}: {r.text[:300]}")
     data = r.json()
