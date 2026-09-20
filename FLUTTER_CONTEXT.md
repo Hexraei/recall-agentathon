@@ -131,9 +131,42 @@ something is not detecting anything.
 
 ---
 
+## Six identities, two chosen at the department level
+
+The first four identities (`mem_robotics_a`, `mem_cs_a`, `mem_robotics_b`,
+`mem_cs_b`) were hand-picked within a department — a clean group and a messy
+group carved out of the same 19 or 14 real students. That invites the fair
+question "did you pick the students to get the answer you wanted?"
+
+The last two answer it differently: **the department itself was picked by
+measuring the whole cohort first**, not by picking students within it.
+
+- **`mem_robotics_clean_dept`** ("Devika R.", 7 sittings). Measured directly
+  from `webapp.db`: 13 of 19 completed robotics students (68%) got "working
+  out where the robot ends up" wrong at least once, and 7 of those chose the
+  identical wrong option on the identical question for the identical reason.
+  This identity is those 7 real students, replayed as 7 sittings. Result:
+  `recurring` on 6 of 6 sittings that had history to read — the strongest,
+  longest chain in the dataset.
+- **`mem_cs_erratic_dept`** ("Aravind S.", 6 sittings). Measured the same way:
+  computer science has no dominant misconception at all — three concepts tied
+  at exactly 10 of 14 students each. Six members picked for genuinely
+  different profiles. Result: `not_enough_evidence → improving → similar →
+  similar → similar → recurring` — real variety, not a forced negative.
+
+**Robotics was chosen for the clean-pattern story and CS for the erratic one
+*because of* this measurement — say that out loud in the demo.** It is a
+stronger claim than "we picked good examples": it says the two departments'
+real data genuinely differ in shape, and the system's behaviour tracks that
+difference rather than a curated one. The measurement itself is in
+`docs/memory-demo-department-selection.md`.
+
+---
+
 ## Showing it fail
 
-You asked to be able to show this breaking. Two honest ways, no rigging needed.
+You asked to be able to show this breaking. Three honest ways now, no rigging
+needed.
 
 **1. Show a sitting with its memory removed.** The demo DB is a file. Copy it,
 delete the earlier sittings for one identity, point the app at the copy: a
@@ -149,10 +182,25 @@ cp memory.db memory-broken.db
 data return a `recurring` claim resting on a thinner connection than others, and
 some return `similar` where a person might have expected `recurring`. Both are
 in `memory.db` now. The app shows the claim and its citations; you say what is
-wrong with it.
+wrong with it. `mem_cs_a` ("Arjun M.") is the sharpest example: it is a Category
+A group, chosen because its members share a clean concept, and it still only
+found the recurrence on 2 of its 3 sittings with history — sitting 4 correctly
+called a weaker match `similar` instead of forcing it.
 
-Leave `awaiting_human` visible in both cases. A run parked on a professor is the
-system declining to decide — that is a load-bearing part of the story.
+**3. Show the erratic department live.** `mem_cs_erratic_dept` ("Aravind S.")
+is the "random, erratic pattern" case, on real CS data, with the department
+picked for exactly this reason (see above). Walk its timeline in order — `first
+→ none_found → none_found → none_found → none_found → found` — and the story
+tells itself: the system stayed quiet across four sittings where the real
+answers genuinely didn't share a cause, then found one real connection on the
+fifth and paused for a professor rather than announcing it. This is the
+strongest "the system declined to overclaim, then found something real when
+there was something real" demonstration in the dataset, because it never had
+its members chosen to force that specific shape — the whole *department* was
+chosen because it measured this way.
+
+Leave `awaiting_human` visible in all three cases. A run parked on a professor
+is the system declining to decide — that is a load-bearing part of the story.
 
 ---
 
@@ -177,8 +225,19 @@ system declining to decide — that is a load-bearing part of the story.
   .venv/bin/python tools/build_memory_demo.py --force
   .venv/bin/python tools/run_memory_demo.py
   ```
-  The second step makes real model calls and takes a few minutes. Sittings must
-  be replayed in order — that is what gives the later ones a history to read.
+  The second step makes real model calls and takes a few minutes — longer now
+  than it used to, since the two department-level groups run 6-7 sittings each
+  instead of 3-4. Sittings must be replayed in order — that is what gives the
+  later ones a history to read. `GET /api/memory/students` should return **six**
+  identities when this is done, not four.
+- **A long sitting chain can hit a provider's per-minute token limit.** The
+  7-sitting robotics group did, once, while this was being built — the
+  comparison step reading 5 prior sittings' worth of real history landed just
+  over Groq's input-token-per-minute cap and the run failed outright instead of
+  falling back. Fixed in `slice/llm.py` (a 413 now triggers the same fallback a
+  429 does), but if a fresh rebuild ever fails partway through a long chain,
+  that is the first thing to check - `docs/memory-demo-department-selection.md`
+  has the full story.
 - **Cache the responses in the app.** They are static between rebuilds, and a
   demo should not depend on the network being good in the room.
 - **Don't write to `webapp.db` from the app.** Real students' answers live
