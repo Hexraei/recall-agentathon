@@ -96,6 +96,12 @@ class Quiz {
   int get questionCount => questions.length;
   bool get hasRun => lastRun != null;
 
+  /// Hosted and still inside its window: students can join it right now.
+  bool get isRunning => lastRun != null && closedAt == null;
+
+  /// Hosted and closed. Its results and analysis exist.
+  bool get isConducted => closedAt != null;
+
   /// "15 questions · 20 min"
   String get summaryLine => '$questionCount questions · $timeLimitMinutes min';
 

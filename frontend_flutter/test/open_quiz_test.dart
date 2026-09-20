@@ -109,6 +109,51 @@ void main() {
     expect(find.text('Hash tables'), findsNothing);
   });
 
+  group('a quiz row states whether it has been conducted', () {
+    test('the open quiz reads as running, not as conducted', () {
+      expect(Fixtures.hashTables.isRunning, isTrue);
+      expect(Fixtures.hashTables.isConducted, isFalse);
+    });
+
+    test('a closed quiz reads as conducted', () {
+      expect(Fixtures.graphs.isConducted, isTrue);
+      expect(Fixtures.graphs.isRunning, isFalse);
+    });
+
+    test('a quiz never hosted is neither', () {
+      const draft = Quiz(
+        id: 'draft',
+        title: 'Sorting',
+        questions: [],
+        timeLimitMinutes: 15,
+      );
+      expect(draft.hasRun, isFalse);
+      expect(draft.isRunning, isFalse);
+      expect(draft.isConducted, isFalse);
+    });
+  });
+
+  testWidgets('My quizzes tags a conducted quiz and the running one', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const RecallApp());
+    await tester.pump();
+    await _settle(tester);
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 't-iyer');
+    await tester.enterText(fields.at(1), 'password');
+    await tester.tap(find.widgetWithText(Center, 'Sign in').hitTestable());
+    await _settle(tester, frames: 24);
+
+    await tester.tap(find.text('My quizzes'));
+    await _settle(tester, frames: 24);
+
+    expect(find.text('Conducted'), findsWidgets);
+    expect(find.text('Running now'), findsOneWidget);
+    expect(find.textContaining('still open'), findsOneWidget);
+  });
+
   testWidgets('tapping "Open now" does not ask for the PIN again', (
     tester,
   ) async {

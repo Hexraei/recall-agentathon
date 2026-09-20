@@ -8,6 +8,7 @@ import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../widgets/shared/bands.dart';
 import '../../widgets/shared/buttons.dart';
+import '../../widgets/shared/live_dot.dart';
 import '../../widgets/shared/misc.dart';
 import '../../widgets/shared/page_scaffold.dart';
 import '../../widgets/shared/sheets.dart';
@@ -184,19 +185,33 @@ class _QuizRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    quiz.week == null
-                        ? quiz.title
-                        : '${quiz.week} · ${quiz.title}',
-                    style: AppText.rowTitle.copyWith(fontSize: 15.5),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          quiz.week == null
+                              ? quiz.title
+                              : '${quiz.week} · ${quiz.title}',
+                          style: AppText.rowTitle.copyWith(fontSize: 15.5),
+                        ),
+                      ),
+                      // A row that only said "Ran Tue 16 Sep" could not tell
+                      // a finished quiz from one still open, so the state is
+                      // named rather than inferred from a date.
+                      if (quiz.isRunning) ...[
+                        const SizedBox(width: 8),
+                        const _RunningTag(),
+                      ] else if (quiz.isConducted) ...[
+                        const SizedBox(width: 8),
+                        const TagPill(text: 'Conducted'),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Text(quiz.summaryLine, style: AppText.rowSecondary),
                   const SizedBox(height: 2),
                   Text(
-                    quiz.hasRun
-                        ? 'Ran ${_shortDate(quiz.lastRun!)}'
-                        : 'Not run yet',
+                    _runLine(quiz),
                     style: AppText.captionSmall.copyWith(
                       color: AppColors.grey4,
                     ),
@@ -243,6 +258,16 @@ class _QuizRow extends StatelessWidget {
     );
   }
 
+  static String _runLine(Quiz quiz) {
+    if (!quiz.hasRun) return 'Not run yet';
+    if (quiz.isRunning) {
+      final t = quiz.lastRun!;
+      return 'Started ${t.hour.toString().padLeft(2, '0')}:'
+          '${t.minute.toString().padLeft(2, '0')} · still open';
+    }
+    return 'Ran ${_shortDate(quiz.lastRun!)}';
+  }
+
   static String _shortDate(DateTime d) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = [
@@ -260,6 +285,37 @@ class _QuizRow extends StatelessWidget {
       'Dec',
     ];
     return '${days[d.weekday - 1]} ${d.day} ${months[d.month - 1]}';
+  }
+}
+
+/// The live counterpart to the Conducted pill: an accent tag with the same
+/// pulsing dot the rest of the app uses for anything updating in real time.
+class _RunningTag extends StatelessWidget {
+  const _RunningTag();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.accentTint,
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const LiveDot(size: 6),
+          const SizedBox(width: 6),
+          Text(
+            'Running now',
+            style: AppText.captionSmall.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.accent,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
