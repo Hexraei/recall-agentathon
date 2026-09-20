@@ -713,5 +713,103 @@ class Fixtures {
     ),
   ];
 
-  static final allQuizzes = <Quiz>[graphs, hashTables, trees, recursion];
+  /// A second quiz this student did take. Recursion exists so the "absent"
+  /// dash on the performance chart is reachable, which left exactly one quiz
+  /// in their history and nothing to choose between on My results.
+  static final sorting = Quiz(
+    id: 'q-sorting',
+    title: 'Sorting',
+    week: 'Week 7',
+    timeLimitMinutes: 12,
+    lastRun: DateTime(2025, 9, 9, 10, 5),
+    closedAt: DateTime(2025, 9, 9, 10, 17),
+    questions: _sortingQuestions,
+  );
+
+  static final _sortingQuestions = <Question>[
+    const Question(
+      id: 's1',
+      text: 'Which sort is stable in its usual implementation?',
+      topic: 'Stability',
+      options: ['Merge sort', 'Quicksort', 'Heapsort', 'Selection sort'],
+      correctIndex: 0,
+    ),
+    const Question(
+      id: 's2',
+      text: 'What does it mean for a sort to be stable?',
+      topic: 'Stability',
+      options: [
+        'It never needs extra memory',
+        'Equal keys keep their original order',
+        'It always runs in n log n',
+        'It sorts in place',
+      ],
+      correctIndex: 1,
+    ),
+    const Question(
+      id: 's3',
+      text: 'What is the worst case of quicksort with a bad pivot?',
+      topic: 'Complexity',
+      options: ['O(n)', 'O(n log n)', 'O(n squared)', 'O(log n)'],
+      correctIndex: 2,
+    ),
+    const Question(
+      id: 's4',
+      text: 'What is the worst case of merge sort?',
+      topic: 'Complexity',
+      options: ['O(n log n)', 'O(n squared)', 'O(n)', 'O(log n)'],
+      correctIndex: 0,
+    ),
+    const Question(
+      id: 's5',
+      text: 'How much extra space does the standard merge sort need?',
+      topic: 'Complexity',
+      options: ['None', 'O(log n)', 'O(n)', 'O(n log n)'],
+      correctIndex: 2,
+    ),
+    const Question(
+      id: 's6',
+      text: 'After one partition step in quicksort, what is guaranteed?',
+      topic: 'Partitioning',
+      options: [
+        'Both halves are sorted',
+        'The pivot is in its final position',
+        'The array is reversed',
+        'The smallest element is first',
+      ],
+      correctIndex: 1,
+    ),
+    const Question(
+      id: 's7',
+      text: 'Which pivot choice most often avoids quicksort worst case?',
+      topic: 'Partitioning',
+      options: [
+        'Always the first element',
+        'Always the last element',
+        'The median of three',
+        'Always the largest element',
+      ],
+      correctIndex: 2,
+    ),
+    const Question(
+      id: 's8',
+      text: 'Why is insertion sort preferred for very small arrays?',
+      topic: 'Comparison sorts',
+      options: [
+        'Its constant factors are small',
+        'It is the only stable sort',
+        'It needs no comparisons',
+        'It runs in constant time',
+      ],
+      correctIndex: 0,
+    ),
+  ];
+
+  static final allQuizzes = <Quiz>[
+    graphs,
+    hashTables,
+    trees,
+    recursion,
+    sorting,
+  ];
 }
