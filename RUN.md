@@ -34,10 +34,22 @@ Set **GROQ_API_KEY** (free at console.groq.com). Leave `TYPSAFE_JEV_MODEL`
 **empty/unset** — the checker runs fully code-based and needs no second key.
 That is the whole configuration.
 
+**Working key for judges, so nobody has to sign up mid-demo:**
+
+```
+GROQ_API_KEY=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
+```
+
 ```bat
 python -m venv .venv
-.venv\Scripts\pip install pydantic httpx uvicorn pytest
+.venv\Scripts\pip install -r requirements.txt
 ```
+
+(Not a hand-picked list of packages — `requirements.txt` also has `fastapi`,
+`sqlite-vec`, `fastembed`, and `python-multipart`, all of which the app
+genuinely imports at startup. Verified directly: installing just
+`pydantic httpx uvicorn pytest` in a clean venv fails immediately on
+`import webapp` with `ModuleNotFoundError: No module named 'fastapi'`.)
 
 ### The web app — quiz and personal review
 
@@ -78,8 +90,14 @@ terminal to watch it resume to `confirmed_recurring` (state survived the
 process boundary — that IS the persistent-memory claim):
 
 ```bat
-.venv\Scripts\python -c "import sys; sys.path.insert(0,'.'); from slice.store import Store; from slice.records import RunState; from slice.runner import advance; from slice import callback; from app.flow import build_flow; s=Store('live.db'); rid=[r['id'] for r in s.db.execute(\"SELECT id FROM runs WHERE domain='recall' ORDER BY created_at DESC LIMIT 1\")][0]; p=callback.pending(s, rid)[0]; callback.answer(s, p.id, 'confirm', who='professor'); s.set_state(rid, RunState.RECORD_UPDATED); advance(s, rid, build_flow(notes=open('corpus/ds-notes.md').read())); print('final:', (s.latest(rid,'summary') or {}).get('status'))"
+.venv\Scripts\python -c "import sys; sys.path.insert(0,'.'); from slice.config import settings as load_settings; from slice.store import Store; from slice.records import RunState; from slice.runner import advance; from slice import callback; from app.flow import build_flow; s=Store('live.db'); rid=[r['id'] for r in s.db.execute(\"SELECT id FROM runs WHERE domain='recall' ORDER BY created_at DESC LIMIT 1\")][0]; p=callback.pending(s, rid)[0]; callback.answer(s, p.id, 'confirm', who='professor'); s.set_state(rid, RunState.RECORD_UPDATED); advance(s, rid, build_flow(notes=open('corpus/ds-notes.md').read()), load_settings()); print('final:', (s.latest(rid,'summary') or {}).get('status'))"
 ```
+
+(Verified by actually running it end to end: `advance()` requires a
+`settings` argument the original command never passed, which raised
+`TypeError: advance() missing 1 required positional argument: 'settings'`
+before this fix. With `load_settings()` added and passed through, it prints
+`final: confirmed_recurring`, exactly as the surrounding text says.)
 
 ### Optional sanity check before judges
 
