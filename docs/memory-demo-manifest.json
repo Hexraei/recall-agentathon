@@ -10,7 +10,7 @@
     "sittings": [
       {
         "sitting": 1,
-        "run_id": "run_b72078d6e041",
+        "run_id": "run_58afb19b3f9f",
         "date": "2026-06-08",
         "assignment_id": "diagnostic_sitting_1",
         "real_student_id": "stu_f1228d0d00",
@@ -22,7 +22,7 @@
       },
       {
         "sitting": 2,
-        "run_id": "run_53be517ef8d2",
+        "run_id": "run_0edb80e67a6c",
         "date": "2026-06-29",
         "assignment_id": "diagnostic_sitting_2",
         "real_student_id": "stu_d5a01e41f9",
@@ -34,7 +34,7 @@
       },
       {
         "sitting": 3,
-        "run_id": "run_00a07297baf8",
+        "run_id": "run_29c834a43954",
         "date": "2026-07-20",
         "assignment_id": "diagnostic_sitting_3",
         "real_student_id": "stu_93dfa11827",
@@ -48,7 +48,7 @@
       },
       {
         "sitting": 4,
-        "run_id": "run_1c84ac83a961",
+        "run_id": "run_3fe0135ee29e",
         "date": "2026-08-10",
         "assignment_id": "diagnostic_sitting_4",
         "real_student_id": "stu_c70717f485",
@@ -73,7 +73,7 @@
     "sittings": [
       {
         "sitting": 1,
-        "run_id": "run_84eb80422b2e",
+        "run_id": "run_c3b15982eb0c",
         "date": "2026-06-08",
         "assignment_id": "diagnostic_sitting_1",
         "real_student_id": "stu_2bf3073f73",
@@ -85,7 +85,7 @@
       },
       {
         "sitting": 2,
-        "run_id": "run_f8a1e6d2820f",
+        "run_id": "run_9004a82c9300",
         "date": "2026-06-29",
         "assignment_id": "diagnostic_sitting_2",
         "real_student_id": "stu_fb9298c06a",
@@ -97,7 +97,7 @@
       },
       {
         "sitting": 3,
-        "run_id": "run_ca78c8245522",
+        "run_id": "run_bc2d02af7eec",
         "date": "2026-07-20",
         "assignment_id": "diagnostic_sitting_3",
         "real_student_id": "stu_0cf341b68e",
@@ -111,7 +111,7 @@
       },
       {
         "sitting": 4,
-        "run_id": "run_7ccabe522b4c",
+        "run_id": "run_f44cf8e68e49",
         "date": "2026-08-10",
         "assignment_id": "diagnostic_sitting_4",
         "real_student_id": "stu_c744ac76e6",
@@ -137,7 +137,7 @@
     "sittings": [
       {
         "sitting": 1,
-        "run_id": "run_26bf683e7302",
+        "run_id": "run_ab4ba4fff9bf",
         "date": "2026-06-08",
         "assignment_id": "diagnostic_sitting_1",
         "real_student_id": "stu_010df982b7",
@@ -151,7 +151,7 @@
       },
       {
         "sitting": 2,
-        "run_id": "run_8eea52098ddb",
+        "run_id": "run_a2dd5ca0fd27",
         "date": "2026-06-29",
         "assignment_id": "diagnostic_sitting_2",
         "real_student_id": "stu_833fb269ea",
@@ -164,7 +164,7 @@
       },
       {
         "sitting": 3,
-        "run_id": "run_534caf3f8ccc",
+        "run_id": "run_ee140ca91be9",
         "date": "2026-07-20",
         "assignment_id": "diagnostic_sitting_3",
         "real_student_id": "stu_f1228d0d00",
@@ -188,7 +188,7 @@
     "sittings": [
       {
         "sitting": 1,
-        "run_id": "run_6154f06fc139",
+        "run_id": "run_22b450ca886b",
         "date": "2026-06-08",
         "assignment_id": "diagnostic_sitting_1",
         "real_student_id": "stu_2bf3073f73",
@@ -200,7 +200,7 @@
       },
       {
         "sitting": 2,
-        "run_id": "run_44f44bc7080b",
+        "run_id": "run_55b1db2a19d6",
         "date": "2026-06-29",
         "assignment_id": "diagnostic_sitting_2",
         "real_student_id": "stu_b5cb2df8b5",
@@ -213,7 +213,7 @@
       },
       {
         "sitting": 3,
-        "run_id": "run_c3f136d4e52a",
+        "run_id": "run_da9a5825990d",
         "date": "2026-07-20",
         "assignment_id": "diagnostic_sitting_3",
         "real_student_id": "stu_f834cd4135",
@@ -226,7 +226,7 @@
       },
       {
         "sitting": 4,
-        "run_id": "run_03237410dbb0",
+        "run_id": "run_303cda888bca",
         "date": "2026-08-10",
         "assignment_id": "diagnostic_sitting_4",
         "real_student_id": "stu_fb9298c06a",
@@ -234,6 +234,216 @@
         "score": 19,
         "wrong_concepts": {
           "understanding what a variable holds": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "mem_robotics_clean_dept",
+    "display": "Devika R.",
+    "department": "robotics",
+    "category": "A",
+    "expect": "recurring",
+    "concept": "working out where the robot ends up",
+    "why": "Chosen at the department level, not hand-picked within a smaller group: this is the single most common real mistake in the whole robotics cohort. Measured directly from webapp.db - 13 of 19 completed robotics students (68%) got at least one 'working out where the robot ends up' question wrong, and 7 of those 13 independently chose the identical wrong option (B) on the identical question (rb_t1_q2) for the identical reason - 'assumed the forward calculation simply reverses; it does not'. This group is those 7. The department was picked for the clean-pattern demo BECAUSE of this measurement, not the other way around - see docs/memory-demo-department-selection.md.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "run_id": "run_b5bf2b9e6bec",
+        "date": "2026-06-08",
+        "assignment_id": "diagnostic_sitting_1",
+        "real_student_id": "stu_76d01d7712",
+        "real_student_name": "Harshavaradhan G",
+        "score": 15,
+        "wrong_concepts": {
+          "working out where the robot ends up": 1,
+          "matching a fix to what went wrong": 1,
+          "backing a claim with a measurement": 1,
+          "choosing a method for the job": 1,
+          "accounting for weight and force": 1
+        }
+      },
+      {
+        "sitting": 2,
+        "run_id": "run_ab014fe3cbc6",
+        "date": "2026-06-29",
+        "assignment_id": "diagnostic_sitting_2",
+        "real_student_id": "stu_fd49dd9cfd",
+        "real_student_name": "JYOTHISH",
+        "score": 16,
+        "wrong_concepts": {
+          "working out where the robot ends up": 1,
+          "combining movements in the right order": 1,
+          "matching a fix to what went wrong": 1,
+          "accounting for weight and force": 1
+        }
+      },
+      {
+        "sitting": 3,
+        "run_id": "run_dbd5499c53bd",
+        "date": "2026-07-20",
+        "assignment_id": "diagnostic_sitting_3",
+        "real_student_id": "stu_c70717f485",
+        "real_student_name": "Krish",
+        "score": 17,
+        "wrong_concepts": {
+          "working out where the robot ends up": 1,
+          "backing a claim with a measurement": 1,
+          "choosing a method for the job": 1
+        }
+      },
+      {
+        "sitting": 4,
+        "run_id": "run_f73a923f59c8",
+        "date": "2026-08-10",
+        "assignment_id": "diagnostic_sitting_4",
+        "real_student_id": "stu_93dfa11827",
+        "real_student_name": "N.karthikeyn",
+        "score": 17,
+        "wrong_concepts": {
+          "working out where the robot ends up": 1,
+          "matching a fix to what went wrong": 1,
+          "backing a claim with a measurement": 1
+        }
+      },
+      {
+        "sitting": 5,
+        "run_id": "run_666c68c51c6c",
+        "date": "2026-08-31",
+        "assignment_id": "diagnostic_sitting_5",
+        "real_student_id": "stu_dfa174a2db",
+        "real_student_name": "Sathya Sa",
+        "score": 15,
+        "wrong_concepts": {
+          "working out where the robot ends up": 2,
+          "matching a fix to what went wrong": 1,
+          "accounting for weight and force": 2
+        }
+      },
+      {
+        "sitting": 6,
+        "run_id": "run_dc8731143cb7",
+        "date": "2026-09-21",
+        "assignment_id": "diagnostic_sitting_6",
+        "real_student_id": "stu_bc79a33738",
+        "real_student_name": "Tinku kannaa",
+        "score": 13,
+        "wrong_concepts": {
+          "working out where the robot ends up": 1,
+          "combining movements in the right order": 1,
+          "matching a fix to what went wrong": 1,
+          "backing a claim with a measurement": 1,
+          "accounting for weight and force": 3
+        }
+      },
+      {
+        "sitting": 7,
+        "run_id": "run_90cf4a40fe7a",
+        "date": "2026-10-12",
+        "assignment_id": "diagnostic_sitting_7",
+        "real_student_id": "stu_92d79a393b",
+        "real_student_name": "Yuvaraaja Ganesh V",
+        "score": 12,
+        "wrong_concepts": {
+          "working out where the robot ends up": 2,
+          "combining movements in the right order": 1,
+          "matching a fix to what went wrong": 1,
+          "backing a claim with a measurement": 2,
+          "accounting for weight and force": 2
+        }
+      }
+    ]
+  },
+  {
+    "id": "mem_cs_erratic_dept",
+    "display": "Aravind S.",
+    "department": "computer_science",
+    "category": "B",
+    "expect": "not_enough_evidence | similar | low confidence",
+    "concept": null,
+    "clean_control": false,
+    "why": "Chosen at the department level: computer science, measured directly, has NO single dominant misconception. Three concepts are tied at exactly 10 of 14 completed students each - 'backing up a claim with evidence', 'picking the right data structure', 'understanding what a variable holds' - so there is no clear winner for the system to confidently converge on, unlike robotics' 68%/47%-of-those matching split. This group's six members were picked to carry genuinely different concept profiles (one concept each, up to four each), and they DO share some individual questions pairwise - real overlap, not a clean control - but scattered across seven different question pairs with no two sittings sharing the same pair twice. That scatter, not a forced absence of any overlap, is what 'erratic' means here. See docs/memory-demo-department-selection.md.",
+    "sittings": [
+      {
+        "sitting": 1,
+        "run_id": "run_d4f7980a83f5",
+        "date": "2026-06-08",
+        "assignment_id": "diagnostic_sitting_1",
+        "real_student_id": "stu_f834cd4135",
+        "real_student_name": "Anbuselvan",
+        "score": 18,
+        "wrong_concepts": {
+          "working out how long code takes": 1,
+          "backing up a claim with evidence": 1
+        }
+      },
+      {
+        "sitting": 2,
+        "run_id": "run_3559a3650111",
+        "date": "2026-06-29",
+        "assignment_id": "diagnostic_sitting_2",
+        "real_student_id": "stu_2bf3073f73",
+        "real_student_name": "MONISH",
+        "score": 19,
+        "wrong_concepts": {
+          "understanding what a variable holds": 1
+        }
+      },
+      {
+        "sitting": 3,
+        "run_id": "run_e6d32a40664a",
+        "date": "2026-07-20",
+        "assignment_id": "diagnostic_sitting_3",
+        "real_student_id": "stu_c744ac76e6",
+        "real_student_name": "Harshavardhan K",
+        "score": 15,
+        "wrong_concepts": {
+          "picking the right data structure": 1,
+          "understanding what a variable holds": 3,
+          "backing up a claim with evidence": 1
+        }
+      },
+      {
+        "sitting": 4,
+        "run_id": "run_0109e71170af",
+        "date": "2026-08-10",
+        "assignment_id": "diagnostic_sitting_4",
+        "real_student_id": "stu_6c627f5ddc",
+        "real_student_name": "Rafan M A",
+        "score": 16,
+        "wrong_concepts": {
+          "working out how long code takes": 1,
+          "backing up a claim with evidence": 1,
+          "understanding what a variable holds": 1,
+          "picking the right data structure": 1
+        }
+      },
+      {
+        "sitting": 5,
+        "run_id": "run_f3045ba244c6",
+        "date": "2026-08-31",
+        "assignment_id": "diagnostic_sitting_5",
+        "real_student_id": "stu_b199f4e5d6",
+        "real_student_name": "Vishnu",
+        "score": 16,
+        "wrong_concepts": {
+          "working out how long code takes": 1,
+          "knowing when a loop or function stops": 1,
+          "understanding what a variable holds": 1,
+          "picking the right data structure": 1
+        }
+      },
+      {
+        "sitting": 6,
+        "run_id": "run_7198758f051b",
+        "date": "2026-09-21",
+        "assignment_id": "diagnostic_sitting_6",
+        "real_student_id": "stu_202b6988d7",
+        "real_student_name": "Thaneesha J",
+        "score": 18,
+        "wrong_concepts": {
+          "backing up a claim with evidence": 1,
+          "picking the right data structure": 1
         }
       }
     ]

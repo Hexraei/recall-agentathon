@@ -162,6 +162,67 @@ GROUPS = [
             "stu_fb9298c06a",  # variable holds, once
         ],
     },
+    {
+        "id": "mem_robotics_clean_dept",
+        "display": "Devika R.",
+        "department": "robotics",
+        "category": "A",
+        "expect": "recurring",
+        "concept": "working out where the robot ends up",
+        "why": ("Chosen at the department level, not hand-picked within a "
+                "smaller group: this is the single most common real mistake "
+                "in the whole robotics cohort. Measured directly from "
+                "webapp.db - 13 of 19 completed robotics students (68%) got "
+                "at least one 'working out where the robot ends up' question "
+                "wrong, and 7 of those 13 independently chose the identical "
+                "wrong option (B) on the identical question (rb_t1_q2) for "
+                "the identical reason - 'assumed the forward calculation "
+                "simply reverses; it does not'. This group is those 7. The "
+                "department was picked for the clean-pattern demo BECAUSE of "
+                "this measurement, not the other way around - see "
+                "docs/memory-demo-department-selection.md."),
+        "members": [
+            "stu_76d01d7712",  # Harshavaradhan G, 15/20
+            "stu_fd49dd9cfd",  # JYOTHISH, 16/20
+            "stu_c70717f485",  # Krish, 17/20
+            "stu_93dfa11827",  # N.karthikeyn, 17/20
+            "stu_dfa174a2db",  # Sathya Sa, 15/20
+            "stu_bc79a33738",  # Tinku kannaa, 13/20
+            "stu_92d79a393b",  # Yuvaraaja Ganesh V, 12/20
+        ],
+    },
+    {
+        "id": "mem_cs_erratic_dept",
+        "display": "Aravind S.",
+        "department": "computer_science",
+        "category": "B",
+        "expect": "not_enough_evidence | similar | low confidence",
+        "concept": None,
+        "clean_control": False,
+        "why": ("Chosen at the department level: computer science, measured "
+                "directly, has NO single dominant misconception. Three "
+                "concepts are tied at exactly 10 of 14 completed students "
+                "each - 'backing up a claim with evidence', 'picking the "
+                "right data structure', 'understanding what a variable "
+                "holds' - so there is no clear winner for the system to "
+                "confidently converge on, unlike robotics' 68%/47%-of-those "
+                "matching split. This group's six members were picked to "
+                "carry genuinely different concept profiles (one concept "
+                "each, up to four each), and they DO share some individual "
+                "questions pairwise - real overlap, not a clean control - "
+                "but scattered across seven different question pairs with no "
+                "two sittings sharing the same pair twice. That scatter, not "
+                "a forced absence of any overlap, is what 'erratic' means "
+                "here. See docs/memory-demo-department-selection.md."),
+        "members": [
+            "stu_f834cd4135",  # Anbuselvan, 18/20
+            "stu_2bf3073f73",  # MONISH, 19/20
+            "stu_c744ac76e6",  # Harshavardhan K, 15/20
+            "stu_6c627f5ddc",  # Rafan M A, 16/20
+            "stu_b199f4e5d6",  # Vishnu, 16/20
+            "stu_202b6988d7",  # Thaneesha J, 18/20
+        ],
+    },
 ]
 
 
@@ -292,15 +353,29 @@ def validate(src: sqlite3.Connection, group: dict) -> list[str]:
                 f"category A claims every sitting misses {concept!r}, but "
                 + ", ".join(missing) + " do(es) not")
     else:
-        # No sitting may repeat another sitting's wrong question at all.
-        seen_q: dict[str, str] = {}
-        for s in per_sitting:
-            for q in s["questions"]:
-                if q in seen_q:
-                    problems.append(
-                        f"category B must have nothing to find, but {q} is "
-                        f"answered wrongly by both {seen_q[q]} and {s['member']}")
-                seen_q[q] = s["member"]
+        # A TRUE negative control (clean_control: True) must have nothing to
+        # find at all - no shared question, no shared concept. A near-miss
+        # (clean_control: False, the default) is explicitly allowed to have
+        # real overlap; that overlap IS the point, and disclosing it honestly
+        # is what makes it a near-miss rather than a mislabelled positive.
+        # Originally this check ran unconditionally for every category B
+        # group, which happened to never fire because the two near-miss
+        # groups that existed before this one had zero question-level
+        # overlap even though they were never asked to have none - a
+        # coincidence, not a guarantee. mem_cs_erratic_dept's members DO
+        # share individual questions pairwise by design (measured, not
+        # avoided), so the unconditional version would have wrongly failed
+        # a group built to be exactly this kind of honest scatter.
+        if group.get("clean_control"):
+            seen_q: dict[str, str] = {}
+            for s in per_sitting:
+                for q in s["questions"]:
+                    if q in seen_q:
+                        problems.append(
+                            f"{group['id']} claims to be a clean control, but "
+                            f"{q} is answered wrongly by both {seen_q[q]} and "
+                            f"{s['member']}")
+                    seen_q[q] = s["member"]
         if group.get("concept") is not None:
             problems.append("category B should not name a concept")
 

@@ -318,9 +318,21 @@ def complete(
             # simply be terser, so it gets the same treatment as a real 4xx/5xx.
             transient_400 = (r.status_code == 400
                              and "json_validate_failed" in r.text)
-            if (r.status_code in (429, 500, 502, 503) or transient_400) \
-                    and role == "primary":
-                span.record(output={"model": mid, "transient_400": transient_400})
+            # A 413 here is Groq's PER-MINUTE input token limit, not the
+            # request being malformed - found live building the memory demo,
+            # where a comparison step reading 5 prior sittings' worth of real
+            # history (7315 tokens) exceeded the 7000 ITPM cap on a run that
+            # a shorter history would have cleared. The request is not
+            # oversized in any absolute sense, only relative to a quota that
+            # resets every minute - so it is exactly the kind of transient
+            # condition a fallback (a different provider, a different quota)
+            # should absorb rather than fail the whole run over. Retrying the
+            # SAME model changes nothing; the request is still the same size.
+            too_large = r.status_code == 413
+            if (r.status_code in (429, 500, 502, 503) or transient_400
+                    or too_large) and role == "primary":
+                span.record(output={"model": mid, "transient_400": transient_400,
+                                    "too_large": too_large})
                 continue                                # transient: fall back
             if r.status_code != 200:
                 raise ModelError(f"{mid} returned HTTP {r.status_code}: {r.text[:300]}")
