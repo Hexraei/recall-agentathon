@@ -868,6 +868,7 @@ def for_student(store, student_id: str, settings, call=complete,
     if not force:
         cached = roster.load_report(store, "student", student_id)
         if cached:
+            cached["_from_cache"] = True
             return cached
 
     facts = student_facts(store, student_id)
@@ -887,6 +888,13 @@ def for_student(store, student_id: str, settings, call=complete,
     body["_trail"] = trail
     roster.save_report(store, "student", student_id, body, run_id)
     body["_run_id"] = run_id
+    # Set only on a run that actually just happened - never persisted, so a
+    # LATER cached read of this same row correctly reports _from_cache=True
+    # instead of remembering "fresh" forever. See _model_error_page's sibling
+    # note in webapp.py for why this distinction exists: a plain page reload
+    # replays this cache in ~1ms, no model involved, and nothing on screen
+    # said so until this flag existed.
+    body["_from_cache"] = False
     return body
 
 
@@ -896,6 +904,7 @@ def for_class(store, department: str, settings, call=complete,
     if not force:
         cached = roster.load_report(store, "class", department)
         if cached:
+            cached["_from_cache"] = True
             return cached
 
     facts = class_facts(store, department)
@@ -915,4 +924,5 @@ def for_class(store, department: str, settings, call=complete,
     body["_trail"] = trail
     roster.save_report(store, "class", department, body, run_id)
     body["_run_id"] = run_id
+    body["_from_cache"] = False   # see the matching note in for_student()
     return body
