@@ -19,9 +19,33 @@ memory.db (used for the robotics side of the demo, and as the recorded
 evidence in docs/memory-demo-department-selection.md) is completely untouched
 by running this any number of times.
 
+Pre-seed vs. live (--live-from)
+--------------------------------
+A full 6-sitting run takes 2-3 minutes on stage, mostly because later
+sittings have more history to read and sometimes trigger a revision loop
+(the checker rejects a draft finding and sends it back for another model
+call). That is real work, not padding, but nobody wants to stand there
+watching sitting 1 - which has no history yet and always resolves in
+seconds anyway.
+
+--live-from N (default 4) advances sittings 1..N-1 QUIETLY first, with no
+per-step trace printed, exactly the same real model calls, just not narrated.
+Those are the "pre-seed" sittings - genuinely run, genuinely real, just done
+before you started talking. Sittings N..last are then advanced WITH the full
+verbose trace, printed as they happen - that is the "live" part a judge
+watches happen in real time.
+
+This is not faking anything: every sitting, pre-seeded or live, calls the
+real model through the real app/flow.py pipeline. The only difference is
+whether the trace is shown while it happens or beforehand. Pre-seeding is
+required anyway, because a later sitting's comparison step can only see
+history that an earlier sitting already wrote - sitting 4 cannot be
+meaningfully "live" unless 1-3 already ran.
+
 Run it on stage:
 
-    .venv/bin/python tools/live_demo_cs_erratic.py
+    .venv/bin/python tools/live_demo_cs_erratic.py                # live from sitting 4 (default)
+    .venv/bin/python tools/live_demo_cs_erratic.py --live-from 5   # narrate only the last 2
 
 Each sitting's REAL model call happens as you watch, printed as it happens -
 same real answers, same real students, same shipping app/flow.py pipeline
@@ -32,6 +56,7 @@ answers changing, but the model call is genuinely new every time.
 """
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -43,7 +68,7 @@ from slice.llm import complete  # noqa: E402
 from slice.store import Store  # noqa: E402
 
 from tools.build_memory_demo import GROUPS, build  # noqa: E402
-from tools.run_memory_demo import run_group  # noqa: E402
+from tools.run_memory_demo import run_group, run_sitting  # noqa: E402
 
 import sqlite3  # noqa: E402
 import shutil  # noqa: E402
@@ -65,6 +90,17 @@ LIVE_GROUP = {
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--live-from", type=int, default=4,
+        help=("1-based sitting number to start narrating live. Sittings "
+              "before this run for real but quietly (pre-seed); this "
+              "sitting onward is traced step by step as it happens (live). "
+              "Default 4 - the first sitting with enough history for the "
+              "model to reason over, and where revision loops start showing "
+              "up. Pass 1 to narrate the whole chain."))
+    args = ap.parse_args()
+
     for suffix in ("", "-wal", "-shm"):
         p = LIVE_DB.with_name(LIVE_DB.name + suffix)
         if p.exists():
@@ -82,19 +118,40 @@ def main() -> None:
     # is the bug that broke the first run of this script: LIVE_GROUP has no
     # "sittings" key until build() adds it.
     manifest = build(src_ro, store, [LIVE_GROUP])
-    live_manifest_group = manifest[0]
+    group = manifest[0]
     store.db.commit()
 
     load_env(ROOT / ".env")
     settings = load_settings()
     notes = (ROOT / "corpus" / "ds-notes.md").read_text(encoding="utf-8")
 
-    print("Advancing each sitting through the real pipeline - this is a live "
-          "model call, not a replay.\n")
-    result = run_group(store, settings, live_manifest_group, notes, verbose=True)
-    store.db.commit()
+    def flow_for(trace):
+        from app.flow import build_flow
+        return build_flow(call=complete, notes=notes, trace=trace)
 
-    print(f"\nFinal label this run: {result['sittings'][-1]['label']}")
+    cut = max(1, min(args.live_from, len(group["sittings"])))
+    pre_seed, live = group["sittings"][:cut - 1], group["sittings"][cut - 1:]
+
+    if pre_seed:
+        print(f"Pre-seeding sittings 1-{cut - 1} quietly - same real model "
+              f"calls, just not narrated (sitting {cut} onward needs their "
+              "history to exist first, the same way it would have if this "
+              "demo group had really been sat over several weeks).\n")
+        for s in pre_seed:
+            run_sitting(store, settings, group, s, notes, flow_for, verbose=False)
+            store.db.commit()
+        print(f"\nPre-seed done. Now going live from sitting {cut}.\n")
+
+    print("Advancing the remaining sitting(s) through the real pipeline, "
+          "traced live - this is a real model call happening now, not a "
+          "replay.\n")
+    sittings_done = list(pre_seed)
+    for s in live:
+        sittings_done.append(
+            run_sitting(store, settings, group, s, notes, flow_for, verbose=True))
+        store.db.commit()
+
+    print(f"\nFinal label this run: {sittings_done[-1]['label']}")
     print("(Re-run this script again for a fresh live call with the same "
           "real students - the answers are fixed, the model call is not.)")
 
