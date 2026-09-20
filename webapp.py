@@ -38,7 +38,7 @@ from slice.config import settings as load_settings
 from slice.llm import ModelError, complete
 from slice.store import Store
 
-from app import bank, memory_api, report, report_api, roster
+from app import bank, memory_api, report, report_api, roster, simple_live_demo
 
 DB = Path(__file__).parent / os.environ.get("RECALL_DB", "webapp.db")
 """Which database this process writes to.
@@ -73,6 +73,7 @@ app.include_router(memory_api.router)
 app.include_router(report_api.router)
 
 _settings = load_settings()
+_ds_notes = (Path(__file__).parent / "corpus" / "ds-notes.md").read_text(encoding="utf-8")
 _store: Store | None = None
 _store_lock = threading.RLock()
 # FastAPI's sync route handlers each run in a worker thread from a pool. A
@@ -229,6 +230,22 @@ def page(body: str, wide: bool = False) -> HTMLResponse:
 def esc(s) -> str:
     return (str(s).replace("&", "&amp;").replace("<", "&lt;")
             .replace(">", "&gt;").replace('"', "&quot;"))
+
+
+def _plain_ref(ref: str) -> str:
+    """'rb_t1_q2#B' -> the concept that question tests, in plain words -
+    never the internal id, which means nothing to someone reading the page
+    rather than the database. Falls back to the raw ref if it doesn't match
+    the expected shape (should not happen for a real citation)."""
+    m = simple_live_demo._REF_RE.match(ref)
+    return simple_live_demo._plain_topic(m.group(1)) if m else ref
+
+
+def _plain_text(text: str | None) -> str | None:
+    """Scrub any raw question refs out of the model's own free-text
+    explanation, same rule as _plain_ref - a judge reads this page, not the
+    versions table."""
+    return simple_live_demo._humanise(text)
 
 
 def _model_error_page(exc: ModelError, back_href: str) -> HTMLResponse:
@@ -576,7 +593,8 @@ def teacher():
 <p class="muted">Pick a department to see how the class performed, then drill
 into a single student.</p>
 {cards}
-<div class="row"><a href="/teacher/memory">Persistent memory demo</a></div>
+<div class="row"><a href="/teacher/memory/simple">Does it remember? (live demo)</a>
+<a href="/teacher/memory">All identities</a></div>
 """)
 
 
@@ -589,6 +607,95 @@ def _outcome_chip(outcome: str) -> str:
         "first": ("First sitting", ""),
     }.get(outcome, (outcome, ""))
     return f'<span class="card {css}" style="display:inline-block;padding:.15rem .6rem;font-size:.8rem">{esc(label)}</span>'
+
+
+@app.get("/teacher/memory/simple", response_class=HTMLResponse)
+def memory_simple_intro():
+    """The one-button version: two real students, one real model call, one
+    plain sentence. For a live demo where the full 6-identity/timeline
+    browsing is more than there is time to walk through.
+    """
+    return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>Does it remember?</h1>
+<p class="muted">Two different real robotics students, further down the
+page's roster, both got the same question wrong for the same reason. Hit the
+button - a real model call happens right now, live, reading the first
+student's answer before deciding about the second.</p>
+<div class="card key">
+  <p style="margin:0">
+    <b>Sitting 1</b> - a real student answers the quiz. Nothing to compare
+    against yet.<br><br>
+    <b>Sitting 2</b> - a different real student answers the same quiz,
+    weeks later. The system reads sitting 1 first, then decides whether
+    this is the same mistake happening again.
+  </p>
+</div>
+<div id="waiting">
+  <div class="spin"></div>
+  <p class="muted">Calling the model now - this takes a few seconds…</p>
+</div>
+<form id="runform" action="/teacher/memory/simple/run" method="get"
+      onsubmit="document.getElementById('waiting').classList.add('on');
+                document.getElementById('runbtn').disabled=true;
+                document.getElementById('runbtn').textContent='Running…';">
+  <button id="runbtn" class="go" type="submit">Run it live</button>
+</form>
+<div class="row"><a href="/teacher/memory">See all identities instead</a>
+<a href="/teacher">Back</a></div>
+""")
+
+
+@app.get("/teacher/memory/simple/run", response_class=HTMLResponse)
+def memory_simple_run():
+    """Actually calls the model - this is the live part, not a replay.
+
+    Builds a fresh two-sitting pair in a throwaway database every time this
+    is hit (see app/simple_live_demo.py), so re-running for a second judge
+    calls the model again rather than showing a cached answer.
+    """
+    try:
+        result = simple_live_demo.run_live(_settings, complete, _ds_notes)
+    except ModelError as e:
+        return _model_error_page(e, "/teacher/memory/simple")
+
+    label = result["label"] or "unknown"
+    plain = {
+        "recurring": "Yes - it caught the repeat.",
+        "similar": "Close, but not sure enough to call it the same mistake.",
+        "not_enough_evidence": "No - it didn't see enough to decide.",
+        "improving": "It looks like this got better, not worse.",
+    }.get(label, label)
+    tone = "good" if label == "recurring" else ""
+
+    cited = "".join(f'<span class="chip">{esc(t)}</span> ' for t in result["cited_topics"])
+
+    return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>Verdict</h1>
+<p class="muted">Real model call, just now - took {result["seconds"]}s.</p>
+<div class="card {tone}" style="margin-top:.8rem">
+  <p style="margin:0;font-size:1.15rem"><b>{esc(plain)}</b></p>
+</div>
+<div class="card" style="margin-top:.8rem">
+  <p class="muted" style="margin:0 0 .4rem">
+    Sitting 1: {esc(result["student_1_name"])} ({result["student_1_score"]}/20) -
+    Sitting 2: {esc(result["student_2_name"])} ({result["student_2_score"]}/20)
+  </p>
+  {f'<p style="margin:.4rem 0 0">{esc(result["explanation"])}</p>' if result.get("explanation") else ""}
+  {f'<p class="muted" style="margin:.5rem 0 0">Based on: {cited}</p>' if cited.strip() else ""}
+</div>
+{'<div class="card key" style="margin-top:.8rem"><p style="margin:0">This is flagged as consequential enough that the system paused here for a professor to confirm it, rather than deciding on its own.</p></div>' if result["paused_for_human"] else ""}
+<div class="card key" style="margin-top:1.2rem">
+  <p style="margin:0">Both students are real and their answers are real. The
+  "weeks later" timing is set up for this demo - a two-day event cannot
+  otherwise produce two genuinely separate sittings to compare.</p>
+</div>
+<div class="row">
+  <a href="/teacher/memory/simple">Run it again</a>
+  <a href="/teacher">Back</a>
+</div>
+""")
 
 
 @app.get("/teacher/memory", response_class=HTMLResponse)
@@ -671,7 +778,12 @@ def memory_timeline(student_id: str):
 
     cards = []
     for s in body["sittings"]:
-        cited = "".join(f'<span class="chip">{esc(r)}</span> ' for r in s["cited_answers"])
+        topics_cited = []
+        for r in s["cited_answers"]:
+            t = _plain_ref(r)
+            if t not in topics_cited:
+                topics_cited.append(t)
+        cited = "".join(f'<span class="chip">{esc(t)}</span> ' for t in topics_cited)
         cards.append(f"""
 <div class="card" style="margin-top:.8rem">
   <div class="meta"><span>Sitting {esc(s["sitting"])} - {esc(s["date"] or "")}</span>
@@ -680,8 +792,8 @@ def memory_timeline(student_id: str):
     Could see {s["prior_sittings_visible"]} earlier sitting{"s" if s["prior_sittings_visible"] != 1 else ""}.
     {f'Scored {s["score"]}/{s["asked"]}.' if s.get("score") is not None else ""}
   </p>
-  {f'<p style="margin:.5rem 0 0">{esc(s["explanation"])}</p>' if s.get("explanation") else ""}
-  {f'<p class="muted" style="margin:.4rem 0 0">Cites: {cited}</p>' if cited.strip() else ""}
+  {f'<p style="margin:.5rem 0 0">{esc(_plain_text(s["explanation"]))}</p>' if s.get("explanation") else ""}
+  {f'<p class="muted" style="margin:.4rem 0 0">Based on: {cited}</p>' if cited.strip() else ""}
   {'<div class="card key" style="margin-top:.6rem"><p style="margin:0">Waiting on a professor.</p></div>' if s["awaiting_human"] else ""}
   {f'<p class="muted" style="margin:.4rem 0 0;font-size:.8rem">Real answers from {esc(s["real_answers_from"])}.</p>' if s.get("real_answers_from") else ""}
   <div class="row" style="margin-top:.6rem">
@@ -728,15 +840,17 @@ def memory_sitting(run_id: str):
         finding_html = f"""
 <h2>Finding</h2>
 <div class="card">
-  <p style="margin:0">{esc(finding["statement"])}</p>
-  {f'<p class="muted" style="margin:.5rem 0 0"><b>What is uncertain:</b> {esc(finding["uncertainty"])}</p>' if finding.get("uncertainty") else ""}
-  {f'<p class="muted" style="margin:.5rem 0 0"><b>Next step:</b> {esc(finding["next_step"])}</p>' if finding.get("next_step") else ""}
+  <p style="margin:0">{esc(_plain_text(finding["statement"]))}</p>
+  {f'<p class="muted" style="margin:.5rem 0 0"><b>What is uncertain:</b> {esc(_plain_text(finding["uncertainty"]))}</p>' if finding.get("uncertainty") else ""}
+  {f'<p class="muted" style="margin:.5rem 0 0"><b>Next step:</b> {esc(_plain_text(finding["next_step"]))}</p>' if finding.get("next_step") else ""}
 </div>"""
 
+    # Concept leads (plain language); a checkmark marks the ones the agent
+    # actually cited in its claim above - the raw question/option code
+    # (e.g. "rb_t1_q2#B") is not shown, only what it tested.
     answers = "".join(
-        f'<tr><td>{esc(a["ref"])}{" ✓" if a["cited_here"] else ""}</td>'
+        f'<tr><td>{esc(a["concept"] or _plain_ref(a["ref"]))}{" ✓ cited" if a["cited_here"] else ""}</td>'
         f'<td class="muted">{esc(a["kind"] or "")}</td>'
-        f'<td>{esc(a["concept"] or "")}</td>'
         f'<td class="muted">{esc(a["detail"] or "")}</td></tr>'
         for a in body["answers"])
 
@@ -744,12 +858,12 @@ def memory_sitting(run_id: str):
 <a class="brand" href="/">Recall</a>
 <h1>Sitting {esc(body["sitting"])} - {esc(body["date"] or "")}</h1>
 {_outcome_chip(body["outcome"])}
-{f'<div class="card" style="margin-top:.8rem"><p style="margin:0">{esc(body["explanation"])}</p></div>' if body.get("explanation") else ""}
+{f'<div class="card" style="margin-top:.8rem"><p style="margin:0">{esc(_plain_text(body["explanation"]))}</p></div>' if body.get("explanation") else ""}
 {'<div class="card key" style="margin-top:.8rem"><p style="margin:0">Waiting on a professor.</p></div>' if body["awaiting_human"] else ""}
 {finding_html}
 <h2>Answers this sitting saw</h2>
 <p class="muted">A checkmark means the agent cited this exact answer in its claim above.</p>
-<table><tr><th>Question</th><th>Kind</th><th>Concept</th><th>Note</th></tr>{answers}</table>
+<table><tr><th>Concept</th><th>Kind</th><th>Note</th></tr>{answers}</table>
 {f'<p class="muted" style="margin-top:.8rem;font-size:.8rem">Real answers from {esc(body["real_answers_from"])}.</p>' if body.get("real_answers_from") else ""}
 <div class="card key" style="margin-top:1.2rem"><p style="margin:0">{esc(body["disclosure"])}</p></div>
 <div class="row"><a href="/teacher/memory">All identities</a></div>

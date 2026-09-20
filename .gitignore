@@ -30,3 +30,6 @@ build/
 
 # Logs and scratch
 *.log
+
+# Claude Code agent worktrees - never part of the repo's own history
+.claude/worktrees/
