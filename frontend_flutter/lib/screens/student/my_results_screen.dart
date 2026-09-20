@@ -80,10 +80,12 @@ class _MyResultsScreenState extends State<MyResultsScreen> {
 
   List<Widget> _list(BuildContext context, List<AttemptSummary> attempts) {
     return [
-      const SectionLabel('Pick a quiz', top: 0),
       Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: Text('Pick a quiz to view result', style: AppText.bodySmall),
+        child: Text(
+          'Select a quiz to view its results',
+          style: AppText.bodySmall,
+        ),
       ),
       RowCard(
         children: [

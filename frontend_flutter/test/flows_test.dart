@@ -141,7 +141,7 @@ void main() {
     // The row used to jump straight into the most recent result, which left
     // no way of reaching any of the others.
     await _tapRow(tester, 'My results');
-    expect(find.text('Pick a quiz'.toUpperCase()), findsOneWidget);
+    expect(find.text('Select a quiz to view its results'), findsOneWidget);
     expect(find.text('Graphs'), findsOneWidget);
     expect(find.text('Sorting'), findsOneWidget);
 
@@ -158,7 +158,7 @@ void main() {
     );
 
     await _back(tester);
-    expect(find.text('Pick a quiz'.toUpperCase()), findsOneWidget);
+    expect(find.text('Select a quiz to view its results'), findsOneWidget);
   });
 
   testWidgets(
