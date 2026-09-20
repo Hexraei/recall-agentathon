@@ -576,7 +576,184 @@ def teacher():
 <p class="muted">Pick a department to see how the class performed, then drill
 into a single student.</p>
 {cards}
+<div class="row"><a href="/teacher/memory">Persistent memory demo</a></div>
 """)
+
+
+# ---------------------------------------------------- 4b. persistent memory
+
+def _outcome_chip(outcome: str) -> str:
+    label, css = {
+        "found": ("Repeat found", "good"),
+        "none_found": ("No repeat claimed", ""),
+        "first": ("First sitting", ""),
+    }.get(outcome, (outcome, ""))
+    return f'<span class="card {css}" style="display:inline-block;padding:.15rem .6rem;font-size:.8rem">{esc(label)}</span>'
+
+
+@app.get("/teacher/memory", response_class=HTMLResponse)
+def memory_identities():
+    """The persistent-memory demo, in a browser - no Flutter required.
+
+    Same data, same three read-only functions (`memory_api.students`,
+    `.student`, `.sitting`), reused directly rather than re-derived, called as
+    plain Python rather than over HTTP since this process already has them
+    imported. Exists so the demo survives a Flutter build failure at the
+    last minute: this page works in any phone or laptop browser, through the
+    same ngrok tunnel, with nothing to install.
+    """
+    try:
+        body = memory_api.students()
+    except Exception as e:
+        if getattr(e, "status_code", None) == 503:
+            return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>Persistent memory</h1>
+<div class="card">{esc(e.detail)}</div>
+<div class="row"><a href="/teacher">Back</a></div>""")
+        raise
+
+    rows = []
+    for s in body["students"]:
+        dept = (s["department"] or "").replace("_", " ").title()
+        flags = []
+        if s["found_a_repeat"]:
+            flags.append('<span class="card good" style="display:inline-block;'
+                         'padding:.1rem .5rem;font-size:.78rem">repeat found</span>')
+        if s["awaiting_human"]:
+            flags.append('<span class="card" style="display:inline-block;'
+                         'padding:.1rem .5rem;font-size:.78rem">awaiting a professor</span>')
+        rows.append(
+            f'<tr><td><a href="/teacher/memory/{esc(s["student_id"])}">'
+            f'{esc(s["name"] or s["student_id"])}</a>'
+            f'<br><span class="muted">{esc(dept)}</span></td>'
+            f'<td class="muted">{s["sittings"]} sitting'
+            f'{"s" if s["sittings"] != 1 else ""}</td>'
+            f'<td>{" ".join(flags)}</td></tr>')
+
+    return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>Persistent memory</h1>
+<p class="muted">{len(body["students"])} identit{"ies" if len(body["students"]) != 1 else "y"} -
+ each one several real students' real answers, replayed as one person
+ sitting the quiz more than once.</p>
+<table><tr><th>Identity</th><th>Sittings</th><th></th></tr>{"".join(rows)}</table>
+<div class="card key" style="margin-top:1.2rem"><p style="margin:0">{esc(body["disclosure"])}</p></div>
+<div class="row"><a href="/teacher">Back</a></div>
+""")
+
+
+@app.get("/teacher/memory/{student_id}", response_class=HTMLResponse)
+def memory_timeline(student_id: str):
+    """One identity's sittings, oldest first - the persistence itself.
+
+    Reuses memory_api.student() directly. Sitting 1 has nothing behind it;
+    each later card is deciding against everything before it, in order, the
+    same way the Flutter timeline screen shows it.
+    """
+    try:
+        body = memory_api.student(student_id)
+    except Exception as e:
+        code = getattr(e, "status_code", None)
+        if code == 404:
+            return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>No such identity</h1>
+<div class="card">{esc(e.detail)}</div>
+<div class="row"><a href="/teacher/memory">Back</a></div>""")
+        if code == 503:
+            return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>Persistent memory</h1>
+<div class="card">{esc(e.detail)}</div>
+<div class="row"><a href="/teacher">Back</a></div>""")
+        raise
+
+    cards = []
+    for s in body["sittings"]:
+        cited = "".join(f'<span class="chip">{esc(r)}</span> ' for r in s["cited_answers"])
+        cards.append(f"""
+<div class="card" style="margin-top:.8rem">
+  <div class="meta"><span>Sitting {esc(s["sitting"])} - {esc(s["date"] or "")}</span>
+  {_outcome_chip(s["outcome"])}</div>
+  <p class="muted" style="margin:.3rem 0 0">
+    Could see {s["prior_sittings_visible"]} earlier sitting{"s" if s["prior_sittings_visible"] != 1 else ""}.
+    {f'Scored {s["score"]}/{s["asked"]}.' if s.get("score") is not None else ""}
+  </p>
+  {f'<p style="margin:.5rem 0 0">{esc(s["explanation"])}</p>' if s.get("explanation") else ""}
+  {f'<p class="muted" style="margin:.4rem 0 0">Cites: {cited}</p>' if cited.strip() else ""}
+  {'<div class="card key" style="margin-top:.6rem"><p style="margin:0">Waiting on a professor.</p></div>' if s["awaiting_human"] else ""}
+  {f'<p class="muted" style="margin:.4rem 0 0;font-size:.8rem">Real answers from {esc(s["real_answers_from"])}.</p>' if s.get("real_answers_from") else ""}
+  <div class="row" style="margin-top:.6rem">
+    <a href="/teacher/memory/sitting/{esc(s["run_id"])}">Full sitting, with the answers cited</a>
+  </div>
+</div>""")
+
+    sm = body["summary"]
+    return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>{esc(body["name"] or body["student_id"])}</h1>
+<p class="muted">{esc((body["department"] or "").replace("_", " ").title())} -
+ {sm["total_sittings"]} sittings - {sm["repeats_found"]} repeat(s) found -
+ {sm["awaiting_human"]} awaiting a human</p>
+{"".join(cards)}
+<div class="card key" style="margin-top:1.2rem"><p style="margin:0">{esc(body["disclosure"])}</p></div>
+<div class="row"><a href="/teacher/memory">All identities</a><a href="/teacher">Departments</a></div>
+""", wide=True)
+
+
+@app.get("/teacher/memory/sitting/{run_id}", response_class=HTMLResponse)
+def memory_sitting(run_id: str):
+    """One sitting in full - the claim next to the exact answers it cites.
+
+    Reuses memory_api.sitting() directly. A cited answer is marked, so
+    whoever is reading can check the claim against the evidence themselves
+    instead of taking the agent's word for it.
+    """
+    try:
+        body = memory_api.sitting(run_id)
+    except Exception as e:
+        code = getattr(e, "status_code", None)
+        if code == 404:
+            return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>No such sitting</h1>
+<div class="card">{esc(e.detail)}</div>
+<div class="row"><a href="/teacher/memory">Back</a></div>""")
+        raise
+
+    finding = body.get("finding")
+    finding_html = ""
+    if finding and finding.get("statement"):
+        finding_html = f"""
+<h2>Finding</h2>
+<div class="card">
+  <p style="margin:0">{esc(finding["statement"])}</p>
+  {f'<p class="muted" style="margin:.5rem 0 0"><b>What is uncertain:</b> {esc(finding["uncertainty"])}</p>' if finding.get("uncertainty") else ""}
+  {f'<p class="muted" style="margin:.5rem 0 0"><b>Next step:</b> {esc(finding["next_step"])}</p>' if finding.get("next_step") else ""}
+</div>"""
+
+    answers = "".join(
+        f'<tr><td>{esc(a["ref"])}{" ✓" if a["cited_here"] else ""}</td>'
+        f'<td class="muted">{esc(a["kind"] or "")}</td>'
+        f'<td>{esc(a["concept"] or "")}</td>'
+        f'<td class="muted">{esc(a["detail"] or "")}</td></tr>'
+        for a in body["answers"])
+
+    return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>Sitting {esc(body["sitting"])} - {esc(body["date"] or "")}</h1>
+{_outcome_chip(body["outcome"])}
+{f'<div class="card" style="margin-top:.8rem"><p style="margin:0">{esc(body["explanation"])}</p></div>' if body.get("explanation") else ""}
+{'<div class="card key" style="margin-top:.8rem"><p style="margin:0">Waiting on a professor.</p></div>' if body["awaiting_human"] else ""}
+{finding_html}
+<h2>Answers this sitting saw</h2>
+<p class="muted">A checkmark means the agent cited this exact answer in its claim above.</p>
+<table><tr><th>Question</th><th>Kind</th><th>Concept</th><th>Note</th></tr>{answers}</table>
+{f'<p class="muted" style="margin-top:.8rem;font-size:.8rem">Real answers from {esc(body["real_answers_from"])}.</p>' if body.get("real_answers_from") else ""}
+<div class="card key" style="margin-top:1.2rem"><p style="margin:0">{esc(body["disclosure"])}</p></div>
+<div class="row"><a href="/teacher/memory">All identities</a></div>
+""", wide=True)
 
 
 @app.get("/teacher/{dept}", response_class=HTMLResponse)
@@ -665,6 +842,8 @@ agent has something to read.</div>
 @app.get("/teacher/{dept}/{sid}", response_class=HTMLResponse)
 def teacher_student(dept: str, sid: str):
     return RedirectResponse(f"/report/{sid}", status_code=303)
+
+
 
 
 # ------------------------------------------------------------------- 5. live
