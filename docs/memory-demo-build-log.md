@@ -170,7 +170,7 @@ Also: read-only (own connection per request, all write methods 405), reads
 `memory.db` not the live `webapp.db`, and every response carries the provenance
 disclosure so the app cannot render the data without the honest framing.
 
-[`FLUTTER_CONTEXT.md`](../FLUTTER_CONTEXT.md) has the endpoint reference, the
+[`FLUTTER_CONTEXT.md`](FLUTTER_CONTEXT.md) has the endpoint reference, the
 three outcome states (`none_found` is a normal confident result, **not** an
 empty state), and two honest ways to demo it failing.
 

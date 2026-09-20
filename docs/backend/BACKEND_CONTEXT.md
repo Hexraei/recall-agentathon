@@ -3,7 +3,7 @@
 **Read this before writing backend code.** It says what exists, what the Flutter app needs
 that does not exist, how to build it on the spine already here, and in what order.
 The endpoint contract is in [REST_API.md](REST_API.md). Project history and the agent
-design are in [MAIN_CONTEXT.md](../../MAIN_CONTEXT.md).
+design are in [MAIN_CONTEXT.md](../MAIN_CONTEXT.md).
 
 ---
 
