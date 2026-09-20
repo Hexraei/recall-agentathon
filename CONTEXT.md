@@ -60,15 +60,20 @@ makes understatement-by-implication visible.) The chat-path era measured this:
 the generative checker failed 7 of 10 reports — but the *absence* of a reading
 checker means those 7 failure-modes simply ship silently.
 
-### Case 3 — calibrated uncertainty, the thing a rulebook structurally cannot do
+### Case 3 — calibrated uncertainty — and the honest caveat
 Three consecutive runs on a **clean, fact-conformant** report:
 noul/conf = **0.55/0.10, 0.43/0.14, 0.37/0.26**. All accepted — but all below
 the 0.60 floor → shipped flagged `_unverified`:
 `"Jev confidence 0.26 below 0.60; report shipped unverified."`
-A code check has no channel for "I checked and I'm not certain"; it either
-flags nothing or flags everything. The floor turns that graded uncertainty into
-a *routing decision* the professor sees — the professor-review trail is
-therefore populated by real doubt, not by a boolean.
+The honest mechanics: for noul questions Jev returns **no native confidence
+field**, so the code derives one (`confidence = |noul−0.5|×2`). That makes
+"confidence" here a remap of the same probability, not an independent second
+channel — and as observed, every clean report landed below the floor:
+**accepted, but never *silently* trusted; flagged every time.** A boolean
+check still cannot express this mid-ground at all, whatever generates the
+number behind it. On the compare path the channel difference is real:
+Jev's choice answers carry a *native* confidence (Mira 0.84 vs Arun 0.35),
+and that number routes the professor decision.
 
 ### Case 4 — comparison is reading comprehension, not arithmetic
 Same fact pattern, two students: Mira's *"counted the loop, ignored the work

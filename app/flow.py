@@ -287,8 +287,14 @@ def build_flow(call=complete, notes: str = "", trace=None):
                     "probabilities": verdict.probabilities,
                     "model": ctx.settings.jev_model,
                 }
-            except (ModelError, Exception) as e:
+            except jev.JevError as e:
                 # Fall back, visibly: the failure is a record, not silent.
+                # Narrow to JevError (network/HTTP/unknown-label/model-shape),
+                # NOT broad Exception: a programming defect inside this try
+                # must crash the run loudly, not masquerade as "Jev went down"
+                # and silently re-run compare on the chat path. That masquerade
+                # already happened once — the floor's ask crashed before its
+                # comparison row existed, and this catch swallowed it.
                 ctx.append("failure", {
                     "kind": "jev_unavailable",
                     "detail": f"{type(e).__name__}: {e}",
@@ -484,13 +490,16 @@ def build_flow(call=complete, notes: str = "", trace=None):
         if jev_verdict:
             ctx.append("jev_verdict", jev_verdict, produced_by="agent:jev")
 
-        if (jev_verdict
-                and comparison["label"] == "recurring"
-                and jev_verdict["confidence"] < ctx.settings.jev_confidence_floor):
+        label = comparison["label"]
+        confidence = (jev_verdict or {}).get("confidence", 1.0)
+        consequential = label in ("recurring", "improving")
+        if (jev_verdict is not None
+                and consequential
+                and confidence < ctx.settings.jev_confidence_floor):
             return ask(
                 ctx,
-                f"Jev judged this `recurring` but confidence "
-                f"{jev_verdict['confidence']:.2f} is below the "
+                f"Jev judged this `{label}` but confidence "
+                f"{confidence:.2f} is below the "
                 f"{ctx.settings.jev_confidence_floor:.2f} floor.")
 
         return RunState.DRAFT_FINDING

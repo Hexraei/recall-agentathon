@@ -104,7 +104,15 @@ class _JudgeQueue:
                 "queue empty - the flow asked Jev unexpectedly"
             r = self._last
         if isinstance(r, Exception):
-            raise r
+            # Raised via JevError, the module's own outage type: handle_
+            # comparing's fallback catch is deliberately NARROW now (JevError
+            # only) so a bug in our code crashes loudly instead of laundering
+            # itself as "Jev unavailable". A raw ConnectionError from the stub
+            # would escape that catch and kill the run - which is what the
+            # production transport wrapper (TRANSPORT_ERRORS -> JevError)
+            # prevents for real network failures.
+            from app.jev_compare import JevError
+            raise JevError(f"{type(r).__name__}: {r}") from r
         return r
 
 

@@ -49,6 +49,21 @@ class JevError(ModelError):
     """Jev could not be reached or would not answer. The caller falls back."""
 
 
+TRANSPORT_ERRORS: tuple[type[Exception], ...] = (
+    httpx.TransportError,    # network unreachable / timeout / malformed request
+    OSError,                 # raw sockets: ConnectionRefusedError et al.
+)
+"""The failure classes that mean "the request did not make a clean round
+trip": network unreachable, timeout, and the httpx family of malformed
+request errors - an empty Bearer key surfaces as LocalProtocolError, not
+as an HTTP status. Any of these gets wrapped into JevError so
+handle_comparing's narrowed fallback catch still treats it as an outage.
+Anything outside this tuple (a TypeError or KeyError raised by our own
+code) is a BUG, not an outage, and must crash loudly rather than
+laundering itself as one.
+"""
+
+
 class JevVerdict(BaseModel):
     """The typed answer, mirroring app.schema.Comparison's contract.
 
@@ -208,10 +223,16 @@ def judge(*, settings: Settings, budget, evidence: dict, prior: dict,
     }
     with _Span(settings, "jev:compare", {"model": settings.jev_model}) as span:
         if json_blob is None:
-            import httpx
-            r = httpx.post(DECISIONS_API,
-                           headers={"Authorization": f"Bearer {settings.api_key}"},
-                           json=body, timeout=timeout)
+            try:
+                r = httpx.post(DECISIONS_API,
+                               headers={"Authorization": f"Bearer {settings.api_key}"},
+                               json=body, timeout=timeout)
+            except TRANSPORT_ERRORS as e:
+                # Transport-level failure (network/timeout/malformed request).
+                # Wrapped so the caller's narrow JevError catch sees an outage,
+                # not a crash.
+                raise JevError(f"Jev transport failure: "
+                               f"{type(e).__name__}: {e}") from e
             if r.status_code == 200:
                 data = r.json()
             else:
