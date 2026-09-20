@@ -29,6 +29,28 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('the splash lockup is centred on the screen', (tester) async {
+    await tester.pumpWidget(const RecallApp());
+    await tester.pump();
+
+    final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+    final lockup = tester.getCenter(find.text('Recall'));
+
+    // The mark sits above the word, so the pair's centre is a little above
+    // the word's own centre. A generous tolerance still catches the old
+    // layout, which sat the lockup roughly 65 points high.
+    expect(
+      (lockup.dy - screen.height / 2).abs(),
+      lessThan(40),
+      reason:
+          'the lockup should be centred on the screen, not on the space '
+          'left over above the status block',
+    );
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('An unrestored session lands on sign in', (tester) async {
     await _bootToAuth(tester);
 

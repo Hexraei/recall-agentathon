@@ -606,5 +606,112 @@ class Fixtures {
     ),
   ];
 
-  static final allQuizzes = <Quiz>[graphs, hashTables, recursion];
+  // ----------------------------------------------------------------- trees
+  /// A second live quiz, already under way. It exists so the two live PINs
+  /// lead somewhere different: 408 217 opens a lobby, 333 333 drops a late
+  /// arrival straight into a quiz that has already started.
+  static final trees = Quiz(
+    id: 'q-trees',
+    title: 'Trees',
+    week: 'Week 10',
+    timeLimitMinutes: 15,
+    lastRun: DateTime.now().subtract(const Duration(minutes: 6)),
+    pin: '333 333',
+    questions: _treeQuestions,
+  );
+
+  static final _treeQuestions = <Question>[
+    const Question(
+      id: 't1',
+      text: 'What is the height of a tree holding a single node?',
+      topic: 'Traversal',
+      options: ['0', '1', '2', 'Undefined'],
+      correctIndex: 0,
+    ),
+    const Question(
+      id: 't2',
+      text: 'Which traversal of a binary search tree yields sorted keys?',
+      topic: 'Traversal',
+      options: ['Pre-order', 'In-order', 'Post-order', 'Level-order'],
+      correctIndex: 1,
+    ),
+    const Question(
+      id: 't3',
+      text: 'What does it mean for a binary tree to be balanced?',
+      topic: 'Representation',
+      options: [
+        'Every node has two children',
+        'Sibling subtree heights differ by at most one',
+        'Every leaf is at the same depth',
+        'It has an even number of nodes',
+      ],
+      correctIndex: 1,
+    ),
+    const Question(
+      id: 't4',
+      text: 'What is the worst-case cost of a lookup in an unbalanced BST?',
+      topic: 'Complexity',
+      options: ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'],
+      correctIndex: 2,
+    ),
+    const Question(
+      id: 't5',
+      text: 'How many leaves does a perfect binary tree of height h have?',
+      topic: 'Representation',
+      options: ['h', '2h', 'Two to the power h', 'Two to the power h, minus 1'],
+      correctIndex: 2,
+    ),
+    const Question(
+      id: 't6',
+      text: 'Which traversal visits a node before either of its subtrees?',
+      topic: 'Traversal',
+      options: ['Pre-order', 'In-order', 'Post-order', 'Reverse in-order'],
+      correctIndex: 0,
+    ),
+    const Question(
+      id: 't7',
+      text: 'Deleting a BST node with two children is usually done how?',
+      topic: 'Representation',
+      options: [
+        'Promote its left child',
+        'Replace it with its in-order successor',
+        'Delete the whole subtree',
+        'Mark it and leave it in place',
+      ],
+      correctIndex: 1,
+    ),
+    const Question(
+      id: 't8',
+      text: 'What does a level-order traversal need that the others do not?',
+      topic: 'Traversal',
+      options: ['A queue', 'A stack', 'Recursion', 'A hash table'],
+      correctIndex: 0,
+    ),
+    const Question(
+      id: 't9',
+      text: 'Why does a balanced tree keep lookups at logarithmic cost?',
+      topic: 'Complexity',
+      options: [
+        'Its height stays proportional to log n',
+        'It stores fewer nodes',
+        'Its keys are hashed',
+        'It caches recent lookups',
+      ],
+      correctIndex: 0,
+    ),
+    const Question(
+      id: 't10',
+      text: 'What distinguishes a binary search tree from any binary tree?',
+      topic: 'Representation',
+      options: [
+        'Every node has at most two children',
+        'Left keys are smaller and right keys larger at every node',
+        'It is always balanced',
+        'It stores no duplicate values',
+      ],
+      correctIndex: 1,
+    ),
+  ];
+
+  static final allQuizzes = <Quiz>[graphs, hashTables, trees, recursion];
 }

@@ -54,11 +54,15 @@ class _SplashScreenState extends State<SplashScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
+          // A Column would centre the lockup in the space left over above the
+          // status block, which sits it visibly high. Stacking centres it on
+          // the screen itself and pins the status to the bottom, so the two
+          // are positioned independently.
+          child: Stack(
             children: [
-              Expanded(
+              Center(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     RecallMark(
                       color: _failed
@@ -75,7 +79,13 @@ class _SplashScreenState extends State<SplashScreen> {
                   ],
                 ),
               ),
-              if (_failed) ..._cannotConnect() else ..._restoring(),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: _failed ? _cannotConnect() : _restoring(),
+                ),
+              ),
             ],
           ),
         ),

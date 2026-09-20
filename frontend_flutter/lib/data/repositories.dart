@@ -293,55 +293,96 @@ class MockSessionRepository implements SessionRepository {
       Future<void>.delayed(const Duration(milliseconds: 600));
 }
 
+/// One quiz running right now, behind the PIN students type for it.
+class _LiveSession {
+  const _LiveSession({
+    required this.quiz,
+    required this.pin,
+    required this.started,
+  });
+
+  final Quiz quiz;
+  final String pin;
+
+  /// Already under way, so joining it is a late entry straight into the
+  /// questions rather than a wait in the lobby.
+  final bool started;
+}
+
 class MockAttemptRepository implements AttemptRepository {
-  /// The PINs this build recognises, and what each one leads to. Typing
-  /// anything else lands on the not-found state.
-  static const _pins = {
-    _openPin: JoinOutcome.ok,
-    '111111': JoinOutcome.closed,
-    '222222': JoinOutcome.alreadySubmitted,
-    '333333': JoinOutcome.alreadyStarted,
+  /// The quizzes actually running, each behind its own PIN. They lead
+  /// somewhere different on purpose: one opens a lobby, the other is already
+  /// under way.
+  static final _live = <String, _LiveSession>{
+    '408217': _LiveSession(
+      quiz: Fixtures.hashTables,
+      pin: '408 217',
+      started: false,
+    ),
+    '333333': _LiveSession(quiz: Fixtures.trees, pin: '333 333', started: true),
   };
 
-  static const _openPin = '408217';
+  /// PINs that resolve to something other than a live quiz.
+  static const _settled = {
+    '111111': JoinOutcome.closed,
+    '222222': JoinOutcome.alreadySubmitted,
+  };
 
   /// Quiz ids this student has submitted during this run.
   final _submitted = <String>{};
+
+  /// The last live quiz this student actually found by typing its PIN.
+  ///
+  /// The banner follows it, so backing out of one quiz and returning to the
+  /// dashboard offers that quiz again rather than resetting to whichever
+  /// session happens to be listed first.
+  String? _lastSeenPin;
+
+  Iterable<_LiveSession> get _available =>
+      _live.values.where((s) => !_submitted.contains(s.quiz.id));
 
   @override
   Future<OpenQuiz?> openQuiz() async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
 
-    // Only a quiz that is genuinely joinable counts as open: one that has
-    // not closed, and that this student has not already submitted.
-    final quiz = Fixtures.hashTables;
-    if (quiz.closedAt != null && quiz.closedAt!.isBefore(DateTime.now())) {
-      return null;
+    final seen = _lastSeenPin == null ? null : _live[_lastSeenPin];
+    if (seen != null && !_submitted.contains(seen.quiz.id)) {
+      return OpenQuiz(quiz: seen.quiz, pin: seen.pin);
     }
-    if (_submitted.contains(quiz.id)) return null;
-    return OpenQuiz(quiz: quiz, pin: _openPin);
+
+    // Nothing found by PIN yet, or that one has been handed in: fall back to
+    // any session still running.
+    if (_available.isEmpty) return null;
+    final first = _available.first;
+    return OpenQuiz(quiz: first.quiz, pin: first.pin);
   }
 
   @override
   Future<JoinResult> join(String pin) async {
     await Future<void>.delayed(const Duration(milliseconds: 900));
     final digits = pin.replaceAll(' ', '');
-    var outcome = _pins[digits] ?? JoinOutcome.notFound;
 
-    // Rejoining something already handed in reads as submitted, not as a
-    // fresh attempt.
-    if (outcome == JoinOutcome.ok &&
-        _submitted.contains(Fixtures.hashTables.id)) {
-      outcome = JoinOutcome.alreadySubmitted;
+    final session = _live[digits];
+    if (session != null) {
+      if (_submitted.contains(session.quiz.id)) {
+        return JoinResult(JoinOutcome.alreadySubmitted, quiz: session.quiz);
+      }
+      // Remember it even if they back out without joining.
+      _lastSeenPin = digits;
+      return JoinResult(
+        session.started ? JoinOutcome.alreadyStarted : JoinOutcome.ok,
+        quiz: session.quiz,
+        remaining: session.started
+            ? session.quiz.duration - const Duration(minutes: 6)
+            : null,
+      );
     }
 
-    return JoinResult(
-      outcome,
-      quiz: outcome == JoinOutcome.notFound ? null : Fixtures.hashTables,
-      remaining: outcome == JoinOutcome.alreadyStarted
-          ? const Duration(minutes: 14, seconds: 20)
-          : null,
-    );
+    final settled = _settled[digits];
+    if (settled != null) {
+      return JoinResult(settled, quiz: Fixtures.hashTables);
+    }
+    return const JoinResult(JoinOutcome.notFound);
   }
 
   @override
@@ -366,6 +407,10 @@ class MockAttemptRepository implements AttemptRepository {
 
     // Recording it is what stops the banner offering the quiz again.
     _submitted.add(attempt.quizId);
+    if (_lastSeenPin != null &&
+        _live[_lastSeenPin]?.quiz.id == attempt.quizId) {
+      _lastSeenPin = null;
+    }
   }
 }
 

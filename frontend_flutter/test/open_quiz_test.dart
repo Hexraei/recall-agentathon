@@ -78,13 +78,62 @@ void main() {
 
         await repo.submit(Attempt(quizId: before.quiz.id, studentId: 'me'));
 
+        final next = await repo.openQuiz();
         expect(
-          await repo.openQuiz(),
-          isNull,
+          next?.quiz.id,
+          isNot(before.quiz.id),
           reason: 'a quiz already handed in is not still on offer',
         );
       },
     );
+
+    test('the banner follows the quiz last found by PIN', () async {
+      final repo = MockAttemptRepository();
+
+      // Nothing found yet, so it offers whichever session is running.
+      final initial = await repo.openQuiz();
+      expect(initial!.quiz.id, Fixtures.hashTables.id);
+
+      // Look up the other live PIN, then back out without joining.
+      final started = await repo.join('333333');
+      expect(started.outcome, JoinOutcome.alreadyStarted);
+      expect(started.quiz!.id, Fixtures.trees.id);
+
+      final after = await repo.openQuiz();
+      expect(
+        after!.quiz.id,
+        Fixtures.trees.id,
+        reason: 'the banner should offer the quiz just looked up',
+      );
+      expect(
+        after.pin.replaceAll(' ', ''),
+        '333333',
+        reason: 'and carry that PIN, not the default one',
+      );
+    });
+
+    test('a PIN that is not live does not become the banner', () async {
+      final repo = MockAttemptRepository();
+      await repo.join('333333');
+      await repo.join('111111'); // closed
+      await repo.join('999999'); // not found
+
+      final open = await repo.openQuiz();
+      expect(
+        open!.quiz.id,
+        Fixtures.trees.id,
+        reason: 'a closed or unknown PIN must not displace a live one',
+      );
+    });
+
+    test('submitting the followed quiz falls back to the other one', () async {
+      final repo = MockAttemptRepository();
+      await repo.join('333333');
+      await repo.submit(Attempt(quizId: Fixtures.trees.id, studentId: 'me'));
+
+      final open = await repo.openQuiz();
+      expect(open!.quiz.id, Fixtures.hashTables.id);
+    });
 
     test('rejoining something already submitted says so', () async {
       final repo = MockAttemptRepository();
@@ -150,8 +199,10 @@ void main() {
     await _settle(tester, frames: 24);
 
     expect(find.text('Conducted'), findsWidgets);
-    expect(find.text('Running now'), findsOneWidget);
-    expect(find.textContaining('still open'), findsOneWidget);
+    // Two quizzes are live in the mock: one waiting in its lobby and one
+    // already under way.
+    expect(find.text('Running now'), findsNWidgets(2));
+    expect(find.textContaining('still open'), findsNWidgets(2));
   });
 
   testWidgets('tapping "Open now" does not ask for the PIN again', (
