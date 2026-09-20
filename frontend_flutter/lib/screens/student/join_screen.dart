@@ -23,7 +23,13 @@ import '../../widgets/shared/page_scaffold.dart';
 /// the screen; quiz closed and already submitted, both in the neutral band
 /// because neither is a mistake; quiz already started.
 class JoinScreen extends StatefulWidget {
-  const JoinScreen({super.key});
+  const JoinScreen({super.key, this.prefilledPin});
+
+  /// Handed over by the open-quiz banner. The app already knows which quiz
+  /// is running, so asking the student to type a PIN it just displayed would
+  /// be busywork. They still press Join, which keeps this screen's states
+  /// intact.
+  final String? prefilledPin;
 
   @override
   State<JoinScreen> createState() => _JoinScreenState();
@@ -36,6 +42,18 @@ class _JoinScreenState extends State<JoinScreen> {
 
   String get _digits => _pin.text.replaceAll(RegExp(r'\D'), '');
   bool get _complete => _digits.length == 6;
+
+  @override
+  void initState() {
+    super.initState();
+    final pin = widget.prefilledPin;
+    if (pin != null) {
+      final digits = pin.replaceAll(RegExp(r'\D'), '');
+      _pin.text = digits.length > 3
+          ? '${digits.substring(0, 3)} ${digits.substring(3)}'
+          : digits;
+    }
+  }
 
   @override
   void dispose() {
@@ -161,7 +179,7 @@ class _JoinScreenState extends State<JoinScreen> {
       child: TextField(
         controller: _pin,
         enabled: !_checking,
-        autofocus: true,
+        autofocus: widget.prefilledPin == null,
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
         maxLength: 7,

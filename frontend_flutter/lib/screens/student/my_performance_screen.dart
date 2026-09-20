@@ -39,8 +39,11 @@ class _MyPerformanceScreenState extends State<MyPerformanceScreen> {
 
   Future<_PerformanceData> _load() async {
     final r = context.read<ResultsRepository>();
-    final (averages, topics, attempts) =
-        await (r.myAverages(), r.myTopicScores(), r.myAttempts()).wait;
+    final (averages, topics, attempts) = await (
+      r.myAverages(),
+      r.myTopicScores(),
+      r.myAttempts(),
+    ).wait;
     return _PerformanceData(
       averages: averages,
       topics: topics,

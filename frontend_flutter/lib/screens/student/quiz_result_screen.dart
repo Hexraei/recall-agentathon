@@ -36,14 +36,22 @@ class StudentQuizResultScreen extends StatefulWidget {
 class _StudentQuizResultScreenState extends State<StudentQuizResultScreen> {
   late Future<QuizResultData?> _future;
 
+  /// Whether the window has shut is the repository's call, not the caller's.
+  /// A screen opened with the wrong argument must still not release a result
+  /// early, so the answer is recomputed here.
+  late bool _stillOpen;
+
   @override
   void initState() {
     super.initState();
     _future = _load();
   }
 
-  Future<QuizResultData?> _load() =>
-      context.read<ResultsRepository>().myResult(widget.args.quizId);
+  Future<QuizResultData?> _load() {
+    final repo = context.read<ResultsRepository>();
+    _stillOpen = widget.args.stillOpen || !repo.isClosed(widget.args.quizId);
+    return repo.myResult(widget.args.quizId);
+  }
 
   void _reload() => setState(() {
     _future = _load();
@@ -73,7 +81,7 @@ class _StudentQuizResultScreenState extends State<StudentQuizResultScreen> {
                   message: "We couldn't load this result.",
                   onRetry: _reload,
                 )
-              else if (widget.args.stillOpen)
+              else if (_stillOpen)
                 ..._notYetAvailable(context, r)
               else
                 ..._available(context, r),
@@ -87,7 +95,7 @@ class _StudentQuizResultScreenState extends State<StudentQuizResultScreen> {
   String _meta(QuizResultData r) {
     final quiz = r.quiz;
     final week = quiz.week == null ? '' : '${quiz.week} · ';
-    if (widget.args.stillOpen) {
+    if (_stillOpen) {
       return '${week}Submitted ${_hhmm(r.submittedAt)} · still open';
     }
     return '${week}Ran ${_longDate(r.submittedAt)} · '

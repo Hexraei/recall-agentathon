@@ -73,7 +73,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       case Routes.studentHome:
         return const StudentHomeScreen();
       case Routes.join:
-        return const JoinScreen();
+        return JoinScreen(prefilledPin: a as String?);
       case Routes.studentLobby:
         return StudentLobbyScreen(quiz: a as Quiz);
       case Routes.questionView:

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/controllers.dart';
-import '../../data/fixtures.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
 import '../../routes.dart';
@@ -39,13 +38,16 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
   Future<_StudentHomeData> _load() async {
     final r = context.read<ResultsRepository>();
-    final attempts = await r.myAttempts();
+    final attempts = context.read<AttemptRepository>();
+
+    // The banner no longer decides for itself what is open. It asks, so it
+    // cannot advertise a quiz that has closed or one already submitted.
+    final (history, open) = await (r.myAttempts(), attempts.openQuiz()).wait;
+
     return _StudentHomeData(
-      attempts: attempts,
-      latest: attempts.isEmpty ? null : attempts.first,
-      // The open-quiz banner assumes the app knows a quiz is live before a
-      // PIN is typed. Nothing pushes that yet, so the mock supplies it.
-      openQuiz: Fixtures.graphs,
+      attempts: history,
+      latest: history.isEmpty ? null : history.first,
+      openQuiz: open,
     );
   }
 
@@ -149,9 +151,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       children: [
         if (d.openQuiz != null) ...[
           LiveBanner(
-            title: 'Open now · ${d.openQuiz!.title}',
-            detail: d.openQuiz!.summaryLine,
-            onTap: () => Navigator.of(context).pushNamed(Routes.join),
+            title: 'Open now · ${d.openQuiz!.quiz.title}',
+            detail: d.openQuiz!.quiz.summaryLine,
+            // The PIN travels with the banner, so tapping something that
+            // says "Open now" does not ask for it all over again.
+            onTap: () => Navigator.of(context)
+                .pushNamed(Routes.join, arguments: d.openQuiz!.pin)
+                .then((_) => _reload()),
           ),
           const SizedBox(height: 12),
         ],
@@ -279,5 +285,5 @@ class _StudentHomeData {
 
   final List<AttemptSummary> attempts;
   final AttemptSummary? latest;
-  final Quiz? openQuiz;
+  final OpenQuiz? openQuiz;
 }

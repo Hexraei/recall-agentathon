@@ -47,8 +47,11 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
 
   Future<_AnalyticsData> _load() async {
     final r = context.read<ResultsRepository>();
-    final (averages, topics, roster) =
-        await (r.classAverages(), r.topicAggregates(), r.roster()).wait;
+    final (averages, topics, roster) = await (
+      r.classAverages(),
+      r.topicAggregates(),
+      r.roster(),
+    ).wait;
     return _AnalyticsData(averages: averages, topics: topics, roster: roster);
   }
 

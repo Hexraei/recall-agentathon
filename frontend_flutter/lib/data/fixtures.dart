@@ -103,13 +103,15 @@ class Fixtures {
   ];
 
   // ------------------------------------------------------------ hash tables
+  /// The quiz that is open right now. It is the one a student joins with the
+  /// PIN, so it deliberately has no [Quiz.closedAt]: its window has not shut,
+  /// which is what keeps its answers out of results until it does.
   static final hashTables = Quiz(
     id: 'q-hash',
     title: 'Hash tables',
-    week: 'Week 8',
+    week: 'Week 10',
     timeLimitMinutes: 20,
-    lastRun: DateTime(2025, 9, 16, 10, 42),
-    closedAt: DateTime(2025, 9, 16, 11, 2),
+    lastRun: DateTime.now(),
     pin: '408 217',
     questions: _hashQuestions,
   );

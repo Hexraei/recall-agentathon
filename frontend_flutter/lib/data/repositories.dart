@@ -62,7 +62,25 @@ class JoinResult {
   final Duration? remaining;
 }
 
+/// A quiz the backend says is open for this student's class right now.
+///
+/// It carries the PIN so the open-quiz banner can hand it to the join flow
+/// rather than making the student read it off the board a second time.
+class OpenQuiz {
+  const OpenQuiz({required this.quiz, required this.pin});
+
+  final Quiz quiz;
+  final String pin;
+}
+
 abstract class AttemptRepository {
+  /// The quiz open right now, or null when nothing is running.
+  ///
+  /// This is the one place that decides a quiz is open. The dashboard banner
+  /// used to assert it on its own, which let it advertise a quiz that had
+  /// already closed.
+  Future<OpenQuiz?> openQuiz();
+
   Future<JoinResult> join(String pin);
 
   /// The lobby waits until the teacher starts.
@@ -79,6 +97,10 @@ abstract class ResultsRepository {
   Future<void> decideFinding(String id, FindingStatus status, {String? reason});
 
   Future<QuizResultData?> myResult(String quizId);
+
+  /// Whether a quiz's window has shut. Until it has, no result is released.
+  bool isClosed(String quizId);
+
   Future<List<AttemptSummary>> myAttempts();
   Future<List<QuizAverage>> myAverages();
   Future<List<TopicScore>> myTopicScores();
@@ -275,16 +297,44 @@ class MockAttemptRepository implements AttemptRepository {
   /// The PINs this build recognises, and what each one leads to. Typing
   /// anything else lands on the not-found state.
   static const _pins = {
-    '408217': JoinOutcome.ok,
+    _openPin: JoinOutcome.ok,
     '111111': JoinOutcome.closed,
     '222222': JoinOutcome.alreadySubmitted,
     '333333': JoinOutcome.alreadyStarted,
   };
 
+  static const _openPin = '408217';
+
+  /// Quiz ids this student has submitted during this run.
+  final _submitted = <String>{};
+
+  @override
+  Future<OpenQuiz?> openQuiz() async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+
+    // Only a quiz that is genuinely joinable counts as open: one that has
+    // not closed, and that this student has not already submitted.
+    final quiz = Fixtures.hashTables;
+    if (quiz.closedAt != null && quiz.closedAt!.isBefore(DateTime.now())) {
+      return null;
+    }
+    if (_submitted.contains(quiz.id)) return null;
+    return OpenQuiz(quiz: quiz, pin: _openPin);
+  }
+
   @override
   Future<JoinResult> join(String pin) async {
     await Future<void>.delayed(const Duration(milliseconds: 900));
-    final outcome = _pins[pin.replaceAll(' ', '')] ?? JoinOutcome.notFound;
+    final digits = pin.replaceAll(' ', '');
+    var outcome = _pins[digits] ?? JoinOutcome.notFound;
+
+    // Rejoining something already handed in reads as submitted, not as a
+    // fresh attempt.
+    if (outcome == JoinOutcome.ok &&
+        _submitted.contains(Fixtures.hashTables.id)) {
+      outcome = JoinOutcome.alreadySubmitted;
+    }
+
     return JoinResult(
       outcome,
       quiz: outcome == JoinOutcome.notFound ? null : Fixtures.hashTables,
@@ -313,11 +363,21 @@ class MockAttemptRepository implements AttemptRepository {
     await Future<void>.delayed(const Duration(milliseconds: 900));
     attempt.submittedAt = DateTime.now();
     attempt.autoSubmitted = auto;
+
+    // Recording it is what stops the banner offering the quiz again.
+    _submitted.add(attempt.quizId);
   }
 }
 
 class MockResultsRepository implements ResultsRepository {
   MockResultsRepository();
+
+  /// Results exist only after the window closes for everyone, so every
+  /// student-facing history is built from closed quizzes alone. A quiz that
+  /// is still open has no result to show yet, not even to whoever has
+  /// already handed theirs in.
+  List<Quiz> get _closed =>
+      Fixtures.allQuizzes.where((q) => q.closedAt != null).toList();
 
   final _findings = <Finding>[
     const Finding(
@@ -616,6 +676,12 @@ class MockResultsRepository implements ResultsRepository {
   }
 
   @override
+  bool isClosed(String quizId) {
+    final quiz = Fixtures.allQuizzes.firstWhere((q) => q.id == quizId);
+    return quiz.closedAt != null;
+  }
+
+  @override
   Future<List<AttemptSummary>> myAttempts() =>
       studentAttempts(Fixtures.student.id);
 
@@ -630,7 +696,7 @@ class MockResultsRepository implements ResultsRepository {
   @override
   Future<List<QuizAverage>> studentAverages(String studentId) async {
     final out = <QuizAverage>[];
-    for (final q in Fixtures.allQuizzes.reversed) {
+    for (final q in _closed.reversed) {
       // One quiz the student did not take, so the dash state is reachable.
       final absent = studentId == Fixtures.student.id && q.id == 'q-recursion';
       out.add(
@@ -651,7 +717,7 @@ class MockResultsRepository implements ResultsRepository {
     bool recent = true,
   }) async {
     final merged = <String, List<int>>{};
-    for (final q in Fixtures.allQuizzes) {
+    for (final q in _closed) {
       for (final t in _resultFor(q, studentId).topicScores) {
         final m = merged.putIfAbsent(t.topic, () => [0, 0]);
         m[0] += t.correct;
@@ -668,7 +734,7 @@ class MockResultsRepository implements ResultsRepository {
   @override
   Future<List<AttemptSummary>> studentAttempts(String studentId) async {
     final out = <AttemptSummary>[];
-    for (final q in Fixtures.allQuizzes) {
+    for (final q in _closed) {
       if (studentId == Fixtures.student.id && q.id == 'q-recursion') continue;
       final r = _resultFor(q, studentId);
       out.add(
