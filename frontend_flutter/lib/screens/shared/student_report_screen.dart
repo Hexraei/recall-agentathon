@@ -99,7 +99,7 @@ class _StudentReportScreenState extends State<StudentReportScreen> {
       const SizedBox(height: 14),
       if (r.headline != null)
         Text(r.headline!, style: AppText.sectionTitle),
-      if (r.unverified) ...[
+      if (r.hasUnverifiedWording) ...[
         const SizedBox(height: 12),
         const InfoBand(
           text:

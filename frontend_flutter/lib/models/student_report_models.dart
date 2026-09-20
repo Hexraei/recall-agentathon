@@ -12,8 +12,11 @@ import 'package:flutter/foundation.dart';
 ///   [fromCache]   true = this is the report from when the student finished
 ///                 the quiz (a database read, no new model call). false =
 ///                 freshly generated just now.
-///   [unverified]  true = the wording has not been double-checked yet. The
-///                 numbers behind it are still accurate regardless.
+///   [unverified]  Present (a non-null string, the checker's own reason) when
+///                 the wording has not passed its check - null when it has.
+///                 The API sends the reason itself here, not a bool: reading
+///                 it as one throws on a real unverified report, which is
+///                 exactly the state a demo needs to be able to show.
 @immutable
 class StudentReport {
   const StudentReport({
@@ -30,7 +33,7 @@ class StudentReport {
     this.nextStep,
     this.byTopic = const [],
     required this.fromCache,
-    required this.unverified,
+    this.unverified,
   });
 
   final String studentId;
@@ -50,9 +53,13 @@ class StudentReport {
   /// A plain database read of an earlier run, not a new model call.
   final bool fromCache;
 
-  /// The wording has not passed the checker yet — a fact about this report,
-  /// not a verdict on the student.
-  final bool unverified;
+  /// The checker's own reason the wording was not signed off, or null when
+  /// it passed cleanly. A fact about this report, not a verdict on the
+  /// student — the app shows [hasUnverifiedWording] rather than this reason.
+  final String? unverified;
+
+  /// Whether to show the "not double-checked yet" notice at all.
+  bool get hasUnverifiedWording => unverified != null;
 
   factory StudentReport.fromJson(Map<String, dynamic> j) => StudentReport(
     studentId: j['student_id'] as String? ?? '',
@@ -74,7 +81,7 @@ class StudentReport {
         .map((e) => TopicLine.fromJson(e as Map<String, dynamic>))
         .toList(),
     fromCache: j['_from_cache'] as bool? ?? false,
-    unverified: j['_unverified'] as bool? ?? false,
+    unverified: j['_unverified'] as String?,
   );
 }
 
