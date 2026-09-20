@@ -12,6 +12,8 @@ import '../../widgets/shared/bands.dart';
 import '../../widgets/shared/dashboard.dart';
 import '../../widgets/shared/misc.dart';
 import '../../widgets/shared/nav_list.dart';
+import '../../widgets/shared/sheets.dart';
+import '../../widgets/shared/student_id_sheet.dart';
 
 /// Screen 12 — Student Home Dashboard.
 ///
@@ -163,6 +165,24 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with RouteAware {
             ),
           ],
         ),
+        const SectionLabel('Agent demos'),
+        NavList(
+          rows: [
+            NavRow(
+              icon: Icons.timeline,
+              title: 'Persistent memory',
+              secondary: 'Real recorded agent output, across sittings',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(Routes.memoryIdentities),
+            ),
+            NavRow(
+              icon: Icons.article_outlined,
+              title: 'My agent report',
+              secondary: 'Enter the id used at signup',
+              onTap: () => _openStudentReport(context),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -213,12 +233,40 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with RouteAware {
             ),
           ],
         ),
+        const SectionLabel('Agent demos'),
+        NavList(
+          rows: [
+            NavRow(
+              icon: Icons.timeline,
+              title: 'Persistent memory',
+              secondary: 'Real recorded agent output, across sittings',
+              onTap: () =>
+                  Navigator.of(context).pushNamed(Routes.memoryIdentities),
+            ),
+            NavRow(
+              icon: Icons.article_outlined,
+              title: 'My agent report',
+              secondary: 'Enter the id used at signup',
+              onTap: () => _openStudentReport(context),
+            ),
+          ],
+        ),
         if (d.latest != null) ...[
           const SectionLabel('Latest result'),
           _LatestResult(attempt: d.latest!),
         ],
       ],
     );
+  }
+}
+
+Future<void> _openStudentReport(BuildContext context) async {
+  final id = await showAppSheet<String?>(
+    context: context,
+    builder: (context) => const StudentIdSheet(),
+  );
+  if (id != null && context.mounted) {
+    Navigator.of(context).pushNamed(Routes.studentReport, arguments: id);
   }
 }
 

@@ -31,6 +31,17 @@ class Routes {
   static const myResults = '/student/results';
   static const quizResult = '/student/result';
   static const myPerformance = '/student/performance';
+
+  // Persistent-memory demo (read-only, real agent output) — reachable from
+  // both teacher and student home, since the identities are not tied to
+  // either role.
+  static const memoryIdentities = '/memory';
+  static const memoryTimeline = '/memory/timeline';
+  static const memorySitting = '/memory/sitting';
+
+  // Individual student report (the real agent pipeline, wrapped as JSON) —
+  // also reachable from either home.
+  static const studentReport = '/report';
 }
 
 /// Arguments for My Quizzes, which behaves differently when it was reached
