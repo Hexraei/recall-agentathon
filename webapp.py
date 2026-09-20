@@ -38,7 +38,7 @@ from slice.config import settings as load_settings
 from slice.llm import ModelError, complete
 from slice.store import Store
 
-from app import bank, memory_api, report, roster
+from app import bank, memory_api, report, report_api, roster
 
 DB = Path(__file__).parent / os.environ.get("RECALL_DB", "webapp.db")
 """Which database this process writes to.
@@ -64,6 +64,13 @@ app = FastAPI()
 # connection per request, so it shares none of the locking machinery below and
 # cannot write to anything. None of the quiz routes change because of it.
 app.include_router(memory_api.router)
+
+# The mobile app's JSON view of the individual student report - the same
+# report.for_student() pipeline the /report/{sid} HTML route below calls,
+# wrapped as JSON instead of rendered as a page. Imports `store` and
+# `_settings` from this module at call time (see report_api.py), so it reads
+# and writes through the same locked connection as every other route here.
+app.include_router(report_api.router)
 
 _settings = load_settings()
 _store: Store | None = None
