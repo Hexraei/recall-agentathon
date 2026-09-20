@@ -128,14 +128,23 @@ def _questions() -> dict:
             },
         },
         "bad_claim": {
-            "type": "noul",
+            "type": "choice",
             "instructions": (
-                "Quote the ONE claim number that is the clearest violation. "
-                "If the first question was answered false (report is fine), "
-                "this must be 0."),
+                "Answer with the NUMBER of the one claim that is the clearest "
+                "violation of the first question. If the report is fine, "
+                "answer 0."),
             "criteria": {
-                "true": "One specific numbered claim above is the violation.",
-                "false": "No claim is a violation.",
+                "0": "No claim is a violation.",
+                "1": "Claim 1 (the first numbered claim) is the violation.",
+                "2": "Claim 2 is the violation.",
+                "3": "Claim 3 is the violation.",
+                "4": "Claim 4 is the violation.",
+                "5": "Claim 5 is the violation.",
+                "6": "Claim 6 is the violation.",
+                "7": "Claim 7 is the violation.",
+                "8": "Claim 8 is the violation.",
+                "9": "Claim 9 is the violation.",
+                "10": "Claim 10 is the violation.",
             },
         },
     }
@@ -196,10 +205,20 @@ def judge(*, settings: Settings, budget, report: dict, facts: dict,
     # violation, so the redrafting prompt receives something actionable
     # instead of a generic objection. The numbered bullets live in the state
     # block (build_jev_check_state), so the number maps back to the sentence.
+    #
+    # Asked as a noul question the answer carries no claim identity at all
+    # (measured live: only noul comes back) - so when Jev is ACTIVE the
+    # question is re-typed as a `choice` over claim numbers (see _questions:
+    # the criteria enumerate the numbered positions), whose `choice` IS the
+    # number. Only noul-typed json_blob probes (old captures) fall back to
+    # "no claim named".
     claim_no = 0
     if not v.accepted:
         try:
-            claim_no = int(float(claim_q.get("claim", 0) or 0))
+            if "choice" in claim_q:
+                claim_no = int(float(claim_q["choice"] or 0))
+            else:
+                claim_no = int(float(claim_q.get("claim", 0) or 0))
         except (TypeError, ValueError):
             claim_no = 0
         claims = _report_bullets(report)
