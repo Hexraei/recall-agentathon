@@ -83,10 +83,7 @@ class _MyResultsScreenState extends State<MyResultsScreen> {
       const SectionLabel('Pick a quiz', top: 0),
       Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: Text(
-          'Most recent first. Open one to see every question.',
-          style: AppText.bodySmall,
-        ),
+        child: Text('Pick a quiz to view result', style: AppText.bodySmall),
       ),
       RowCard(
         children: [
