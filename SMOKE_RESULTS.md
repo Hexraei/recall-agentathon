@@ -1,12 +1,5 @@
 # SMOKE_RESULTS.md — Smoke Test Results & Judge Recreation Guide
 
-> **Recorded on `jev-compare`, a branch not merged into `main`.** The Jev
-> report-checker results below (Smoke Test 2, Demos 7–9) describe code that is
-> not in `main` — see `JEV_CONTEXT.md`. Smoke Test 1 (persistent state memory
-> across separate OS processes) exercises `app/flow.py`'s core pipeline, which
-> *is* in `main` and unaffected by Jev either way — that part of this document
-> describes real, current behaviour.
-
 - **Repo:** /home/jasper/Agentathon_work/recall-agentathon
 - **Branch:** `jev-compare`
 - **Date:** 2026-09-20

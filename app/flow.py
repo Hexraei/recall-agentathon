@@ -21,10 +21,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from slice import callback
-from slice.llm import complete
+from slice.llm import complete, ModelError
 from slice.records import RunState
 
 from . import history, provenance
+from . import jev_compare as jev
 from .schema import Check, Comparison, EvidenceSet, Finding, Review
 
 # --------------------------------------------------------------- domain rules
@@ -249,16 +250,64 @@ def build_flow(call=complete, notes: str = "", trace=None):
         Kept apart from drafting so that "similar", "recurring", "improving" and
         "not enough evidence" is a record the checker can test, rather than a
         word buried inside a finding.
+
+        Two transports, one contract. When TYPSAFE_JEV_MODEL is set, the
+        verdict comes from the decisions model (jev_compare.judge) - a typed
+        answer with a probability distribution and a confidence score. Below
+        the confidence floor the verdict is not trusted and the run asks the
+        professor instead, whatever the label says. Anything Jev-side that
+        fails (network, unknown label, quota) falls back to the chat path -
+        the fallback is the same SchemaFailure family the runner already
+        handles, so a Jev outage degrades to the known-good transport rather
+        than failing the run.
         """
         attempt = ctx.latest("attempt")
         prior = history.prior_records(ctx.store, attempt["student_id"], ctx.run_id)
+        evidence_now = ctx.latest("evidence")
 
-        comparison = timed("compare", lambda: call(
-            settings=ctx.settings, budget=ctx.budget,
-            messages=build_compare_messages(ctx.latest("evidence"), prior,
-                                            attempt["learning_objectives"]),
-            schema=Comparison, step="compare",
-        ), lambda r: r.label)
+        comparison = None
+        jev_verdict = None
+        if jev.jev_available(ctx.settings):
+            try:
+                verdict = jev.judge(
+                    settings=ctx.settings, budget=ctx.budget,
+                    evidence=evidence_now, prior=prior, attempt=attempt,
+                    week_gap=jev.compute_week_gap(
+                        [r.get("date") for r in prior["evidence"]],
+                        attempt.get("date", "")),
+                )
+                comparison = Comparison(
+                    label=verdict.label,
+                    related_refs=verdict.related_refs,
+                    explanation=verdict.explanation,
+                )
+                jev_verdict = {
+                    "label": verdict.label,
+                    "confidence": verdict.confidence,
+                    "probabilities": verdict.probabilities,
+                    "model": ctx.settings.jev_model,
+                }
+            except jev.JevError as e:
+                # Fall back, visibly: the failure is a record, not silent.
+                # Narrow to JevError (network/HTTP/unknown-label/model-shape),
+                # NOT broad Exception: a programming defect inside this try
+                # must crash the run loudly, not masquerade as "Jev went down"
+                # and silently re-run compare on the chat path. That masquerade
+                # already happened once — the floor's ask crashed before its
+                # comparison row existed, and this catch swallowed it.
+                ctx.append("failure", {
+                    "kind": "jev_unavailable",
+                    "detail": f"{type(e).__name__}: {e}",
+                    "note": "fell back to the chat compare path",
+                }, produced_by="agent:compare")
+
+        if comparison is None:
+            comparison = timed("compare", lambda: call(
+                settings=ctx.settings, budget=ctx.budget,
+                messages=build_compare_messages(evidence_now, prior,
+                                                attempt["learning_objectives"]),
+                schema=Comparison, step="compare",
+            ), lambda r: r.label)
 
         # The model may not award `recurring` on a single assignment, whatever
         # it thinks it sees. Recurrence is a claim about more than one piece of
@@ -274,7 +323,9 @@ def build_flow(call=complete, notes: str = "", trace=None):
             })
 
         ctx.append("comparison", comparison.model_dump(), produced_by="agent:compare")
-        return RunState.DRAFT_FINDING
+
+        return _route_after_compare(ctx, comparison.model_dump(), jev_verdict,
+                                    _ask_professor)
 
     def handle_draft_finding(ctx) -> RunState:
         """Write a bounded finding, addressing the last rejection if there was one."""
@@ -419,14 +470,56 @@ def build_flow(call=complete, notes: str = "", trace=None):
 
     # ---------------------------------------------------------------- helpers
 
+    def _route_after_compare(ctx, comparison: dict, jev_verdict: dict | None,
+                             ask) -> RunState:
+        """Decide where compare's verdict goes, with the record already stored.
+
+        Everything here reads the PERSISTED comparison, not an in-frame object.
+        That is what fixes the sent-back calibration: the earlier version
+        appended `jev_verdict` and asked the professor from INSIDE the try
+        block, before the comparison row existed - the ask itself fetched
+        `latest('comparison')`, found None, and its TypeError was swallowed by
+        the same except that discards Jev outages. One record, one routing
+        decision, in this order:
+
+            1. the calibration row (the model did judge this)
+            2. the comparison row      (what the run will act on)
+            3. the floor's question    (only when the label is consequential
+                                        AND the confidence is a coin flip)
+        """
+        if jev_verdict:
+            ctx.append("jev_verdict", jev_verdict, produced_by="agent:jev")
+
+        label = comparison["label"]
+        confidence = (jev_verdict or {}).get("confidence", 1.0)
+        consequential = label in ("recurring", "improving")
+        if (jev_verdict is not None
+                and consequential
+                and confidence < ctx.settings.jev_confidence_floor):
+            return ask(
+                ctx,
+                f"Jev judged this `{label}` but confidence "
+                f"{confidence:.2f} is below the "
+                f"{ctx.settings.jev_confidence_floor:.2f} floor.")
+
+        return RunState.DRAFT_FINDING
+
     def _ask_professor(ctx, why: str) -> RunState:
         finding = ctx.latest("finding")
         comparison = ctx.latest("comparison")
+        # The Jev floor routes to review AFTER comparing has persisted its
+        # comparison but BEFORE any finding exists - so `finding` may
+        # legitimately be None here, while the checker's routes (a rejected
+        # draft / max revisions) always have one. Build the question from what
+        # exists rather than assuming.
+        finding_line = (f"Finding: {finding['statement']}\n"
+                        if finding and finding.get("statement")
+                        else "Finding: (none drafted yet)\n")
         callback.ask(
             ctx.store, ctx.run_id,
             question=(
                 f"{why}\n\n"
-                f"Finding: {finding['statement']}\n"
+                f"{finding_line}"
                 f"Comparison: {comparison['label']} - {comparison['explanation']}\n\n"
                 "Confirm, revise, reject, or request more evidence."
             ),

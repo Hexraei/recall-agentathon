@@ -51,6 +51,13 @@ class Settings:
     langfuse_public: str
     langfuse_secret: str
     langfuse_host: str
+    # Jev, the decisions model, judged to be the calibrated judge for the
+    # compare step. Empty string = off, and the compare step uses the chat
+    # path above exactly as before. The endpoint is NOT chat/completions - it
+    # lives at api/alpha/decisions on the same OpenRouter key and refuses the
+    # chat endpoint with an error that names the right route (verified).
+    jev_model: str = ""
+    jev_confidence_floor: float = 0.60
 
     @property
     def tracing_enabled(self) -> bool:
@@ -75,4 +82,6 @@ def settings(reload: bool = True) -> Settings:
         langfuse_public       = g("LANGFUSE_PUBLIC_KEY", "").strip(),
         langfuse_secret       = g("LANGFUSE_SECRET_KEY", "").strip(),
         langfuse_host         = g("LANGFUSE_HOST", "https://cloud.langfuse.com").strip(),
+        jev_model             = g("TYPSAFE_JEV_MODEL", "").strip(),
+        jev_confidence_floor  = float(g("JEV_CONFIDENCE_FLOOR", "0.60")),
     )

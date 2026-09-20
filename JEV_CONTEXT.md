@@ -1,15 +1,5 @@
 # JEV_CONTEXT.md — the `jev-compare` branch
 
-> **This file describes `jev-compare`, a branch that has NOT been merged into
-> `main`.** It landed here only as a reference doc, alongside `SMOKE_RESULTS.md`,
-> because the smoke-test evidence it links to is worth keeping even though the
-> Jev integration code itself is not in `main`. Nothing described below —
-> `app/jev_compare.py`, `app/jev_report_check.py`, the Jev-aware `app/flow.py`
-> routing, `TYPSAFE_JEV_MODEL`, etc. — exists on `main`. If you are reading
-> this to understand what the running system does today, it doesn't apply;
-> read `MAIN_CONTEXT.md` instead. This is a record of what the branch built,
-> kept for whoever eventually decides whether to bring it in for real.
-
 **Branch:** `jev-compare` (from `main` after the teammate's Phase 1–4b + quiz/report
 commits). This file is the branch's context doc: what was built here, how it
 iterated, how to run it, and what is still open. Companion to `MAIN_CONTEXT.md`
