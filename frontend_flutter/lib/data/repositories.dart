@@ -1,6 +1,12 @@
+import 'dart:convert';
 import 'dart:math';
 
+import 'package:http/http.dart' as http;
+
+import '../models/memory_models.dart';
 import '../models/models.dart';
+import '../models/student_report_models.dart';
+import 'api_config.dart';
 import 'fixtures.dart';
 
 /// The boundary between the UI and wherever data actually comes from.
@@ -117,6 +123,61 @@ abstract class ResultsRepository {
   });
   Future<List<AttemptSummary>> studentAttempts(String studentId);
   Future<QuizResultData> studentAttemptDetail(String studentId, String quizId);
+}
+
+/// The persistent-memory demo (`GET /api/memory/*`, app/memory_api.py).
+///
+/// Read-only, backed by the real `memory.db` the demo tooling built — there
+/// is no mock implementation of this one, because the whole point is that a
+/// person in the room is looking at real recorded agent output, not a
+/// plausible stand-in for it.
+abstract class MemoryRepository {
+  /// The identity list screen.
+  Future<List<MemoryIdentitySummary>> students();
+
+  /// One identity's full timeline, oldest sitting first.
+  Future<MemoryIdentityDetail> student(String studentId);
+
+  /// One sitting in full, including which cited answers back the claim.
+  Future<SittingDetail> sitting(String runId);
+}
+
+/// Thrown by [MemoryRepository] when `memory.db` has not been built yet
+/// (the API's own 503) — kept distinct from a plain network failure so the
+/// screen can say something more useful than "could not load".
+class MemoryNotBuiltException implements Exception {
+  const MemoryNotBuiltException(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
+/// The individual student report (`GET /api/report/{id}`, app/report_api.py)
+/// — the JSON wrapper around the same agent pipeline
+/// (`report.for_student()`) the web app's `/report/{sid}` page renders.
+abstract class StudentReportRepository {
+  /// `force: true` asks the server to regenerate rather than serve the
+  /// cached report — the same escape hatch the web page's "Regenerate it"
+  /// link uses.
+  Future<StudentReport> report(String studentId, {bool force = false});
+}
+
+/// Thrown when the report could not be generated because the model that
+/// writes it is unreachable — the API's own 503. Distinct from a 404 (no
+/// such student, or they have not answered anything yet).
+class ReportUnavailableException implements Exception {
+  const ReportUnavailableException(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
+/// No such student, or they have not answered anything yet.
+class ReportNotFoundException implements Exception {
+  const ReportNotFoundException(this.message);
+  final String message;
+  @override
+  String toString() => message;
 }
 
 // ---------------------------------------------------------------- mock impls
@@ -846,5 +907,121 @@ class MockResultsRepository implements ResultsRepository {
   ) async {
     final quiz = Fixtures.allQuizzes.firstWhere((q) => q.id == quizId);
     return _latency(_resultFor(quiz, studentId));
+  }
+}
+
+// ----------------------------------------------------------------- HTTP impls
+
+/// Real implementation of [MemoryRepository], calling the FastAPI process
+/// (`webapp.py`) started separately — see [ApiConfig.baseUrl].
+///
+/// Responses are cached in memory for the lifetime of this object: the data
+/// is static between demo rebuilds (see FLUTTER_CONTEXT.md's "Practical
+/// notes"), and a live demo should not depend on the network being good in
+/// the room for a second look at the same identity.
+class HttpMemoryRepository implements MemoryRepository {
+  HttpMemoryRepository({http.Client? client})
+    : _client = client ?? http.Client();
+
+  final http.Client _client;
+  List<MemoryIdentitySummary>? _studentsCache;
+  final _detailCache = <String, MemoryIdentityDetail>{};
+  final _sittingCache = <String, SittingDetail>{};
+
+  Uri _uri(String path) => Uri.parse('${ApiConfig.baseUrl}$path');
+
+  Future<Map<String, dynamic>> _getJson(String path) async {
+    final http.Response resp;
+    try {
+      resp = await _client.get(_uri(path));
+    } catch (e) {
+      throw Exception('Could not reach the server at ${ApiConfig.baseUrl}: $e');
+    }
+    if (resp.statusCode == 503) {
+      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      throw MemoryNotBuiltException(
+        body['detail'] as String? ?? 'memory.db has not been built yet',
+      );
+    }
+    if (resp.statusCode == 404) {
+      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      throw Exception(body['detail'] as String? ?? 'Not found');
+    }
+    if (resp.statusCode != 200) {
+      throw Exception('Server returned ${resp.statusCode}');
+    }
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
+
+  @override
+  Future<List<MemoryIdentitySummary>> students() async {
+    if (_studentsCache != null) return _studentsCache!;
+    final j = await _getJson('/api/memory/students');
+    final list = (j['students'] as List? ?? const [])
+        .map((e) => MemoryIdentitySummary.fromJson(e as Map<String, dynamic>))
+        .toList();
+    _studentsCache = list;
+    return list;
+  }
+
+  @override
+  Future<MemoryIdentityDetail> student(String studentId) async {
+    final cached = _detailCache[studentId];
+    if (cached != null) return cached;
+    final j = await _getJson('/api/memory/student/$studentId');
+    final detail = MemoryIdentityDetail.fromJson(j);
+    _detailCache[studentId] = detail;
+    return detail;
+  }
+
+  @override
+  Future<SittingDetail> sitting(String runId) async {
+    final cached = _sittingCache[runId];
+    if (cached != null) return cached;
+    final j = await _getJson('/api/memory/sitting/$runId');
+    final detail = SittingDetail.fromJson(j);
+    _sittingCache[runId] = detail;
+    return detail;
+  }
+}
+
+/// Real implementation of [StudentReportRepository], calling the same
+/// FastAPI process as [HttpMemoryRepository] — see [ApiConfig.baseUrl].
+class HttpStudentReportRepository implements StudentReportRepository {
+  HttpStudentReportRepository({http.Client? client})
+    : _client = client ?? http.Client();
+
+  final http.Client _client;
+
+  Uri _uri(String path) => Uri.parse('${ApiConfig.baseUrl}$path');
+
+  @override
+  Future<StudentReport> report(String studentId, {bool force = false}) async {
+    final uri = _uri(
+      '/api/report/$studentId${force ? '?force=1' : ''}',
+    );
+    final http.Response resp;
+    try {
+      resp = await _client.get(uri);
+    } catch (e) {
+      throw Exception('Could not reach the server at ${ApiConfig.baseUrl}: $e');
+    }
+
+    if (resp.statusCode == 404) {
+      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      throw ReportNotFoundException(
+        body['detail'] as String? ?? 'Student not found',
+      );
+    }
+    if (resp.statusCode == 503) {
+      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      throw ReportUnavailableException(
+        body['detail'] as String? ?? 'The report could not be generated',
+      );
+    }
+    if (resp.statusCode != 200) {
+      throw Exception('Server returned ${resp.statusCode}');
+    }
+    return StudentReport.fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
   }
 }

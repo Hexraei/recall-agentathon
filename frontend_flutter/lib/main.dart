@@ -29,6 +29,14 @@ class RecallApp extends StatelessWidget {
         Provider<ResultsRepository>(
           create: (c) => MockResultsRepository(c.read<AuthRepository>()),
         ),
+        // Real HTTP-backed repositories, not mocks: both call the FastAPI
+        // process (webapp.py) started separately. See lib/data/api_config.dart
+        // for the base URL to point at an emulator, a real device, or a
+        // tunnel instead of localhost.
+        Provider<MemoryRepository>(create: (_) => HttpMemoryRepository()),
+        Provider<StudentReportRepository>(
+          create: (_) => HttpStudentReportRepository(),
+        ),
         ChangeNotifierProvider<AuthController>(
           create: (c) => AuthController(c.read<AuthRepository>()),
         ),

@@ -4,7 +4,11 @@ import 'data/controllers.dart';
 import 'models/models.dart';
 import 'routes.dart';
 import 'screens/shared/auth_screen.dart';
+import 'screens/shared/memory_identities_screen.dart';
+import 'screens/shared/memory_sitting_screen.dart';
+import 'screens/shared/memory_timeline_screen.dart';
 import 'screens/shared/splash_screen.dart';
+import 'screens/shared/student_report_screen.dart';
 import 'screens/student/join_screen.dart';
 import 'screens/student/my_performance_screen.dart';
 import 'screens/student/my_results_screen.dart';
@@ -89,6 +93,18 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
         return StudentQuizResultScreen(args: a as QuizResultArgs);
       case Routes.myPerformance:
         return const MyPerformanceScreen();
+
+      // -------------------------------------------------- persistent memory
+      case Routes.memoryIdentities:
+        return const MemoryIdentitiesScreen();
+      case Routes.memoryTimeline:
+        return MemoryTimelineScreen(studentId: a as String);
+      case Routes.memorySitting:
+        return MemorySittingScreen(runId: a as String);
+
+      // ------------------------------------------------------ student report
+      case Routes.studentReport:
+        return StudentReportScreen(studentId: a as String);
 
       default:
         return const SplashScreen();
