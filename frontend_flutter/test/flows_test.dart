@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recall/main.dart';
+import 'package:recall/widgets/shared/page_scaffold.dart';
 
 /// Walks the teacher path and the student path against the mock data layer,
 /// which is what the conversion brief asks to be proven before the build is
@@ -130,6 +131,34 @@ void main() {
     await _tapRow(tester, 'See full result');
     expect(find.text('By topic'.toUpperCase()), findsOneWidget);
     expect(find.text('Every question'.toUpperCase()), findsOneWidget);
+  });
+
+  testWidgets('Student path: My results lists every quiz before opening one', (
+    tester,
+  ) async {
+    await _signIn(tester, asStudent: true);
+
+    // The row used to jump straight into the most recent result, which left
+    // no way of reaching any of the others.
+    await _tapRow(tester, 'My results');
+    expect(find.text('Pick a quiz'.toUpperCase()), findsOneWidget);
+    expect(find.text('Graphs'), findsOneWidget);
+    expect(find.text('Sorting'), findsOneWidget);
+
+    // Opening the older one proves the choice is honoured, not overridden by
+    // the latest attempt.
+    await _tapRow(tester, 'Sorting');
+    expect(find.text('Every question'.toUpperCase()), findsOneWidget);
+    // The back affordance is a chevron, so its wording lives in the
+    // semantics label rather than on screen.
+    expect(
+      tester.widget<PageScaffold>(find.byType(PageScaffold)).backLabel,
+      'Back to results',
+      reason: 'back should name the list it came from, not the dashboard',
+    );
+
+    await _back(tester);
+    expect(find.text('Pick a quiz'.toUpperCase()), findsOneWidget);
   });
 
   testWidgets(

@@ -173,13 +173,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             NavRow(
               icon: Icons.assignment_outlined,
               title: 'My results',
-              secondary: '${d.attempts.length} quizzes taken',
-              // "My results" points at the most recent one; the full list of
-              // past results lives at the bottom of My Performance.
-              onTap: () => Navigator.of(context).pushNamed(
-                Routes.quizResult,
-                arguments: QuizResultArgs(quizId: d.latest!.quiz.id),
-              ),
+              secondary: d.attempts.length == 1
+                  ? '1 quiz taken'
+                  : '${d.attempts.length} quizzes taken',
+              // The list comes first, so any past quiz can be reached from
+              // here and not only the most recent one.
+              onTap: () => Navigator.of(context).pushNamed(Routes.myResults),
             ),
             NavRow(
               icon: Icons.trending_up,

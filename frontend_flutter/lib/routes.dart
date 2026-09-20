@@ -28,6 +28,7 @@ class Routes {
   static const questionView = '/student/question';
   static const reviewSubmit = '/student/review';
   static const submitted = '/student/submitted';
+  static const myResults = '/student/results';
   static const quizResult = '/student/result';
   static const myPerformance = '/student/performance';
 }
@@ -48,8 +49,17 @@ class StudentAttemptArgs {
 
 /// Arguments for the student result screen.
 class QuizResultArgs {
-  const QuizResultArgs({required this.quizId, this.stillOpen = false});
+  const QuizResultArgs({
+    required this.quizId,
+    this.stillOpen = false,
+    this.backLabel,
+  });
   final String quizId;
+
+  /// Where the back chevron says it goes. The result screen is reachable from
+  /// the dashboard and from the list of results, and the label should name
+  /// whichever one opened it.
+  final String? backLabel;
 
   /// The quiz has not closed yet, so the screen shows what was submitted and
   /// says when the result lands, rather than an empty chart.

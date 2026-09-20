@@ -69,7 +69,7 @@ class _StudentQuizResultScreenState extends State<StudentQuizResultScreen> {
         return PageScaffold(
           title: quiz?.title ?? 'Result',
           subtitle: r == null ? null : _meta(r),
-          backLabel: 'Back to home',
+          backLabel: widget.args.backLabel ?? 'Back to home',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

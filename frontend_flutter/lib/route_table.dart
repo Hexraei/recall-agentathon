@@ -7,6 +7,7 @@ import 'screens/shared/auth_screen.dart';
 import 'screens/shared/splash_screen.dart';
 import 'screens/student/join_screen.dart';
 import 'screens/student/my_performance_screen.dart';
+import 'screens/student/my_results_screen.dart';
 import 'screens/student/question_view_screen.dart';
 import 'screens/student/quiz_result_screen.dart';
 import 'screens/student/review_submit_screen.dart';
@@ -82,6 +83,8 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
         return ReviewSubmitScreen(controller: a as AttemptController);
       case Routes.submitted:
         return SubmittedScreen(args: a as SubmittedArgs);
+      case Routes.myResults:
+        return const MyResultsScreen();
       case Routes.quizResult:
         return StudentQuizResultScreen(args: a as QuizResultArgs);
       case Routes.myPerformance:
