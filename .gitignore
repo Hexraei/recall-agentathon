@@ -1,6 +1,32 @@
+# Python
 .venv/
-*.db
-*.db-*
 __pycache__/
 *.pyc
+.pytest_cache/
+
+# Secrets - never commit a real key
 .env
+
+# Databases are rebuilt by simulate.py / seed scripts. consistency.db is
+# tracked on purpose as measurement evidence (see docs/evidence/).
+*.db
+*.db-*
+!consistency.db
+
+# Editors and OS
+.idea/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+*.swp
+
+# Flutter / Dart build output (frontend_flutter/.gitignore covers the rest)
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Logs and scratch
+*.log
