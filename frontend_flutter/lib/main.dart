@@ -19,10 +19,14 @@ class RecallApp extends StatelessWidget {
         // The repository interfaces are what the screens depend on; which
         // implementation sits behind them is decided here and nowhere else.
         Provider<AuthRepository>(create: (_) => MockAuthRepository()),
-        Provider<QuizRepository>(create: (_) => MockQuizRepository()),
+        Provider<QuizRepository>(
+          create: (c) => MockQuizRepository(c.read<AuthRepository>()),
+        ),
         Provider<SessionRepository>(create: (_) => MockSessionRepository()),
         Provider<AttemptRepository>(create: (_) => MockAttemptRepository()),
-        Provider<ResultsRepository>(create: (_) => MockResultsRepository()),
+        Provider<ResultsRepository>(
+          create: (c) => MockResultsRepository(c.read<AuthRepository>()),
+        ),
         ChangeNotifierProvider<AuthController>(
           create: (c) => AuthController(c.read<AuthRepository>()),
         ),

@@ -273,4 +273,43 @@ void main() {
     expect(find.text('WINDOW CLOSED'), findsOneWidget);
     expect(find.text('See class results'), findsOneWidget);
   });
+
+  testWidgets('A newly created student account starts with no history', (
+    tester,
+  ) async {
+    await _bootToAuth(tester);
+
+    final toggle = find
+        .ancestor(
+          of: find.textContaining('Create an account', findRichText: true),
+          matching: find.byType(GestureDetector),
+        )
+        .first;
+    await tester.ensureVisible(toggle);
+    await _settle(tester, frames: 4);
+    await tester.tap(toggle);
+    await _settle(tester, frames: 8);
+
+    await tester.tap(find.text('Student'));
+    await _settle(tester, frames: 4);
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'Meera Nair');
+    await tester.enterText(fields.at(1), 's2024099');
+    await tester.enterText(fields.at(2), 'password12');
+    await _settle(tester, frames: 4);
+
+    final create = find.widgetWithText(Center, 'Create account');
+    await tester.ensureVisible(create);
+    await _settle(tester, frames: 4);
+    await tester.tap(create.hitTestable());
+    await _settle(tester, frames: 24);
+
+    // The dashboard greets the new account and offers the first quiz. None of
+    // the demo student's results may leak into it.
+    expect(find.text('Join your first quiz'), findsOneWidget);
+    expect(find.text('Latest result'.toUpperCase()), findsNothing);
+    expect(find.text('Graphs'), findsNothing);
+    expect(find.text('Sorting'), findsNothing);
+  });
 }

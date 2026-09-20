@@ -40,7 +40,7 @@ void main() {
     });
 
     test('a student history holds only quizzes that have closed', () async {
-      final repo = MockResultsRepository();
+      final repo = MockResultsRepository(MockAuthRepository());
       final attempts = await repo.myAttempts();
 
       expect(attempts, isNotEmpty);
@@ -59,7 +59,7 @@ void main() {
     });
 
     test('isClosed gates the open quiz and allows a finished one', () {
-      final repo = MockResultsRepository();
+      final repo = MockResultsRepository(MockAuthRepository());
       expect(repo.isClosed(Fixtures.hashTables.id), isFalse);
       expect(repo.isClosed(Fixtures.graphs.id), isTrue);
     });

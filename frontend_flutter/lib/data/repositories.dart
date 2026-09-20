@@ -24,6 +24,11 @@ abstract class AuthRepository {
   /// Restores a session on launch, or null when there is none.
   Future<AppUser?> restoreSession();
   Future<void> signOut();
+
+  /// Whoever is signed in right now, or null. The other repositories read
+  /// this so that "my quizzes" and "my results" mean the signed-in account
+  /// and not a fixed fixture.
+  AppUser? get currentUser;
 }
 
 abstract class QuizRepository {
@@ -161,6 +166,9 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async => _current = null;
+
+  @override
+  AppUser? get currentUser => _current;
 }
 
 class AuthException implements Exception {
@@ -171,32 +179,44 @@ class AuthException implements Exception {
 }
 
 class MockQuizRepository implements QuizRepository {
-  MockQuizRepository() : _quizzes = [...Fixtures.allQuizzes];
+  MockQuizRepository(this._auth);
 
-  final List<Quiz> _quizzes;
+  final AuthRepository _auth;
+
+  /// The demo teacher's library, already full of term's work.
+  final List<Quiz> _quizzes = [...Fixtures.allQuizzes];
+
+  /// Anyone who signs up gets their own, which starts empty, so a new
+  /// account opens on the invitation rather than on somebody else's term.
+  final List<Quiz> _ownQuizzes = [];
+
+  List<Quiz> get _library =>
+      _auth.currentUser?.id == Fixtures.teacher.id ? _quizzes : _ownQuizzes;
 
   @override
-  Future<List<Quiz>> myQuizzes() => _latency(List.unmodifiable(_quizzes));
+  Future<List<Quiz>> myQuizzes() => _latency(List.unmodifiable(_library));
 
   @override
-  Future<Quiz> quizById(String id) =>
-      _latency(_quizzes.firstWhere((q) => q.id == id));
+  Future<Quiz> quizById(String id) => _latency(
+    [..._library, ...Fixtures.allQuizzes].firstWhere((q) => q.id == id),
+  );
 
   @override
   Future<void> saveQuiz(Quiz quiz) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
-    final i = _quizzes.indexWhere((q) => q.id == quiz.id);
+    final library = _library;
+    final i = library.indexWhere((q) => q.id == quiz.id);
     if (i == -1) {
-      _quizzes.insert(0, quiz);
+      library.insert(0, quiz);
     } else {
-      _quizzes[i] = quiz;
+      library[i] = quiz;
     }
   }
 
   @override
   Future<void> deleteQuiz(String id) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
-    _quizzes.removeWhere((q) => q.id == id);
+    _library.removeWhere((q) => q.id == id);
   }
 
   @override
@@ -415,7 +435,18 @@ class MockAttemptRepository implements AttemptRepository {
 }
 
 class MockResultsRepository implements ResultsRepository {
-  MockResultsRepository();
+  MockResultsRepository(this._auth);
+
+  final AuthRepository _auth;
+
+  /// "My" means the signed-in account. An account created in this build has
+  /// sat no quiz, so it has no history — it must not be handed the demo
+  /// student's.
+  String get _meId => _auth.currentUser?.id ?? Fixtures.student.id;
+
+  /// Only the roster has a past. Everyone else starts empty.
+  bool _hasHistory(String studentId) =>
+      Fixtures.roster.any((s) => s.id == studentId);
 
   /// Results exist only after the window closes for everyone, so every
   /// student-facing history is built from closed quizzes alone. A quiz that
@@ -716,8 +747,9 @@ class MockResultsRepository implements ResultsRepository {
 
   @override
   Future<QuizResultData?> myResult(String quizId) async {
+    if (!_hasHistory(_meId)) return _latency(null);
     final quiz = Fixtures.allQuizzes.firstWhere((q) => q.id == quizId);
-    return _latency(_resultFor(quiz, Fixtures.student.id));
+    return _latency(_resultFor(quiz, _meId));
   }
 
   @override
@@ -727,19 +759,17 @@ class MockResultsRepository implements ResultsRepository {
   }
 
   @override
-  Future<List<AttemptSummary>> myAttempts() =>
-      studentAttempts(Fixtures.student.id);
+  Future<List<AttemptSummary>> myAttempts() => studentAttempts(_meId);
 
   @override
-  Future<List<QuizAverage>> myAverages() =>
-      studentAverages(Fixtures.student.id);
+  Future<List<QuizAverage>> myAverages() => studentAverages(_meId);
 
   @override
-  Future<List<TopicScore>> myTopicScores() =>
-      studentTopicScores(Fixtures.student.id);
+  Future<List<TopicScore>> myTopicScores() => studentTopicScores(_meId);
 
   @override
   Future<List<QuizAverage>> studentAverages(String studentId) async {
+    if (!_hasHistory(studentId)) return _latency(const <QuizAverage>[]);
     final out = <QuizAverage>[];
     for (final q in _closed.reversed) {
       // One quiz the student did not take, so the dash state is reachable.
@@ -761,6 +791,7 @@ class MockResultsRepository implements ResultsRepository {
     String studentId, {
     bool recent = true,
   }) async {
+    if (!_hasHistory(studentId)) return _latency(const <TopicScore>[]);
     final merged = <String, List<int>>{};
     for (final q in _closed) {
       for (final t in _resultFor(q, studentId).topicScores) {
@@ -778,6 +809,7 @@ class MockResultsRepository implements ResultsRepository {
 
   @override
   Future<List<AttemptSummary>> studentAttempts(String studentId) async {
+    if (!_hasHistory(studentId)) return _latency(const <AttemptSummary>[]);
     final out = <AttemptSummary>[];
     for (final q in _closed) {
       if (studentId == Fixtures.student.id && q.id == 'q-recursion') continue;
