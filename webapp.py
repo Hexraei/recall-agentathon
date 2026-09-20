@@ -611,54 +611,120 @@ def _outcome_chip(outcome: str) -> str:
 
 @app.get("/teacher/memory/simple", response_class=HTMLResponse)
 def memory_simple_intro():
-    """The one-button version: two real students, one real model call, one
-    plain sentence. For a live demo where the full 6-identity/timeline
-    browsing is more than there is time to walk through.
+    """The one-button version: real students, one real model call, one plain
+    sentence. For a live demo where the full 6-identity/timeline browsing is
+    more than there is time to walk through.
+
+    Two departments, each with three lengths - robotics is the clean,
+    confident pattern catch; computer science is the honest, erratic case
+    where no single mistake dominates. Showing both is the point: the system
+    is not always saying "recurring", it says so exactly when the real data
+    supports it. See app/simple_live_demo.py's module docstring for the full
+    reasoning and how each chain was picked and verified.
     """
+    def _buttons(dept: str) -> str:
+        return "".join(f'''
+<form action="/teacher/memory/simple/run" method="get" style="flex:1"
+      onsubmit="document.getElementById('waiting').classList.add('on');
+                document.getElementById('lengthbuttons').style.display='none';">
+  <input type="hidden" name="department" value="{dept}">
+  <input type="hidden" name="length" value="{n}">
+  <button class="go" type="submit">{n} sittings</button>
+</form>''' for n in (2, 3, 4))
+
     return page(f"""
 <a class="brand" href="/">Recall</a>
 <h1>Does it remember?</h1>
-<p class="muted">Two different real robotics students, further down the
-page's roster, both got the same question wrong for the same reason. Hit the
-button - a real model call happens right now, live, reading the first
-student's answer before deciding about the second.</p>
-<div class="card key">
-  <p style="margin:0">
-    <b>Sitting 1</b> - a real student answers the quiz. Nothing to compare
-    against yet.<br><br>
-    <b>Sitting 2</b> - a different real student answers the same quiz,
-    weeks later. The system reads sitting 1 first, then decides whether
-    this is the same mistake happening again.
-  </p>
-</div>
+<p class="muted">Two real departments, two different real stories. Pick how
+many sittings to chain - a real model call happens right now, live, reading
+every earlier sitting before deciding about the last one.</p>
 <div id="waiting">
   <div class="spin"></div>
   <p class="muted">Calling the model now - this takes a few seconds…</p>
 </div>
-<form id="runform" action="/teacher/memory/simple/run" method="get"
-      onsubmit="document.getElementById('waiting').classList.add('on');
-                document.getElementById('runbtn').disabled=true;
-                document.getElementById('runbtn').textContent='Running…';">
-  <button id="runbtn" class="go" type="submit">Run it live</button>
-</form>
+<div id="lengthbuttons">
+  <h2>Robotics - a clean, shared mistake</h2>
+  <p class="muted">Real students who all got the same question wrong for the
+  same reason. The system should confidently catch the repeat.</p>
+  <div class="row">{_buttons("robotics")}</div>
+
+  <h2>Computer science - no single pattern</h2>
+  <p class="muted">Real students with genuinely different mistakes. No
+  dominant misconception in this department - the system should stay
+  honestly uncertain rather than force a match.</p>
+  <div class="row">{_buttons("computer_science")}</div>
+</div>
 <div class="row"><a href="/teacher/memory">See all identities instead</a>
 <a href="/teacher">Back</a></div>
 """)
 
 
 @app.get("/teacher/memory/simple/run", response_class=HTMLResponse)
-def memory_simple_run():
+def memory_simple_run(department: str = "robotics", length: int = 2):
     """Actually calls the model - this is the live part, not a replay.
 
-    Builds a fresh two-sitting pair in a throwaway database every time this
-    is hit (see app/simple_live_demo.py), so re-running for a second judge
-    calls the model again rather than showing a cached answer.
+    Builds a fresh chain in a throwaway database every time this is hit (see
+    app/simple_live_demo.py), so re-running for a second judge calls the
+    model again rather than showing a cached answer.
     """
+    if department not in ("robotics", "computer_science") or length not in (2, 3, 4):
+        return RedirectResponse("/teacher/memory/simple", status_code=303)
+
     try:
-        result = simple_live_demo.run_live(_settings, complete, _ds_notes)
+        result = simple_live_demo.run_live(_settings, complete, _ds_notes,
+                                            department=department, length=length)
     except ModelError as e:
         return _model_error_page(e, "/teacher/memory/simple")
 
+    return page(_verdict_html(result))
+
+
+@app.get("/teacher/memory/simple/decide", response_class=HTMLResponse)
+def memory_simple_decide(session_id: str, run_id: str, question_id: str, decision: str):
+    """A teacher's real action on a pending review - confirm or reject.
+
+    Goes through the same slice.callback.answer() every human-in-the-loop
+    decision in this project uses (see app/simple_live_demo.decide()), then
+    re-renders the same verdict page with the review resolved rather than
+    pending - so the "Pending your review" buttons disappear once acted on.
+
+    `session_id` identifies which run_live() call this review belongs to -
+    each one gets its own database file, so a review here is never at risk
+    from a different chain started afterward (see LIVE_DB_DIR in
+    app/simple_live_demo.py for why that matters).
+    """
+    if decision not in ("confirm", "reject"):
+        return RedirectResponse("/teacher/memory/simple", status_code=303)
+
+    try:
+        simple_live_demo.decide(session_id, run_id, question_id, decision,
+                                 _settings, complete, _ds_notes)
+    except FileNotFoundError as e:
+        return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>This demo session has expired</h1>
+<div class="card">{esc(e)}</div>
+<div class="row"><a href="/teacher/memory/simple">Run another</a></div>""")
+    except ModelError as e:
+        return _model_error_page(e, "/teacher/memory/simple")
+
+    label = "confirmed" if decision == "confirm" else "rejected"
+    return page(f"""
+<a class="brand" href="/">Recall</a>
+<h1>Decision recorded</h1>
+<div class="card good">
+  <p style="margin:0">You {esc(label)} this finding. The run has moved on
+  from waiting on a professor to closed, exactly as it would for a real
+  quiz result.</p>
+</div>
+<div class="row">
+  <a href="/teacher/memory/simple">Run another</a>
+  <a href="/teacher">Back</a>
+</div>
+""")
+
+
+def _verdict_html(result: dict) -> str:
     label = result["label"] or "unknown"
     plain = {
         "recurring": "Yes - it caught the repeat.",
@@ -669,33 +735,64 @@ def memory_simple_run():
     tone = "good" if label == "recurring" else ""
 
     cited = "".join(f'<span class="chip">{esc(t)}</span> ' for t in result["cited_topics"])
+    sittings_line = " - ".join(
+        f'Sitting {i+1}: {esc(s["student_name"])} ({s["score"]}/20)'
+        for i, s in enumerate(result["sittings"]))
 
-    return page(f"""
+    review_html = ""
+    if result["paused_for_human"] and result.get("pending_question_id"):
+        review_html = f"""
+<div class="card key" style="margin-top:.8rem">
+  <p style="margin:0"><b>Pending your review</b></p>
+  <p class="muted" style="margin:.4rem 0 0">This is flagged as consequential
+  enough that the system will not close it on its own. As the teacher, decide:</p>
+  <div class="row" style="margin-top:.8rem">
+    <form action="/teacher/memory/simple/decide" method="get" style="flex:1">
+      <input type="hidden" name="session_id" value="{esc(result['session_id'])}">
+      <input type="hidden" name="run_id" value="{esc(result['run_id'])}">
+      <input type="hidden" name="question_id" value="{esc(result['pending_question_id'])}">
+      <input type="hidden" name="decision" value="confirm">
+      <button class="go" type="submit">Confirm - this is real</button>
+    </form>
+    <form action="/teacher/memory/simple/decide" method="get" style="flex:1">
+      <input type="hidden" name="session_id" value="{esc(result['session_id'])}">
+      <input type="hidden" name="run_id" value="{esc(result['run_id'])}">
+      <input type="hidden" name="question_id" value="{esc(result['pending_question_id'])}">
+      <input type="hidden" name="decision" value="reject">
+      <button class="go" type="submit" style="background:var(--ink)">Reject - not convinced</button>
+    </form>
+  </div>
+</div>"""
+    elif result["paused_for_human"]:
+        # Paused, but this run's question was already answered (a second
+        # look at an already-decided verdict) - nothing actionable left.
+        review_html = ('<div class="card key" style="margin-top:.8rem">'
+                       '<p style="margin:0">This was already reviewed.</p></div>')
+
+    return f"""
 <a class="brand" href="/">Recall</a>
 <h1>Verdict</h1>
-<p class="muted">Real model call, just now - took {result["seconds"]}s.</p>
+<p class="muted">{esc(result["department_label"])} - real model call, just
+ now - took {result["seconds"]}s, chaining {result["length"]} sittings.</p>
 <div class="card {tone}" style="margin-top:.8rem">
   <p style="margin:0;font-size:1.15rem"><b>{esc(plain)}</b></p>
 </div>
 <div class="card" style="margin-top:.8rem">
-  <p class="muted" style="margin:0 0 .4rem">
-    Sitting 1: {esc(result["student_1_name"])} ({result["student_1_score"]}/20) -
-    Sitting 2: {esc(result["student_2_name"])} ({result["student_2_score"]}/20)
-  </p>
+  <p class="muted" style="margin:0 0 .4rem">{sittings_line}</p>
   {f'<p style="margin:.4rem 0 0">{esc(result["explanation"])}</p>' if result.get("explanation") else ""}
   {f'<p class="muted" style="margin:.5rem 0 0">Based on: {cited}</p>' if cited.strip() else ""}
 </div>
-{'<div class="card key" style="margin-top:.8rem"><p style="margin:0">This is flagged as consequential enough that the system paused here for a professor to confirm it, rather than deciding on its own.</p></div>' if result["paused_for_human"] else ""}
+{review_html}
 <div class="card key" style="margin-top:1.2rem">
-  <p style="margin:0">Both students are real and their answers are real. The
-  "weeks later" timing is set up for this demo - a two-day event cannot
-  otherwise produce two genuinely separate sittings to compare.</p>
+  <p style="margin:0">Every student in this chain is real and their answers
+  are real. The "weeks later" timing is set up for this demo - a two-day
+  event cannot otherwise produce genuinely separate sittings to compare.</p>
 </div>
 <div class="row">
   <a href="/teacher/memory/simple">Run it again</a>
   <a href="/teacher">Back</a>
 </div>
-""")
+"""
 
 
 @app.get("/teacher/memory", response_class=HTMLResponse)
