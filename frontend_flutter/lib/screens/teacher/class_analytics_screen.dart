@@ -136,6 +136,8 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
       _FilterRow(
         label: _quizzesInView >= d.averages.length
             ? 'All quizzes'
+            : _quizzesInView == 1
+            ? 'Last quiz'
             : 'Last $_quizzesInView quizzes',
         detail: averages.isEmpty
             ? ''
@@ -284,8 +286,16 @@ class _FilterSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final options = <int>{3, 6, available}.where((n) => n <= available).toList()
-      ..sort();
+    // 1 and 2 are here on purpose, not just 3 and 6: filtering down that far
+    // is the only way to reach the too-few-for-a-trend state, since the
+    // demo account always has six quizzes closed.
+    final options = <int>{
+      1,
+      2,
+      3,
+      6,
+      available,
+    }.where((n) => n <= available).toList()..sort();
     return SheetFrame(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,7 +312,11 @@ class _FilterSheet extends StatelessWidget {
             children: [
               for (final n in options)
                 FactRow(
-                  label: n == available ? 'All quizzes' : 'Last $n quizzes',
+                  label: n == available
+                      ? 'All quizzes'
+                      : n == 1
+                      ? 'Last quiz'
+                      : 'Last $n quizzes',
                   value: n == selected ? '✓' : '',
                   onTap: () => Navigator.of(context).pop(n),
                 ),

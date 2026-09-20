@@ -767,13 +767,24 @@ class MockResultsRepository implements ResultsRepository {
   @override
   Future<List<TopicScore>> myTopicScores() => studentTopicScores(_meId);
 
+  /// Two students in the mock are deliberately sparse, so the states that
+  /// need a gap in someone's history are reachable rather than theoretical:
+  /// the signed-in student misses Recursion, which is what puts a dash on
+  /// their own performance chart, and Priya Venkat misses everything but
+  /// Graphs, which is what makes "one attempt only" reachable from the
+  /// teacher's side without depending on chance across the whole roster.
+  bool _missed(String studentId, String quizId) {
+    if (studentId == Fixtures.student.id) return quizId == 'q-recursion';
+    if (studentId == 's10') return quizId != Fixtures.graphs.id;
+    return false;
+  }
+
   @override
   Future<List<QuizAverage>> studentAverages(String studentId) async {
     if (!_hasHistory(studentId)) return _latency(const <QuizAverage>[]);
     final out = <QuizAverage>[];
     for (final q in _closed.reversed) {
-      // One quiz the student did not take, so the dash state is reachable.
-      final absent = studentId == Fixtures.student.id && q.id == 'q-recursion';
+      final absent = _missed(studentId, q.id);
       out.add(
         QuizAverage(
           quizTitle: q.title,
@@ -794,6 +805,7 @@ class MockResultsRepository implements ResultsRepository {
     if (!_hasHistory(studentId)) return _latency(const <TopicScore>[]);
     final merged = <String, List<int>>{};
     for (final q in _closed) {
+      if (_missed(studentId, q.id)) continue;
       for (final t in _resultFor(q, studentId).topicScores) {
         final m = merged.putIfAbsent(t.topic, () => [0, 0]);
         m[0] += t.correct;
@@ -812,7 +824,7 @@ class MockResultsRepository implements ResultsRepository {
     if (!_hasHistory(studentId)) return _latency(const <AttemptSummary>[]);
     final out = <AttemptSummary>[];
     for (final q in _closed) {
-      if (studentId == Fixtures.student.id && q.id == 'q-recursion') continue;
+      if (_missed(studentId, q.id)) continue;
       final r = _resultFor(q, studentId);
       out.add(
         AttemptSummary(
