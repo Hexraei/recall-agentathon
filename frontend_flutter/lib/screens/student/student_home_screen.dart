@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../data/controllers.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
+import '../../route_observer.dart';
 import '../../routes.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
@@ -27,7 +28,7 @@ class StudentHomeScreen extends StatefulWidget {
   State<StudentHomeScreen> createState() => _StudentHomeScreenState();
 }
 
-class _StudentHomeScreenState extends State<StudentHomeScreen> {
+class _StudentHomeScreenState extends State<StudentHomeScreen> with RouteAware {
   late Future<_StudentHomeData> _future;
 
   @override
@@ -35,6 +36,27 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     super.initState();
     _future = _load();
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic>) routeObserver.subscribe(this, route);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  /// Attempting a quiz pushes several routes deep and hands off between them
+  /// with `pushReplacementNamed`, which completes the very first one's
+  /// future before the attempt is even finished. Reloading here instead,
+  /// whenever this screen is exposed again for any reason, is what actually
+  /// catches a quiz being joined, submitted, or backed out of.
+  @override
+  void didPopNext() => _reload();
 
   Future<_StudentHomeData> _load() async {
     final r = context.read<ResultsRepository>();
@@ -154,10 +176,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             title: 'Open now · ${d.openQuiz!.quiz.title}',
             detail: d.openQuiz!.quiz.summaryLine,
             // The PIN travels with the banner, so tapping something that
-            // says "Open now" does not ask for it all over again.
-            onTap: () => Navigator.of(context)
-                .pushNamed(Routes.join, arguments: d.openQuiz!.pin)
-                .then((_) => _reload()),
+            // says "Open now" does not ask for it all over again. Reloading
+            // is didPopNext's job now, not this push's own future — see the
+            // note on RouteAware above.
+            onTap: () => Navigator.of(
+              context,
+            ).pushNamed(Routes.join, arguments: d.openQuiz!.pin),
           ),
           const SizedBox(height: 12),
         ],

@@ -222,4 +222,68 @@ void main() {
       reason: 'the PIN travels with the banner',
     );
   });
+
+  testWidgets('the dashboard drops the banner after a lobby-started attempt is '
+      'submitted, not just an already-started one', (tester) async {
+    // A quiz joined before the teacher starts it goes through the lobby,
+    // which later hands off to the question view with
+    // pushReplacementNamed. That replace completes the *first* pushed
+    // route's future — the one the banner's tap was relying on for its
+    // reload — long before the attempt is anywhere near submitted. Only
+    // the already-started path (tested above, via a straight push chain)
+    // happened to exercise the working case; this is the one that found
+    // the bug.
+    await _signInAsStudent(tester);
+
+    // Submit the other live quiz first, through its already-started
+    // shortcut, so Hash tables joined below is the only one left open.
+    await tester.tap(find.text('Join a quiz'));
+    await _settle(tester, frames: 4);
+    await tester.enterText(find.byType(TextField).first, '333333');
+    await _settle(tester, frames: 4);
+    await tester.tap(find.widgetWithText(Center, 'Join'));
+    await _settle(tester, frames: 24);
+    await tester.tap(find.widgetWithText(Center, 'Join now'));
+    await _settle(tester, frames: 24);
+    await tester.tap(find.text('Review & submit'));
+    await _settle(tester, frames: 24);
+    await tester.tap(find.widgetWithText(Center, 'Submit'));
+    await _settle(tester);
+    await tester.tap(find.widgetWithText(Center, 'Submit anyway'));
+    await _settle(tester, frames: 24);
+    await tester.tap(find.widgetWithText(Center, 'Back to home'));
+    await _settle(tester, frames: 24);
+    expect(find.textContaining('Hash tables'), findsOneWidget);
+
+    await tester.tap(find.textContaining('Open now'));
+    await _settle(tester, frames: 4);
+    await tester.tap(find.widgetWithText(Center, 'Join'));
+    await _settle(tester, frames: 24);
+    expect(find.text('Waiting to start'), findsOneWidget);
+
+    // Past the lobby's own auto-start timer.
+    await tester.pump(const Duration(seconds: 9));
+    await _settle(tester, frames: 24);
+    expect(find.textContaining('Question 1 of'), findsOneWidget);
+
+    await tester.tap(find.text('Review & submit'));
+    await _settle(tester, frames: 24);
+    await tester.tap(find.widgetWithText(Center, 'Submit'));
+    await _settle(tester);
+    await tester.tap(find.widgetWithText(Center, 'Submit anyway'));
+    await _settle(tester, frames: 24);
+    expect(find.text('Submitted'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(Center, 'Back to home'));
+    await _settle(tester, frames: 24);
+
+    expect(
+      find.textContaining('Open now'),
+      findsNothing,
+      reason:
+          'the quiz just submitted was the only one left open, so the '
+          'dashboard must reload rather than show what it cached before '
+          'the attempt started',
+    );
+  });
 }

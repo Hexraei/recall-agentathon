@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../data/controllers.dart';
 import '../../data/repositories.dart';
 import '../../models/models.dart';
+import '../../route_observer.dart';
 import '../../routes.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
@@ -29,7 +30,7 @@ class TeacherHomeScreen extends StatefulWidget {
   State<TeacherHomeScreen> createState() => _TeacherHomeScreenState();
 }
 
-class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
+class _TeacherHomeScreenState extends State<TeacherHomeScreen> with RouteAware {
   late Future<_HomeData> _future;
 
   @override
@@ -37,6 +38,28 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     super.initState();
     _future = _load();
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic>) routeObserver.subscribe(this, route);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  /// Hosting a quiz pushes My Quizzes, then the lobby, then the monitor, and
+  /// each hands off to the next with `pushReplacementNamed` — which
+  /// completes an earlier push's future well before the quiz has even
+  /// started, let alone closed. Reloading on didPopNext instead catches the
+  /// return however many routes deep the trip went, the same fix as on the
+  /// student dashboard.
+  @override
+  void didPopNext() => _reload();
 
   Future<_HomeData> _load() async {
     // Both repositories are read before the first await, so nothing touches
@@ -141,9 +164,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
               'Write four-option questions, set one deadline for the whole '
               'attempt, then host it and read the class PIN aloud.',
           actionLabel: 'Create a quiz',
-          onAction: () => Navigator.of(
-            context,
-          ).pushNamed(Routes.quizBuilder).then((_) => _reload()),
+          onAction: () => Navigator.of(context).pushNamed(Routes.quizBuilder),
         ),
         const SizedBox(height: 20),
         const PrimaryActionCard(
@@ -199,9 +220,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
               icon: Icons.description_outlined,
               title: 'My quizzes',
               secondary: '${d.quizzes.length} saved',
-              onTap: () => Navigator.of(
-                context,
-              ).pushNamed(Routes.myQuizzes).then((_) => _reload()),
+              onTap: () => Navigator.of(context).pushNamed(Routes.myQuizzes),
             ),
             NavRow(
               icon: Icons.bar_chart,
@@ -216,9 +235,8 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
               secondary: 'Confirm before students see them',
               // The badge disappears entirely when the queue is empty.
               badge: d.pendingFindings > 0 ? '${d.pendingFindings}' : null,
-              onTap: () => Navigator.of(
-                context,
-              ).pushNamed(Routes.reviewFindings).then((_) => _reload()),
+              onTap: () =>
+                  Navigator.of(context).pushNamed(Routes.reviewFindings),
             ),
           ],
         ),
