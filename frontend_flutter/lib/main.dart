@@ -6,6 +6,7 @@ import 'data/repositories.dart';
 import 'route_table.dart';
 import 'routes.dart';
 import 'theme/app_theme.dart';
+import 'widgets/shared/responsive_shell.dart';
 
 void main() => runApp(const RecallApp());
 
@@ -37,6 +38,8 @@ class RecallApp extends StatelessWidget {
         theme: AppTheme.light,
         initialRoute: Routes.splash,
         onGenerateRoute: onGenerateRoute,
+        builder: (context, child) =>
+            ResponsiveShell(child: child ?? const SizedBox.shrink()),
       ),
     );
   }

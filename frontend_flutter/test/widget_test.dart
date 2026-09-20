@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recall/main.dart';
 import 'package:recall/theme/colors.dart';
+import 'package:recall/widgets/shared/responsive_shell.dart';
 
 /// Splash restores the session on a 900ms delay and animates a looping bar
 /// while it does, so a test that stops on Splash would leave both a pending
@@ -50,6 +51,27 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+    'ResponsiveShell does not constrain the page outside a web build',
+    (tester) async {
+      // flutter_test's default surface is 800 wide, well past the
+      // shell's breakpoint. If it applied here the way it does on web,
+      // the sign-in card would be centred in a narrower box; on every
+      // other platform — including this test binary — it must render
+      // full width instead, gated by kIsWeb rather than by width alone.
+      await _bootToAuth(tester);
+
+      final field = tester.getSize(find.byType(TextField).first);
+      expect(
+        field.width,
+        greaterThan(ResponsiveShell.maxContentWidth),
+        reason:
+            'a non-web run must not be squeezed into the web-only '
+            'centred column',
+      );
+    },
+  );
 
   testWidgets('An unrestored session lands on sign in', (tester) async {
     await _bootToAuth(tester);
