@@ -761,3 +761,157 @@ def test_cohort_language_is_descriptive_on_a_class_report_only():
     ranked = {"headline": "You did better than most students.",
               "strengths": [], "gaps": [], "next_step": "x", "uncertainty": "y"}
     assert report.check_claim_strength(ranked, stu_facts, "student") is not None
+
+
+# ------------------------------------ evidence: one sentence, about one concept
+
+def test_a_concept_with_no_mistakes_carries_no_sentence():
+    """`evidence` reads the WRONG ANSWERS. A concept with none leaves the model
+    nothing to say, and asked anyway it writes filler - "You got all of these
+    right" appeared 55 times across 150 entries on the real cohort, beside a
+    score already showing 3/3. Cleared in code, like enforce_pattern(): no
+    rewrite can turn an absent mistake into an observation about one."""
+    facts = {"by_concept": [
+        {"concept": "clean", "asked": 3, "correct": 3, "wrong_answer_count": 0,
+         "missed_in_topics": []},
+        {"concept": "messy", "asked": 4, "correct": 1, "wrong_answer_count": 3,
+         "missed_in_topics": ["A", "B"]}]}
+    body = {"headline": "h",
+            "strengths": [{"concept": "clean", "verdict": "strong",
+                           "evidence": "You got all of these right."}],
+            "gaps": [{"concept": "messy", "verdict": "weak",
+                      "evidence": "The misses counted the outer loop only."}],
+            "next_step": "n", "uncertainty": "u"}
+
+    notes = report.strip_empty_evidence(body, facts)
+    assert body["strengths"][0]["evidence"] == ""
+    assert any("clean" in n for n in notes)
+    # A concept that DOES have mistakes keeps its sentence.
+    assert body["gaps"][0]["evidence"] == "The misses counted the outer loop only."
+
+
+def test_one_sentence_may_not_stand_in_for_two_concepts():
+    """Measured: a sentence was reused across different concepts 36 times in 30
+    real reports. Sometimes generic, sometimes a specific reading of one
+    concept's mistakes pasted onto another's - which says something false about
+    the second. Unlike the filler case this is sent BACK: the mistakes are
+    there to describe, the model just described them once."""
+    facts = {"by_concept": [
+        {"concept": "a", "asked": 4, "correct": 1, "wrong_answer_count": 3,
+         "missed_in_topics": ["X"]},
+        {"concept": "b", "asked": 4, "correct": 1, "wrong_answer_count": 3,
+         "missed_in_topics": ["Y"]}]}
+    shared = "The misses both missed a continuous effect."
+    body = {"headline": "h", "strengths": [],
+            "gaps": [{"concept": "a", "verdict": "weak", "evidence": shared},
+                     {"concept": "b", "verdict": "weak", "evidence": shared}],
+            "next_step": "n", "uncertainty": "u"}
+
+    check = report.check_distinct_evidence(body, facts)
+    assert check is not None and check.failed_check == "claim_strength"
+    assert "a" in check.detail and "b" in check.detail
+
+    # Distinct sentences pass.
+    body["gaps"][1]["evidence"] = "The misses chose the average, not the worst case."
+    assert report.check_distinct_evidence(body, facts) is None
+
+    # Two EMPTY sentences are not duplicates - both concepts were simply clean.
+    body["gaps"][0]["evidence"] = ""
+    body["gaps"][1]["evidence"] = ""
+    assert report.check_distinct_evidence(body, facts) is None
+
+
+def test_the_results_page_omits_an_empty_sentence_rather_than_printing_a_blank():
+    import webapp
+    rows = [{"concept": "clean", "verdict": "strong", "evidence": ""},
+            {"concept": "messy", "verdict": "weak", "evidence": "The misses skipped it."}]
+    html = webapp._concept_cards(rows, "ok")
+    assert "<p" not in html.split("messy")[0], "empty evidence rendered a paragraph"
+    assert "The misses skipped it." in html
+
+
+def test_the_trail_shows_what_code_corrected_not_a_blank_check_line():
+    """The `correct` step is where arithmetic - not judgement - fixed the
+    draft: a verdict recomputed, an entry moved, filler cleared. It used to
+    fall through to the check branch and render as "check r1 -> " with nothing
+    after it, which is both wrong and hides the most interesting line in the
+    trail."""
+    import webapp
+    body = {"_revisions": 2, "_trail": [
+        {"step": "draft", "revision": 1, "body": {"headline": "first try"}},
+        {"step": "check", "revision": 1,
+         "body": {"verdict": "rejected", "failed_check": "citation",
+                  "detail": "named a topic, not a concept"}},
+        {"step": "draft", "revision": 2, "body": {"headline": "second try"}},
+        {"step": "correct", "revision": 2,
+         "body": {"corrections": ["loops: weak -> strong (4 of 4), moved gaps -> strengths"]}},
+        {"step": "check", "revision": 2, "body": {"verdict": "accepted"}},
+    ]}
+    html = webapp._trail_html(body)
+    assert "moved gaps" in html, "the code correction is not shown"
+    assert "code   r2" in html
+    # No check line may be rendered with an empty verdict.
+    for line in html.split("\n"):
+        if line.strip().startswith("check"):
+            assert "accepted" in line or "rejected" in line, line
+
+
+def test_a_spent_daily_quota_is_reported_once_not_silently_absorbed(capsys):
+    """The fallback working is the design succeeding - but 29 of 30 real
+    reports ran on the slower secondary without a word on screen, which reads
+    as "the system got slower", not "the fast provider is out of quota until
+    tomorrow". Warn once per model, to stderr, and keep working."""
+    from slice import llm
+    llm._DEGRADED_WARNED.clear()
+    body = ('{"error":{"message":"Rate limit reached for model `x` on tokens '
+            'per day (TPD): Limit 200000, Used 198913"}}')
+    llm._warn_degraded("qwen/qwen3.8-27b", 884.0, body)
+    first = capsys.readouterr().err
+    assert "rate limited" in first
+    assert "daily token quota" in first, "should name the real cause"
+    assert "Falling back" in first
+
+    # Same model again: silent, or a cohort run prints this 30 times.
+    llm._warn_degraded("qwen/qwen3.8-27b", 884.0, body)
+    assert capsys.readouterr().err == ""
+
+    # A per-minute limit is a queue, not a spent quota - no daily wording.
+    llm._DEGRADED_WARNED.clear()
+    llm._warn_degraded("other-model", 45.0, '{"error":{"message":"rate limit"}}')
+    assert "daily token quota" not in capsys.readouterr().err
+
+
+def test_moving_an_entry_on_verdict_does_not_duplicate_a_concept():
+    """Measured on the real cohort: a draft listed four strengths and two gaps,
+    every concept distinct WITHIN its own list, but both gaps naming a concept
+    already in strengths. enforce_verdicts() moved them on verdict and appended
+    blindly, so the student saw 'knowing when a loop or function stops' twice
+    in strengths with the same sentence under both. The move is right; the
+    blind append was not."""
+    facts = {"by_concept": [
+        {"concept": "loops", "asked": 4, "correct": 3, "wrong_answer_count": 1,
+         "missed_in_topics": ["A"]}]}
+    body = {"headline": "h",
+            "strengths": [{"concept": "loops", "verdict": "strong",
+                           "evidence": "The one miss checked only at the start."}],
+            "gaps": [{"concept": "loops", "verdict": "weak",
+                      "evidence": "The one miss checked only at the start."}],
+            "next_step": "n", "uncertainty": "u"}
+
+    notes = report.enforce_verdicts(body, facts)
+    names = [e["concept"] for e in body["strengths"]]
+    assert names.count("loops") == 1, f"concept duplicated: {names}"
+    assert not body["gaps"], "the entry should have left gaps"
+    assert any("duplicate" in n for n in notes)
+
+
+def test_a_concept_listed_twice_is_rejected():
+    facts = {"by_concept": [
+        {"concept": "a", "asked": 3, "correct": 0, "wrong_answer_count": 3,
+         "missed_in_topics": ["X", "Y"]}]}
+    body = {"headline": "h", "strengths": [],
+            "gaps": [{"concept": "a", "verdict": "weak", "evidence": "one"},
+                     {"concept": "a", "verdict": "weak", "evidence": "two"}],
+            "next_step": "n", "uncertainty": "u"}
+    check = report.check_distinct_evidence(body, facts)
+    assert check is not None and "listed twice" in check.detail

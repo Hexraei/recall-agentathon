@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 import time
 from typing import Any, Type
 
@@ -85,6 +86,28 @@ def _retry_after(r: httpx.Response) -> float | None:
                 return parsed
     match = re.search(r"try again in ([\d.]+)s", r.text)
     return float(match.group(1)) if match else None
+
+
+_DEGRADED_WARNED: set[str] = set()
+
+
+def _warn_degraded(model: str, delay: float | None, body: str) -> None:
+    """Tell the operator, once, that the primary is out and we are degrading.
+
+    Stderr rather than an exception: the run is still working, and a fallback
+    that quietly succeeds is the whole point of having one. But a silent
+    degradation before a demo is how you find out during the demo.
+    """
+    if model in _DEGRADED_WARNED:
+        return
+    _DEGRADED_WARNED.add(model)
+    detail = ""
+    if "tokens per day" in body or "TPD" in body:
+        detail = " (daily token quota spent - this will not clear until the quota resets)"
+    wait = f" for ~{delay/60:.0f} min" if delay else ""
+    print(f"\n  [slice] {model} is rate limited{wait}{detail}.\n"
+          f"  [slice] Falling back to the secondary model. Reports will still "
+          f"generate, more slowly.\n", file=sys.stderr)
 
 
 def _duration(raw: str) -> float | None:
@@ -275,6 +298,15 @@ def complete(
                     waited = True
                     i -= 1                              # try this model again
                     continue
+                # Too long to wait out, so we will degrade to the fallback and
+                # keep working. Say so ONCE per process: a daily-quota 429
+                # quotes ~15 minutes and repeats on every call for the rest of
+                # the day, so the primary is simply gone and every report is
+                # being served by the slower fallback. Measured: 29 of 30
+                # reports ran on the fallback without a word on screen, which
+                # looks like "the system got slower" rather than "the fast
+                # provider is out of quota until tomorrow".
+                _warn_degraded(mid, delay, r.text)
 
             # A 400 with this specific code is Groq's own schema-enforced
             # generation running out of room before it could produce valid

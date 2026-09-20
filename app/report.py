@@ -50,12 +50,26 @@ MAX_DRAFTS = 2
 the token/attempt fence in slice/budget.py - two malformed JSON replies must not
 silently spend the revisions this counter exists to protect.
 
-Lowered from 3 on measurement. A third draft almost never changed the outcome:
-across repeated cohort runs the checker that rejected draft 2 rejected draft 3
-as well, usually on a different marginal objection, so the extra round trip
-bought a third of the wall-clock time and nothing else. Two drafts still show
-the back-edge doing real work - a rejection with a reason, and a rewrite that
-answers it - which is the behaviour worth watching.
+Lowered from 3 on measurement, and re-confirmed since.
+
+The original reason no longer applies: it was that the checker rejecting draft
+2 would reject draft 3 as well, on a different marginal objection. That checker
+was a model, and those objections were mostly hallucinated - see
+docs/evidence/bug-05-checker-hallucinated-contradictions.md. The checks are
+code now and they do not invent objections, so the question had to be asked
+again rather than inherited.
+
+Re-measured over 96 report runs on the real cohort under the current checks:
+
+    95 accepted the first draft
+     1 was rejected, redrafted, and accepted
+     0 spent the budget without a clean draft
+
+So a second draft is occasionally needed and, when it is, always sufficient.
+Two remains right for a different reason than it was chosen for: not "a third
+draft would not help" but "a second one already finishes the job". It also
+keeps the back-edge real - a rejection with a reason, and a rewrite that
+answers it, which is the behaviour worth watching.
 """
 
 DEADLINE_SECONDS = 90.0
@@ -80,8 +94,20 @@ class ConceptCall(BaseModel):
     concept: str
     """Must match a concept the student actually answered on. Checked in code."""
     verdict: Literal["strong", "mixed", "weak"]
-    evidence: str = Field(max_length=160)
-    """What in the counts supports this - the model's reading, in one sentence.
+    evidence: str = Field(default="", max_length=160)
+    """What THIS concept's wrong answers have in common, in one sentence - or
+    empty when there are none.
+
+    Optional since measuring the real cohort. `evidence` is a reading of the
+    MISTAKES, so a concept with no mistakes leaves the model nothing to say and
+    it fills the space instead: "You got all of these right" appeared 55 times
+    across 150 entries, next to a score that already says exactly that. Worse,
+    it is the same sentence every time, so 67% of reports repeated a line - and
+    a student who reads the identical sentence under three different headings
+    can see the report is not really looking at them.
+
+    Empty is now the honest answer for a clean concept, and strip_empty_evidence()
+    enforces it in code rather than asking the prompt nicely.
 
     Lowered from 300 after a genuinely all-strong report (5 concepts, all
     `strong`, nothing to trim) intermittently overran settings.max_tokens and
@@ -384,6 +410,16 @@ def enforce_verdicts(report: dict, facts: dict) -> list[str]:
 
     for src, dest, row in moves:
         report[src].remove(row)
+        # Not if the destination already names this concept. A writer may list
+        # a concept under `gaps` AND `strengths` - measured on the real cohort:
+        # one draft had four strengths and two gaps, all six concepts distinct
+        # within their own list, but both gaps duplicating a concept already in
+        # strengths. Moving them on verdict then produced a `strengths` list
+        # naming two concepts twice, each with the same sentence, which is what
+        # a student actually saw. The move is right; appending blindly is not.
+        if any(x["concept"] == row["concept"] for x in report.get(dest) or []):
+            fixed.append(f"{row['concept']}: dropped duplicate entry from {src}")
+            continue
         report.setdefault(dest, []).append(row)
 
     return fixed
@@ -437,6 +473,83 @@ def enforce_pattern(report: dict, facts: dict) -> str | None:
                 f"{len(spans[named])} topic(s), not two or more")
 
     report["pattern_concept"] = named
+    return None
+
+
+# ------------------------------------------------ evidence, in code
+
+def strip_empty_evidence(report: dict, facts: dict) -> list[str]:
+    """Clear `evidence` on any concept with nothing to explain. In place.
+
+    `evidence` says what the WRONG ANSWERS have in common. A concept with none
+    has no such sentence to write, and asked for one anyway the model writes
+    filler: "You got all of these right", 55 times in 150 entries on the real
+    cohort, beside a score already showing 3/3.
+
+    Removed rather than sent back, on the same reasoning as enforce_pattern():
+    there is nothing for a rewrite to fix. No wording turns an absent mistake
+    into an observation about one, and the score already carries the fact.
+
+    Returns notes for the trail.
+    """
+    counts = {r["concept"]: r for r in facts.get("by_concept", [])}
+    cleared: list[str] = []
+    for field in ("strengths", "gaps", "teach_again", "solid"):
+        for row in report.get(field) or []:
+            if not (row.get("evidence") or "").strip():
+                continue
+            row_counts = counts.get(row["concept"])
+            if not row_counts:
+                continue           # the citation gate handles invented concepts
+            if row_counts.get("wrong_answer_count", 0) == 0:
+                row["evidence"] = ""
+                cleared.append(f"{row['concept']}: cleared evidence (no wrong answers)")
+    return cleared
+
+
+def check_distinct_evidence(report: dict, facts: dict) -> ReportCheck | None:
+    """One sentence may not stand in for two different concepts.
+
+    Measured on the real cohort: one sentence was reused across different
+    concepts 36 times in 30 reports - most often a generic line, but sometimes
+    a specific reading of one concept's mistakes pasted onto another's, which
+    says something false about the second. A student reading the same sentence
+    under three headings can see the report is not looking at them separately.
+
+    Unlike the filler case this IS sent back: the mistakes are there to be
+    described, the model simply described them once and reused it, and that is
+    something a rewrite can fix.
+    """
+    # A concept may appear once in the whole report. Listing it twice - even
+    # with the same verdict and the same sentence - is a duplicate entry a
+    # student sees as the report stuttering. enforce_verdicts() no longer
+    # creates these, but a draft can still arrive with one.
+    everywhere: dict[str, str] = {}
+    for field in ("strengths", "gaps", "teach_again", "solid"):
+        for row in report.get(field) or []:
+            first = everywhere.get(row["concept"])
+            if first is not None:
+                return ReportCheck(
+                    verdict="rejected", failed_check="claim_strength",
+                    detail=(f"'{row['concept']}' is listed twice (in {first} "
+                            f"and {field}). Name each concept once."))
+            everywhere[row["concept"]] = field
+
+    seen: dict[str, str] = {}
+    for field in ("strengths", "gaps", "teach_again", "solid"):
+        for row in report.get(field) or []:
+            text = (row.get("evidence") or "").strip()
+            if not text:
+                continue
+            first = seen.get(text.lower())
+            if first is not None and first != row["concept"]:
+                return ReportCheck(
+                    verdict="rejected", failed_check="claim_strength",
+                    detail=(f"The sentence '{text}' is used for both "
+                            f"'{first}' and '{row['concept']}'. Each entry must "
+                            "describe its own concept's mistakes; write a "
+                            "different sentence for each, or leave one empty."))
+            seen.setdefault(text.lower(), row["concept"])
     return None
 
 
@@ -701,6 +814,10 @@ def _generate(store, kind: str, key: str, facts: dict, schema, build, call,
         dropped = enforce_pattern(body, facts)
         if dropped:
             corrected.append(dropped)
+        # A clean concept has no mistakes to describe, so it carries no
+        # sentence. Done before the checks so a cleared line cannot then be
+        # rejected as a duplicate of another cleared line.
+        corrected += strip_empty_evidence(body, facts)
         if corrected:
             trail.append({"step": "correct", "revision": attempt,
                           "body": {"corrections": corrected}})
@@ -713,6 +830,7 @@ def _generate(store, kind: str, key: str, facts: dict, schema, build, call,
         # the numbers. Nothing here asks a model to compare a sentence to a
         # count anymore.
         check = (check_citations(body, facts)
+                 or check_distinct_evidence(body, facts)
                  or check_claim_strength(body, facts, kind))
         if check is None:
             check = ReportCheck(verdict="accepted")

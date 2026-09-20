@@ -363,10 +363,15 @@ def answer(sid: str = Form(...), qid: str = Form(...), chosen: str = Form(...),
 def _concept_cards(rows, css: str) -> str:
     if not rows:
         return '<p class="muted">Nothing in this group.</p>'
+    # A concept with no wrong answers carries no sentence - the score beside it
+    # already says they got them all, and the paragraph is omitted rather than
+    # rendered empty. See strip_empty_evidence() in app/report.py.
     return "".join(
         f'<div class="card {css}"><b>{esc(r["concept"])}</b> '
         f'<span class="chip">{esc(r["verdict"])}</span>'
-        f'<p class="muted" style="margin:.45rem 0 0">{esc(r["evidence"])}</p></div>'
+        + (f'<p class="muted" style="margin:.45rem 0 0">'
+           f'{esc(r["evidence"])}</p>' if (r.get("evidence") or "").strip() else "")
+        + '</div>'
         for r in rows)
 
 
@@ -378,6 +383,13 @@ def _trail_html(body: dict) -> str:
     for row in trail:
         if row["step"] == "draft":
             lines.append(f'draft  r{row["revision"]}  → {row["body"].get("headline","")[:70]}')
+        elif row["step"] == "correct":
+            # What CODE fixed before any check ran - a verdict recomputed from
+            # the counts, an entry moved to the list it belongs in, a pattern
+            # dropped, filler cleared. Worth showing: it is the half of this
+            # system that is arithmetic rather than judgement.
+            for note in row["body"].get("corrections", []):
+                lines.append(f'code   r{row["revision"]}  → {note[:80]}')
         else:
             b = row["body"]
             verdict = b.get("verdict", "")
@@ -462,9 +474,11 @@ def _prose(strengths, gaps) -> list[str]:
         lead = "The part to work on is " if len(bad) == 1 else "The parts to work on are "
         out.append(lead + _join(bad) + ".")
         # One concrete example of what went wrong, so the advice is not abstract.
-        first = (gaps or [{}])[0].get("evidence")
+        # The first gap that HAS a sentence: a clean concept now carries none.
+        first = next((g["evidence"] for g in (gaps or [])
+                      if (g.get("evidence") or "").strip()), "")
         if first:
-            out.append(first[0].upper() + first[1:] if first else "")
+            out.append(first[0].upper() + first[1:])
     if not good and not bad:
         out.append("Your answers were spread fairly evenly, with no single "
                    "area standing out either way.")
